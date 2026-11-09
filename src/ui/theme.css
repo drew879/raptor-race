@@ -1,0 +1,69 @@
+@font-face { font-family: 'Fraunces'; font-weight: 700; font-display: swap; src: url('../assets/fonts/fraunces-700.woff2') format('woff2'); }
+@font-face { font-family: 'Fraunces'; font-weight: 900; font-display: swap; src: url('../assets/fonts/fraunces-900.woff2') format('woff2'); }
+@font-face { font-family: 'Nunito Sans'; font-weight: 400; font-display: swap; src: url('../assets/fonts/nunito-400.woff2') format('woff2'); }
+@font-face { font-family: 'Nunito Sans'; font-weight: 700; font-display: swap; src: url('../assets/fonts/nunito-700.woff2') format('woff2'); }
+@font-face { font-family: 'Nunito Sans'; font-weight: 900; font-display: swap; src: url('../assets/fonts/nunito-900.woff2') format('woff2'); }
+
+:root {
+  --paper: #f3e6cc;
+  --paper-2: #ead8b5;
+  --paper-edge: #d9c19a;
+  --ink: #3a2a1e;
+  --ink-soft: #6b5440;
+  --amber: #ffb21e;
+  --amber-light: #ffe08a;
+  --amber-deep: #c8620a;
+  --teal: #2c8a8f;
+  --horizon: #f4cfa0;
+  --cliff: #c9573c;
+  --display: 'Fraunces', Georgia, serif;
+  --ui: 'Nunito Sans', system-ui, -apple-system, sans-serif;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.23 0 0 0 0 0.16 0 0 0 0 0.1 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--ui); }
+button { font: inherit; color: inherit; }
+
+.paper { background-color: var(--paper); background-image: var(--grain); }
+
+/* Amber gem button */
+.btn-amber {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-width: 200px; padding: 16px 30px 17px; border: 3px solid var(--ink); border-radius: 16px;
+  font-family: var(--display); font-weight: 900; font-size: 24px; letter-spacing: 0.04em; color: var(--ink);
+  background: linear-gradient(165deg, #fff1b8 0%, var(--amber-light) 18%, var(--amber) 52%, #ee8a12 78%, var(--amber-deep) 100%);
+  box-shadow: 0 4px 0 var(--ink), 0 0 26px rgba(255, 178, 30, 0.55), inset 0 2px 0 rgba(255, 255, 255, 0.55);
+  cursor: pointer; text-transform: uppercase; overflow: hidden;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.btn-amber::before { /* facet highlight */
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(115deg, rgba(255,255,255,0.45) 0 22%, transparent 22% 100%), linear-gradient(245deg, rgba(200,98,10,0.25) 0 18%, transparent 18% 100%);
+  pointer-events: none;
+}
+.btn-amber:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink), 0 0 18px rgba(255, 178, 30, 0.5), inset 0 2px 0 rgba(255,255,255,0.5); }
+
+.btn-paper {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 22px; border: 2.5px solid var(--ink);
+  border-radius: 14px; background: var(--paper); background-image: var(--grain); font-family: var(--ui); font-weight: 900;
+  font-size: 16px; letter-spacing: 0.06em; text-transform: uppercase; box-shadow: 0 3px 0 var(--ink); cursor: pointer;
+}
+.btn-paper:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+
+.tag {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 7px; border: 2px solid var(--ink); border-radius: 10px;
+  background: var(--paper); background-image: var(--grain); box-shadow: 0 2px 0 var(--ink);
+  font-weight: 900; font-variant-numeric: tabular-nums; color: var(--ink);
+}
+
+.card {
+  position: relative; padding: 22px 20px 20px; background: var(--paper); background-image: var(--grain);
+  border: 2px solid var(--ink); border-radius: 6px; box-shadow: 4px 5px 0 rgba(58, 42, 30, 0.85);
+}
+.card::after { /* taped corner */
+  content: ''; position: absolute; top: -10px; left: 50%; width: 74px; height: 22px; transform: translateX(-50%) rotate(-3deg);
+  background: rgba(255, 224, 138, 0.72); border: 1px solid rgba(200, 98, 10, 0.35);
+}
+.eyebrow { font-family: var(--ui); font-weight: 900; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-soft); }
+.h-display { font-family: var(--display); font-weight: 900; line-height: 1.02; margin: 0; }
