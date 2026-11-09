@@ -7,6 +7,8 @@ import { GOBI } from './palette';
  */
 export const worldUniforms = {
   uCurve: { value: 0.0007 },
+  /** Lateral bend (track curves): + bends the world to the right with distance. Animated per frame. */
+  uBend: { value: 0 },
   uRimColor: { value: new THREE.Color(GOBI.sunGlow) },
 };
 
@@ -19,14 +21,15 @@ export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; be
   const bend = opts.bend ?? true;
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uCurve = worldUniforms.uCurve;
+    shader.uniforms.uBend = worldUniforms.uBend;
     shader.uniforms.uRimColor = rimCol ? { value: rimCol } : worldUniforms.uRimColor;
     if (bend) {
       shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', '#include <common>\nuniform float uCurve;')
+        .replace('#include <common>', '#include <common>\nuniform float uCurve, uBend;')
         .replace(
           '#include <project_vertex>',
           `#include <project_vertex>
-          { vec4 bentPos = mvPosition; bentPos.y -= uCurve * bentPos.z * bentPos.z; gl_Position = projectionMatrix * bentPos; }`,
+          { vec4 bentPos = mvPosition; float zz = bentPos.z * bentPos.z; bentPos.y -= uCurve * zz; bentPos.x += uBend * zz; gl_Position = projectionMatrix * bentPos; }`,
         );
     }
     if (rim > 0 && shader.fragmentShader.includes('vViewPosition')) {

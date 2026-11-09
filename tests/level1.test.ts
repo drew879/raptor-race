@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { LEVEL1 } from '../src/game/level1';
 import { Session } from '../src/game/session';
-import { HAZARD_BOXES } from '../src/game/collision';
+import { hazardBox } from '../src/game/collision';
+import { Bot } from '../src/game/bot';
 import { HUMANLIKE, PERFECT, playLevel } from '../src/game/bot';
 
 describe('level 1 data', () => {
@@ -16,8 +17,8 @@ describe('level 1 data', () => {
       for (const h of LEVEL1.hazards) {
         const wide = h.type === 'ledgeWide' || h.type === 'ribArch';
         if (!wide && h.lane !== p.lane) continue;
-        const box = HAZARD_BOXES[h.type];
-        if (Math.abs(h.d - p.d) > box.hz + 0.5) continue;
+        const box = hazardBox(h.type, h.len);
+        if (Math.abs(h.d + (h.len ?? 0) / 2 - p.d) > box.hz + 0.5) continue;
         if (p.y > box.y0 - 0.25 && p.y < box.y1 + 0.25) bad.push(`amber d=${p.d.toFixed(1)} lane=${p.lane} y=${p.y.toFixed(2)} vs ${h.type}@${h.d}`);
       }
     }
@@ -29,6 +30,44 @@ describe('level 1 data', () => {
     const walls = [...rows.entries()].filter(([, s]) => s.size === 3).map(([d]) => d);
     const k = LEVEL1.length / 1100;
     expect(walls.every((d) => d > 620 * k && d < 700 * k)).toBe(true);
+  });
+});
+
+describe('forks', () => {
+  const spines = LEVEL1.hazards.filter((h) => h.type === 'spine');
+  it('level 1 has two forks, each with only jumpable or slidable obstacles on its routes', () => {
+    expect(spines).toHaveLength(2);
+    for (const sp of spines) {
+      const inside = LEVEL1.hazards.filter((h) => h !== sp && h.d >= sp.d - 1 && h.d <= sp.d + sp.len! + 1);
+      expect(inside.every((h) => h.type === 'ledge' || h.type === 'arch')).toBe(true);
+      expect(inside.every((h) => h.lane !== sp.lane)).toBe(true);
+    }
+  });
+  it('the runner can never be beside a spine in its lane, and swipes into it are refused', () => {
+    const s = new Session(LEVEL1);
+    const bot = new Bot(s, PERFECT);
+    s.start();
+    let refused = 0, alongsideInSpineLane = 0, preyInSpineLane = 0;
+    for (let t = 0; t < 200 && s.state === 'running'; t += 1 / 60) {
+      bot.step(1 / 60);
+      const sp = s.spineAt(s.distance);
+      if (sp) {
+        // Try to swipe into the fin every half second.
+        if (Math.round(t * 60) % 30 === 0) {
+          const before = s.runner.lane;
+          s.input(s.runner.lane < 0 ? 'right' : 'left');
+          if (s.runner.lane === before) refused++;
+        }
+        if (s.runner.lane === sp.lane && s.distance > sp.d + 2) alongsideInSpineLane++;
+      }
+      const ps = s.spineAt(s.preyD);
+      if (ps && s.preyD > ps.d + 3 && Math.abs(s.preyX) < 0.6) preyInSpineLane++;
+      s.step(1 / 60);
+      s.drainEvents();
+    }
+    expect(refused).toBeGreaterThan(4);
+    expect(alongsideInSpineLane).toBe(0);
+    expect(preyInSpineLane).toBe(0);
   });
 });
 

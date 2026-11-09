@@ -14,6 +14,8 @@ import { GOBI, RAPTOR_GOBI_STREAK, col, mix } from '../render/palette';
 import { Session, type GameEvent } from '../game/session';
 import { CONFIG } from '../game/config';
 import { LEVEL1 } from '../game/level1';
+import { curvatureAt } from '../game/level';
+import { worldUniforms } from '../render/materials';
 import { Input } from '../core/input';
 import { AudioEngine } from '../audio/sfx';
 import { loadSave, writeSave } from '../game/save';
@@ -322,6 +324,7 @@ const HINTS: Record<HintKind, [string, string, string, string]> = {
   slide: ['↓', 'Swipe down to slide under arches and bones', '0', '6px'],
   magnet: ['◈', 'Amber Sense pulls nearby amber to you', '0', '0'],
   updraft: ['≋', 'Grab the updraft to glide over the boulders. Steer left and right while you fly', '0', '-6px'],
+  fork: ['⇆', 'The trail splits around a rock fin. Pick a side: left is rougher, with more amber', '8px', '0'],
 };
 function showHint(h: HintKind) {
   const [g, t, nx, ny] = HINTS[h];
@@ -394,6 +397,12 @@ function handle(e: GameEvent) {
       break;
     case 'clear':
       floatText(`+${e.bonus}`, 'small', 44);
+      break;
+    case 'blocked':
+      // Swiped into a fork's rock fin: a soft bump, no penalty.
+      audio.play('land');
+      haptic(12);
+      shake = Math.max(shake, 0.14);
       break;
     case 'stumble':
       audio.play('stumble');
@@ -513,7 +522,7 @@ function syncWorld(dt: number) {
   for (const h of session.hazards) {
     live.add(h.id);
     if (!hazardMeshes.has(h.id)) {
-      const m = createHazard(h.type, h.id);
+      const m = createHazard(h.type, h.id, h.len);
       m.position.set(h.x, 0, -h.d);
       stage.world.add(m);
       hazardMeshes.set(h.id, m);
@@ -639,6 +648,23 @@ function updateCamera(dt: number) {
   $('speed').style.opacity = (camBlend * clamp((r.speed - 13) / 8, 0, 1) * (app === 'playing' ? 0.55 : 0)).toFixed(3);
   if (Math.abs(stage.camera.fov - fov) > 0.01) { stage.camera.fov = fov; stage.camera.updateProjectionMatrix(); }
   stage.follow(r.x, ending ? -session.preyD + 8 : z);
+  updateBend(dt, camBlend);
+}
+
+/** Automatic bends: the world curves left or right ahead (the simulation stays straight). The far scenery
+ * swings round as you go, and the camera banks a little into the turn. Only in the chase view. */
+let bend = 0, heading = 0;
+function updateBend(dt: number, chase: number) {
+  const C = CONFIG.curves;
+  const r = session.runner;
+  const running = app === 'playing' || app === 'paused' || app === 'caught' || app === 'lost' || app === 'intro';
+  const target = running ? curvatureAt(LEVEL.curves, r.distance + C.lookAhead) * chase : 0;
+  bend = damp(bend, target, 1.6, dt);
+  worldUniforms.uBend.value = bend * C.bend;
+  if (app === 'playing') heading += bend * C.bend * 2 * r.speed * C.headingGain * dt;
+  heading = clamp(damp(heading, 0, 0.04, dt), -C.maxHeading, C.maxHeading);
+  stage.backdrop.rotation.y = heading;
+  if (Math.abs(bend) > 1e-3) stage.camera.rotateZ(-bend * C.roll);
 }
 
 /** Opening shot: close on the grazing prey, it looks up and bolts, the camera swings back behind the raptor. */
@@ -742,6 +768,7 @@ function pregenerate(budgetMs: number) {
 function warmShaders() {
   const g = new THREE.Group();
   for (const t of ['boulder', 'ledge', 'ledgeWide', 'arch', 'ribArch'] as const) g.add(createHazard(t));
+  for (const h of LEVEL.hazards) if (h.type === 'spine') g.add(createHazard('spine', 0, h.len)); // also builds each fin once, up front
   g.position.set(0, -50, 0);
   stage.world.add(g);
   stage.renderer.compile(stage.scene, stage.camera);

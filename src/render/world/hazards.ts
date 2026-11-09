@@ -101,9 +101,62 @@ function ribArch(): THREE.BufferGeometry {
   return g.build();
 }
 
+/**
+ * A fork's sandstone fin: a tall, narrow wall of banded rock down the middle lane, from z = 0 back to
+ * z = -len. Its prow is steep so it reads as a wall to go around (never something to jump).
+ */
+function spine(len: number): THREE.BufferGeometry {
+  const g = new GeomBuilder();
+  const rng = new Rng(Math.round(len * 10));
+  const bands = [mix(GOBI.cliffRed, GOBI.hazardRock, 0.25), mix(GOBI.cliffLight, GOBI.hazardRockLight, 0.3), mix(GOBI.cliffRed, GOBI.cliffShadow, 0.35), mix(GOBI.cliffRed, GOBI.hazardRock, 0.25), mix(GOBI.cliffLight, GOBI.cliffPale, 0.25)];
+  const top = mix(GOBI.cliffLight, GOBI.cliffPale, 0.35);
+  const tone = (y: number, ny: number, z: number) => {
+    const b = bands[Math.floor((y + 0.1 * Math.sin(z * 0.7)) / 0.36) % bands.length];
+    return shade(ny > 0.55 ? top : b, (ny < -0.2 ? 0.72 : 1) * (1 + 0.04 * Math.sin(z * 1.9 + y * 3.1)));
+  };
+  // Cross-section, as (x fraction of half-width, y fraction of height), left to right over the top.
+  const prof: [number, number][] = [[-1, 0], [-0.96, 0.35], [-0.82, 0.7], [-0.5, 0.94], [0, 1], [0.5, 0.94], [0.82, 0.7], [0.96, 0.35], [1, 0]];
+  const N = Math.max(4, Math.round(len / 1.2));
+  const ring = (k: number) => {
+    const z = -(k / N) * len;
+    const fromNose = (k / N) * len, fromTail = len - fromNose;
+    const ramp = (m: number, over: number) => Math.min(1, m / over);
+    const hScale = 0.55 + 0.45 * ramp(fromNose, 2.2) * ramp(fromTail, 2.2);
+    const h = (2.15 + 0.35 * Math.sin(k * 0.53 + 1) + 0.2 * Math.sin(k * 1.37) + (rng.next() - 0.5) * 0.12) * hScale;
+    const w = 0.56 * (0.8 + 0.2 * ramp(fromNose, 1.5) * ramp(fromTail, 1.5)) * (1 + (rng.next() - 0.5) * 0.08);
+    return prof.map(([fx, fy]) => new THREE.Vector3(fx * w + (fy > 0.5 ? (rng.next() - 0.5) * 0.05 : 0), fy * h, z + (fy > 0 && fy < 1 ? (rng.next() - 0.5) * 0.15 : 0)));
+  };
+  let prev = ring(0);
+  const first = prev;
+  for (let k = 1; k <= N; k++) {
+    const cur = ring(k);
+    for (let j = 0; j < prof.length - 1; j++) {
+      const a = prev[j], b = prev[j + 1], c = cur[j + 1], d = cur[j];
+      const n = new THREE.Vector3().crossVectors(new THREE.Vector3().subVectors(b, a), new THREE.Vector3().subVectors(d, a)).normalize();
+      const mid = a.clone().add(c).multiplyScalar(0.5);
+      g.quad(a, b, c, d, tone(mid.y, n.y, mid.z)); // outward-facing (n is the outward normal)
+    }
+    prev = cur;
+  }
+  // End caps: the prow facing the runner and the tail.
+  const capCol = (y: number) => tone(y, 0, 0);
+  const ctr0 = new THREE.Vector3(0, first[4].y * 0.45, 0.25), ctr1 = new THREE.Vector3(0, prev[4].y * 0.45, -len - 0.25);
+  for (let j = 0; j < prof.length - 1; j++) {
+    g.tri(first[j + 1], first[j], ctr0, capCol((first[j].y + first[j + 1].y) / 2)); // faces +z, toward the runner
+    g.tri(prev[j], prev[j + 1], ctr1, capCol((prev[j].y + prev[j + 1].y) / 2));
+  }
+  return g.build();
+}
+
 const GEOMS: Partial<Record<HazardType, THREE.BufferGeometry>> = {};
+const SPINES = new Map<number, THREE.BufferGeometry>();
 const BOULDERS = ['boulderA', 'boulderB', 'boulderC'] as const;
-export function hazardGeometry(type: HazardType, variant = 0): THREE.BufferGeometry {
+export function hazardGeometry(type: HazardType, variant = 0, len = 0): THREE.BufferGeometry {
+  if (type === 'spine') {
+    const key = Math.round(len * 10);
+    if (!SPINES.has(key)) SPINES.set(key, spine(len));
+    return SPINES.get(key)!;
+  }
   // Scanned rocks (Poly Haven, CC0) for boulders and ledges; arches and bones stay hand-built.
   if (type === 'boulder') return scenery(BOULDERS[variant % BOULDERS.length]);
   if (type === 'ledge') return scenery('ledge');
@@ -115,8 +168,8 @@ export function hazardGeometry(type: HazardType, variant = 0): THREE.BufferGeome
   return GEOMS[type]!;
 }
 
-export function createHazard(type: HazardType, variant = 0): THREE.Mesh {
-  const m = new THREE.Mesh(hazardGeometry(type, variant), MATS.hazard);
+export function createHazard(type: HazardType, variant = 0, len = 0): THREE.Mesh {
+  const m = new THREE.Mesh(hazardGeometry(type, variant, len), MATS.hazard);
   if (type === 'boulder') m.rotation.y = (variant * 2.39996) % (Math.PI * 2); // golden-angle spin for variety
   m.castShadow = true;
   m.receiveShadow = true;

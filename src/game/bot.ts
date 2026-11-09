@@ -15,7 +15,7 @@ export const PERFECT: BotProfile = { reaction: 0, jitter: 0, errorRate: 0, greed
 export const HUMANLIKE: BotProfile = { reaction: 0.3, jitter: 0.07, errorRate: 0.03, greedEggs: false, seed: 1 };
 
 type Need = 'free' | 'block' | 'jump' | 'slide';
-const NEED: Record<string, Need> = { boulder: 'block', ledge: 'jump', ledgeWide: 'jump', arch: 'slide', ribArch: 'slide' };
+const NEED: Record<string, Need> = { boulder: 'block', ledge: 'jump', ledgeWide: 'jump', arch: 'slide', ribArch: 'slide', spine: 'block' };
 
 /** Plays a Session through its public input API, the same way a player would. */
 export class Bot {
@@ -115,6 +115,8 @@ export class Bot {
         if (pick) target = pick.lane;
       }
     }
+    // Alongside a fork spine the route is committed: no lane changes, just jumps and slides.
+    if (s.spineAt(s.distance + v * 0.25 + lead, 0.5) && planned !== 0) target = planned;
     if (target !== planned && this.laneCooldown <= 0) {
       this.send(target < planned ? 'left' : 'right');
       this.laneCooldown = CONFIG.lanes.changeTime + 0.04;

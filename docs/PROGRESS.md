@@ -23,7 +23,8 @@ Newest first. Every session updates this before pushing.
 - [x] scripts/hunt-shots.mjs captures the intro, pounce and plate; lab.html shows `subject=proto|pin`
 - [ ] Jump obstacles that fit the Gobi (gullies and sandstone slabs proposed; awaiting owner)
 - [ ] Inclusion rewards (journal pages and a plumage proposed; awaiting owner)
-- [ ] Forks and automatic curves (approved)
+- [x] Forks: a sandstone fin down the middle lane splits the trail into two routes (one rough and rich, one easy); swipes into the fin are refused with a soft bump; the prey takes the easy side; Level 1 has two (design 704-750 and 922-968)
+- [x] Automatic bends: a lateral view-space bend (sim stays straight), far scenery swings round, the camera banks; nine bends in Level 1
 - [ ] Pacing pass on long straightaways; adaptive synthesized music
 - [ ] Variety: landmarks and set pieces (canyon walls, hoodoos, bone fields, herds), terrain sections
 

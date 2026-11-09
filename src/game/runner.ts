@@ -102,6 +102,11 @@ export class Runner {
     this.lastDir = -this.lastDir;
   }
 
+  /** Put the runner straight into a lane (used when reviving next to a fork spine). */
+  snapToLane(lane: number) {
+    this.lane = lane; this.x = laneX(lane); this.laneFromX = this.x; this.laneT = 1;
+  }
+
   /** Reset for a fresh start or checkpoint restart. */
   reset(distance: number) {
     this.lane = 0; this.x = 0; this.y = 0; this.vy = 0; this.distance = distance;

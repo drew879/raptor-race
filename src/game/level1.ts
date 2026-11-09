@@ -65,10 +65,18 @@ for (let d = 640; d <= 680; d += 10) B.hz(d, 'boulder', -1, 0, 1);
 B.sky(628, 692, 0, 2.75, 3.2);
 B.sky(644, 676, 1, 2.75, 4);
 B.egg(666, -1, 2.75);
-B.line(712, 730, 0);
-B.hz(742, 'ledgeWide', 0).arcOver(742, 0);
-B.hz(760, 'boulder', 0);
-B.line(754, 768, 1);
+// Fork 1: a rock fin splits the trail. Left is rough and rich; right is easy and sparse (the prey goes right).
+B.hint(694, 'fork');
+B.fork(704, 750);
+B.line(706, 711, -1);
+B.hz(716, 'ledge', -1).arcOver(716, -1);
+B.hz(729, 'arch', -1).low(725, 733, -1);
+B.hz(742, 'ledge', -1).arcOver(742, -1);
+B.line(708, 722, 1, 4.6);
+B.hz(732, 'ledge', 1);
+B.line(738, 748, 1, 5);
+B.hz(762, 'boulder', 0);
+B.line(756, 768, 1);
 
 // Checkpoint 2 at 772. Beat 6: the storm rises; combos (772-1020).
 B.hz(790, 'ledge', 0).hz(790, 'boulder', -1, 1).arcOver(790, 0);
@@ -81,18 +89,34 @@ B.hz(876, 'ledgeWide', 0).arcOver(876, 0);
 B.hz(894, 'ledge', 0, 1).hz(894, 'boulder', -1).arcOver(894, 0);
 B.hz(900, 'boulder', 1);
 B.egg(910, 1, 0.8);
-B.line(914, 926, 0);
-B.hz(938, 'arch', -1, 0).hz(938, 'boulder', 1).low(934, 942, 0);
-B.hz(956, 'ledge', -1, 1).hz(956, 'boulder', 0).arcOver(956, -1).arcOver(956, 1);
-B.hz(972, 'ribArch', 0).low(968, 976, 1).low(968, 976, -1);
-B.hz(990, 'boulder', -1, 1);
-B.line(984, 1000, 0);
-B.hz(1008, 'ledgeWide', 0).arcOver(1008, 0);
+// Fork 2: right after the egg you're already on the rough side; it pays, the left is easy (the prey goes left).
+B.fork(922, 968);
+B.hz(932, 'arch', 1).low(928, 936, 1);
+B.hz(945, 'ledge', 1).arcOver(945, 1);
+B.hz(958, 'arch', 1).low(954, 962, 1);
+B.line(926, 940, -1, 4.6);
+B.hz(950, 'ledge', -1);
+B.line(956, 966, -1, 5);
+B.hz(980, 'ribArch', 0).low(976, 984, 0);
+B.hz(994, 'boulder', -1, 1);
+B.line(988, 1002, 0);
+B.hz(1010, 'ledgeWide', 0).arcOver(1010, 0);
 
 // Beat 7: final dash to the nest (1020-1100).
 B.line(1018, 1040, 0);
 B.line(1046, 1068, 1).line(1046, 1068, -1);
 B.line(1074, 1094, 0);
+
+// Automatic bends (visual): mostly gentle, never during a teaching beat's first obstacle.
+B.bend(20, 95, 0.8);
+B.bend(205, 280, -0.9);
+B.bend(310, 372, 0.7);
+B.bend(440, 525, -1);
+B.bend(545, 605, 0.9);
+B.bend(700, 765, -1);
+B.bend(790, 870, 1);
+B.bend(915, 975, -0.8);
+B.bend(1012, 1100, 1.1);
 
 export const LEVEL1: LevelDef = B.build({
   id: 'flaming-cliffs',

@@ -89,9 +89,9 @@ export class HaloField {
     this.geo.setAttribute('aAlpha', new THREE.BufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage));
     this.geo.setAttribute('aColor', new THREE.BufferAttribute(this.color, 3).setUsage(THREE.DynamicDrawUsage));
     const mat = new THREE.ShaderMaterial({
-      uniforms: { uCurve: worldUniforms.uCurve, uScale: { value: 800 }, uFogNear: { value: fog.near }, uFogFar: { value: fog.far } },
+      uniforms: { uCurve: worldUniforms.uCurve, uBend: worldUniforms.uBend, uScale: { value: 800 }, uFogNear: { value: fog.near }, uFogFar: { value: fog.far } },
       vertexShader: /* glsl */ `
-        uniform float uCurve, uScale, uFogNear, uFogFar;
+        uniform float uCurve, uBend, uScale, uFogNear, uFogFar;
         attribute float aSize, aAlpha; attribute vec3 aColor;
         varying float vAlpha; varying vec3 vColor;
         void main() {
@@ -100,6 +100,7 @@ export class HaloField {
           vAlpha = aAlpha * (1.0 - smoothstep(uFogNear, uFogFar, dist));
           vColor = aColor;
           mv.y -= uCurve * mv.z * mv.z;
+          mv.x += uBend * mv.z * mv.z;
           gl_Position = projectionMatrix * mv;
           gl_PointSize = aSize * uScale / max(dist, 0.1);
         }`,

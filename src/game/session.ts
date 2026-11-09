@@ -1,10 +1,11 @@
 import { Runner, type RunnerAction } from './runner';
 import { CONFIG, laneX } from './config';
-import { HAZARD_BOXES, testHit } from './collision';
+import { hazardBox, testHit } from './collision';
 import { speedAt, type HintKind, type LevelDef } from './level';
 import type { HazardType, Lane, PickupKind } from './types';
 
-export interface LiveHazard { id: number; type: HazardType; lane: Lane; d: number; x: number; hit: boolean; passed: boolean }
+/** `len` > 0 for long hazards (the fork spine), which run from `d` to `d + len`. */
+export interface LiveHazard { id: number; type: HazardType; lane: Lane; d: number; len: number; x: number; hit: boolean; passed: boolean }
 export interface LivePickup { id: number; kind: PickupKind; lane: Lane; d: number; x: number; y: number; taken: boolean; eggIndex: number }
 
 export type GameEvent =
@@ -12,6 +13,7 @@ export type GameEvent =
   | { t: 'egg'; x: number; y: number; d: number; index: number }
   | { t: 'power'; kind: 'magnet' | 'updraft'; x: number; y: number; d: number }
   | { t: 'stumble' }
+  | { t: 'blocked'; dir: number }
   | { t: 'crash'; cause: HazardType | 'storm' }
   | { t: 'clear'; bonus: number }
   | { t: 'combo'; combo: number }
@@ -79,7 +81,22 @@ export class Session {
   input(a: RunnerAction) {
     if (this.state !== 'running') return;
     if (a === 'jump' && this.pounceReady) { this.startPounce(); return; }
+    if ((a === 'left' || a === 'right') && this.laneBlocked(this.runner.lane + (a === 'left' ? -1 : 1))) {
+      // Alongside a fork's rock fin: the swipe is refused with a soft bump instead of a stumble.
+      this.events.push({ t: 'blocked', dir: a === 'left' ? -1 : 1 });
+      return;
+    }
     this.runner.request(a);
+  }
+
+  /** The fork spine whose span covers distance d (with a little margin), if any. */
+  spineAt(d: number, margin = 0) {
+    return this.hazards.find((h) => h.type === 'spine' && d >= h.d - margin && d <= h.d + h.len);
+  }
+  /** True when moving into `lane` right now would run into a fork spine alongside. */
+  laneBlocked(lane: number) {
+    const s = this.spineAt(this.runner.distance, 1.5);
+    return !!s && s.lane === lane;
   }
 
   get gap() { return this.preyD - this.runner.distance; }
@@ -95,8 +112,21 @@ export class Session {
 
   /** Prey steering: pick a lane that is clear of boulders a short way ahead of it. */
   private steerPrey() {
+    // Forks: alongside a spine, stay on this side; approaching one, take the side with fewer obstacles.
+    const along = this.spineAt(this.preyD, 1);
+    if (along) {
+      if (this.preyLaneTarget === along.lane) this.preyLaneTarget = this.preyX < along.x ? -1 : 1;
+      return;
+    }
+    const spine = this.hazards.find((h) => h.type === 'spine' && h.d > this.preyD && h.d < this.preyD + 16);
+    if (spine && this.preyLaneTarget === spine.lane) {
+      const count = (lane: number) => this.hazards.filter((h) => h.type !== 'spine' && h.lane === lane && h.d >= spine.d && h.d <= spine.d + spine.len).length;
+      this.preyLaneTarget = count(-1) < count(1) ? -1 : 1;
+      return;
+    }
+    // Boulders block a lane; the prey also goes around arches when it can (it's too tall to duck).
     const ahead = this.hazards.filter((h) => h.d > this.preyD + 2 && h.d < this.preyD + 14);
-    const blocked = (lane: number) => ahead.some((h) => h.type === 'boulder' && h.lane === lane);
+    const blocked = (lane: number) => ahead.some((h) => (h.type === 'boulder' || h.type === 'arch' || h.type === 'spine') && h.lane === lane);
     if (blocked(this.preyLaneTarget)) {
       const options = [-1, 0, 1].filter((l) => !blocked(l));
       if (options.length) this.preyLaneTarget = options.sort((a, b) => Math.abs(a - this.preyLaneTarget) - Math.abs(b - this.preyLaneTarget))[0];
@@ -121,7 +151,7 @@ export class Session {
     while (this.hzCursor < L.hazards.length && L.hazards[this.hzCursor].d < ahead) {
       const h = L.hazards[this.hzCursor++];
       const wide = h.type === 'ledgeWide' || h.type === 'ribArch';
-      this.hazards.push({ id: this.nextId++, type: h.type, lane: h.lane, d: h.d, x: wide ? 0 : laneX(h.lane), hit: false, passed: false });
+      this.hazards.push({ id: this.nextId++, type: h.type, lane: h.lane, d: h.d, len: h.len ?? 0, x: wide ? 0 : laneX(h.lane), hit: false, passed: false });
     }
     while (this.pkCursor < L.pickups.length && L.pickups[this.pkCursor].d < ahead) {
       const idx = this.pkCursor++;
@@ -131,7 +161,7 @@ export class Session {
       this.pickups.push({ id: this.nextId++, kind: p.kind, lane: p.lane, d: p.d, x: laneX(p.lane), y: p.y, taken: false, eggIndex });
     }
     while (this.hintCursor < L.hints.length && L.hints[this.hintCursor].d <= d) this.events.push({ t: 'hint', hint: L.hints[this.hintCursor++].hint });
-    this.hazards = this.hazards.filter((h) => h.d > d - 15);
+    this.hazards = this.hazards.filter((h) => h.d + h.len > d - 15);
     this.pickups = this.pickups.filter((p) => !p.taken && p.d > d - 15);
   }
 
@@ -229,22 +259,22 @@ export class Session {
     // Hazards.
     for (const h of this.hazards) {
       if (h.hit || h.passed) continue;
-      const dz = h.d - r.distance;
-      if (dz < -0.9) {
+      const box = hazardBox(h.type, h.len);
+      const dz = h.d + h.len / 2 - r.distance;
+      if (dz < -0.9 - box.hz) {
         h.passed = true;
         // Cleared an obstacle in our own lane by jumping or sliding: small style bonus.
-        const box = HAZARD_BOXES[h.type];
-        if (h.type !== 'boulder' && Math.abs(r.x - h.x) < box.hx + 0.26) {
+        if (h.type !== 'boulder' && h.type !== 'spine' && Math.abs(r.x - h.x) < box.hx + 0.26) {
           this.score += 50;
           this.preyD -= CONFIG.hunt.closePerClear;
           this.events.push({ t: 'clear', bonus: 50 });
         }
         continue;
       }
-      if (this.invuln > 0 || Math.abs(dz) > 1.2) continue;
-      const hit = testHit({ x: r.x, prevX, y: r.y, sliding: r.sliding, airborne: !r.grounded }, dz, h.x, HAZARD_BOXES[h.type]);
+      if (this.invuln > 0 || Math.abs(dz) > 1.2 + box.hz) continue;
+      const hit = testHit({ x: r.x, prevX, y: r.y, sliding: r.sliding, airborne: !r.grounded }, dz, h.x, box);
       if (hit === 'none') continue;
-      h.hit = true;
+      if (h.type !== 'spine') h.hit = true; // a fork spine stays solid along its whole length
       if (hit === 'front') { this.crash(h.type); return; }
       if (hit === 'side') r.bounce();
       this.stumble();
@@ -318,7 +348,10 @@ export class Session {
     this.storm = 0;
     this.invuln = 2;
     this.runner.stumble = 0;
-    for (const h of this.hazards) if (h.d - this.runner.distance < 4) h.passed = true;
+    for (const h of this.hazards) if (h.type !== 'spine' && h.d - this.runner.distance < 4) h.passed = true;
+    // Crashed into a fork spine's nose: get back up beside it, on the side the prey took.
+    const spine = this.spineAt(this.runner.distance, 2);
+    if (spine && this.runner.lane === spine.lane) this.runner.snapToLane(this.preyLaneTarget !== spine.lane ? this.preyLaneTarget : -1);
     return true;
   }
 
