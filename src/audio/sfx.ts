@@ -2,6 +2,11 @@
  * Synthesized sound effects (WebAudio). Mirrors docs/AUDIO_BIBLE.md.
  * Works with an online AudioContext or an OfflineAudioContext (for automated loudness checks).
  */
+import { Music } from './music';
+
+/** Music bus level relative to SFX: keeps music peaks about 8 dB under SFX peaks (AUDIO_BIBLE mix targets). */
+export const MUSIC_LEVEL = 0.3;
+
 export type SfxName = 'amber' | 'lane' | 'jump' | 'land' | 'slide' | 'stumble' | 'egg' | 'powerup' | 'checkpoint' | 'finish';
 
 const PENTA = [0, 2, 4, 7, 9]; // major pentatonic, semitones
@@ -156,7 +161,10 @@ export class AudioEngine {
   ctx: AudioContext | null = null;
   sfx: Sfx | null = null;
   master: GainNode | null = null;
+  music: Music | null = null;
+  private musicBus: GainNode | null = null;
   private muted = false;
+  private musicOn = true;
   unlock() {
     if (this.ctx) { void this.ctx.resume(); return; }
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -168,6 +176,14 @@ export class AudioEngine {
     this.master.gain.value = this.muted ? 0 : 1;
     this.master.connect(comp).connect(this.ctx.destination);
     this.sfx = new Sfx(this.ctx, this.master);
+    this.musicBus = this.ctx.createGain();
+    this.musicBus.gain.value = this.musicOn ? MUSIC_LEVEL : 0;
+    this.musicBus.connect(this.master);
+    this.music = new Music(this.ctx, this.musicBus);
+  }
+  setMusic(on: boolean) {
+    this.musicOn = on;
+    if (this.musicBus) this.musicBus.gain.value = on ? MUSIC_LEVEL : 0;
   }
   play(name: SfxName, opts?: { dir?: number }) {
     if (!this.ctx || this.ctx.state !== 'running') return;

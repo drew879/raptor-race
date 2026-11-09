@@ -26,7 +26,7 @@ Newest first. Every session updates this before pushing.
 - [x] Forks: a sandstone fin down the middle lane splits the trail into two routes (one rough and rich, one easy); swipes into the fin are refused with a soft bump; the prey takes the easy side; Level 1 has two (design 704-750 and 922-968)
 - [x] Automatic bends: a lateral view-space bend (sim stays straight), far scenery swings round, the camera banks; nine bends in Level 1
 - [x] Pacing pass: every decision-free stretch over ~2.5 s filled (was up to 6.3 s; now only the opener, which carries the "Hunt!" banner and lanes hint, runs 3.9 s). Fills favour dodges over jumps to keep it fairly easy: human-like bot 90% within one revive, never loses the prey
-- [ ] Adaptive synthesized music
+- [x] Adaptive synthesized music: hand drums, shaker, wind, plucked motifs in C# minor pentatonic (in key with the amber chimes); builds with the hunt, sting on the pounce, separate Music toggle; levels checked offline
 - [ ] Variety: landmarks and set pieces (canyon walls, hoodoos, bone fields, herds), terrain sections
 
 ## Previous milestone: M0 + M1 gate (see docs/GATE-M0-M1.md)

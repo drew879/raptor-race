@@ -105,6 +105,7 @@ root.innerHTML = `
       <button class="btn-amber" id="btnResume">Resume</button>
       <button class="btn-paper" id="btnRestart">Restart level</button>
       <button class="btn-paper" id="btnSound2">Sound: on</button>
+      <button class="btn-paper" id="btnMusic">Music: on</button>
       <button class="btn-paper" id="btnFps">Frame rate: hidden</button>
       <button class="btn-paper" id="btnQuit">Quit to title</button>
     </div>
@@ -157,10 +158,12 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 const save = loadSave();
 const audio = new AudioEngine();
 audio.setMuted(!save.sound);
+audio.setMusic(save.music);
 const syncSoundLabels = () => {
   $('btnSound').textContent = save.sound ? '♪' : '×';
   $('btnSound').setAttribute('aria-label', save.sound ? 'Sound on' : 'Sound off');
   $('btnSound2').textContent = `Sound: ${save.sound ? 'on' : 'off'}`;
+  $('btnMusic').textContent = `Music: ${save.music ? 'on' : 'off'}`;
 };
 const toggleSound = () => { save.sound = !save.sound; audio.setMuted(!save.sound); writeSave(save); syncSoundLabels(); };
 syncSoundLabels();
@@ -236,6 +239,13 @@ function setApp(s: AppState) {
   show('hud', s === 'playing' || s === 'paused' || s === 'caught' || s === 'lost');
   input.enabled = s === 'playing';
   if (s !== 'playing') $('hint').hidden = true;
+  // Music follows the run: playing builds it, pause muffles it, any menu or setback fades it out.
+  const m = audio.music;
+  if (m) {
+    if (s === 'playing') { m.setPaused(false); if (!m.isPlaying) m.start(); }
+    else if (s === 'paused') m.setPaused(true);
+    else if (s !== 'finishing') m.stop(s === 'intro' ? 0.3 : 0.7);
+  }
 }
 
 function renderObjectives() {
@@ -260,6 +270,7 @@ $('btnBack').addEventListener('click', () => setApp('title'));
 $('btnGo').addEventListener('click', startRun);
 $('btnSound').addEventListener('click', toggleSound);
 $('btnSound2').addEventListener('click', toggleSound);
+$('btnMusic').addEventListener('click', () => { save.music = !save.music; audio.setMusic(save.music); writeSave(save); syncSoundLabels(); });
 $('btnFps').addEventListener('click', () => {
   DEBUG = !DEBUG;
   $('debug').hidden = !DEBUG;
@@ -381,6 +392,7 @@ function handle(e: GameEvent) {
     case 'egg':
       if (!save.seenInclusion) { save.seenInclusion = true; writeSave(save); }
       audio.play('egg');
+      audio.music?.duckFor(0.6);
       haptic(20);
       renderEggs();
       floatText('Amber inclusion found!', 'banner', 30);
@@ -446,6 +458,7 @@ function handle(e: GameEvent) {
       timeScale = 0.35;
       shake = Math.max(shake, 0.3);
       audio.play('jump');
+      audio.music?.sting();
       setApp('finishing');
       break;
     case 'preyLost':
@@ -746,6 +759,7 @@ function frame(now: number) {
   if (app === 'title' || app === 'prerun' || app === 'results') pregenerate(6);
   if (app === 'playing' && dt > 0.05) hitches.push(Math.round(dt * 1000));
   adaptQuality(dt);
+  updateMusic(dt);
   hud();
   draw();
   if (DEBUG) {
@@ -755,6 +769,20 @@ function frame(now: number) {
     $('debug').textContent = `${fpsShown.toFixed(0)} fps · worst ${(worst * 1000).toFixed(0)} ms\n${info.calls} calls · ${(info.triangles / 1000).toFixed(0)}k tris`;
     if (fpsAcc === 0) worst = 0;
   }
+}
+
+// Music intensity: builds with progress and as the gap closes; full in the finale. The storm swells the wind.
+let musicI = 0;
+function updateMusic(dt: number) {
+  const m = audio.music;
+  if (!m) return;
+  const r = session.runner;
+  const close = clamp((24 - session.gap) / 15, 0, 1);
+  const target = session.inFinale ? 1 : clamp(0.2 + 0.45 * session.progress + 0.3 * close + (r.glideLeft > 0 ? 0.1 : 0), 0, 0.95);
+  musicI = damp(musicI, target, 0.8, dt);
+  m.intensity = musicI;
+  m.storm = clamp(session.storm * 0.85 + clamp((r.distance - LEVEL.stormRises) / (LEVEL.length - LEVEL.stormRises), 0, 1) * 0.4, 0, 1);
+  m.update();
 }
 
 // Terrain for the whole level is built while the player is on the menus (never mid-run).
@@ -835,7 +863,7 @@ window.__rr = {
   autoplay() { bot = new Bot(session, PERFECT); },
   advance(seconds: number, render = false) { const n = Math.round(seconds / STEP); for (let i = 0; i < n; i++) step(STEP); hud(); if (render) draw(); },
   draw() { draw(); },
-  state: () => ({ app, length: LEVEL.length, distance: session.distance, score: Math.round(session.score), amber: session.amber, eggs: session.eggs, sstate: session.state, pounceReady: session.pounceReady, pinned: session.pinned }),
+  state: () => ({ app, length: LEVEL.length, distance: session.distance, score: Math.round(session.score), amber: session.amber, eggs: session.eggs, sstate: session.state, pounceReady: session.pounceReady, pinned: session.pinned, music: audio.music ? { playing: audio.music.isPlaying, intensity: +audio.music.intensity.toFixed(2), ctx: audio.ctx?.state } : null }),
   input: (a: RunnerAction) => session.input(a),
   click: (id: string) => $(id).click(),
   stats: () => ({ ...streamer.stats(), calls: stage.renderer.info.render.calls, tris: stage.renderer.info.render.triangles }),

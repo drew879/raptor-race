@@ -6,11 +6,13 @@ export interface SaveData {
   eggs: Record<string, boolean[]>;
   amberBank: number;
   sound: boolean;
+  /** Music on/off (separate from sound effects). */
+  music: boolean;
   runs: number;
   seenInclusion?: boolean;
 }
 const KEY = 'raptor-race-save-v1';
-const fresh = (): SaveData => ({ v: 1, best: {}, stars: {}, eggs: {}, amberBank: 0, sound: true, runs: 0 });
+const fresh = (): SaveData => ({ v: 1, best: {}, stars: {}, eggs: {}, amberBank: 0, sound: true, music: true, runs: 0 });
 
 export function loadSave(): SaveData {
   try {
