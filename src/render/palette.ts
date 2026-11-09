@@ -42,6 +42,20 @@ export const RAPTOR_GOBI_STREAK = {
   skin: 0x8a6a55,
 } as const;
 
+/** Unlockable Velociraptor plumage, "Dusk": charcoal with rust bars and a rust flash (all 3 inclusions). */
+export const RAPTOR_DUSK = {
+  base: 0x3f3632,
+  dark: 0x221c1a,
+  light: 0xc8743c,
+  under: 0xcbb898,
+  accent: 0xe08a2e,
+  eyePatch: 0x2a2730,
+  eyeRim: 0xe2b44a,
+  eye: 0xf4d27a,
+  claw: 0x1c1816,
+  skin: 0x6e5545,
+} as const;
+
 export type RaptorPlumage = { [K in keyof typeof RAPTOR_GOBI_STREAK]: number };
 
 /** sRGB hex to linear working-space Color. */

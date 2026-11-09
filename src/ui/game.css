@@ -130,3 +130,35 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; backgrou
 .quarry .latin { font-size: 13px; line-height: 1.4; font-style: italic; }
 .skip { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 34px); text-align: center; pointer-events: none;
   font-weight: 900; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--paper); text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+
+/* Field Journal: a scrolling paper sheet with chapters, level cards, inclusion pages and plumages. */
+.journal { justify-content: flex-start; overflow-y: auto; -webkit-overflow-scrolling: touch; background: rgba(58, 42, 30, .25); }
+.journal-card { background: var(--paper); background-image: var(--grain); border: 2px solid var(--ink); border-radius: 10px; box-shadow: 4px 5px 0 var(--ink); padding: 14px 14px 18px; margin: 0 auto 24px; }
+.journal-head { display: flex; align-items: center; justify-content: space-between; }
+.btn-paper.small { padding: 6px 12px; font-size: 13px; min-height: 0; }
+.journal .ch-title { font-family: var(--display); font-weight: 900; font-size: 24px; margin: 14px 0 2px; border-bottom: 2px solid rgba(58,42,30,.25); padding-bottom: 4px; }
+.journal .ch-progress { font-weight: 800; font-size: 13px; color: var(--ink-soft); margin-bottom: 8px; }
+.journal .lock-note { font-size: 13px; font-weight: 700; color: var(--ink-soft); margin: 2px 0 0; }
+.journal .lvl { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1.5px solid rgba(58,42,30,.3); border-radius: 8px; margin: 6px 0; background: rgba(255,255,255,.35); }
+.journal .lvl.locked { opacity: .7; background: transparent; border-style: dashed; }
+.journal .lvl-n { font-family: var(--display); font-weight: 900; font-size: 22px; width: 26px; text-align: center; }
+.journal .lvl-main { display: flex; flex-direction: column; gap: 1px; font-size: 14px; }
+.journal .lvl-main b { font-family: var(--display); font-size: 17px; }
+.journal .lvl-stars { display: flex; align-items: center; gap: 2px; font-weight: 700; font-size: 13px; }
+.journal .lvl-stars svg.star { width: 17px; height: 17px; }
+.journal .pages { display: grid; gap: 10px; margin: 10px 0 6px; }
+.journal .page { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: 8px; border: 1.5px solid rgba(58,42,30,.3); background: #FBF4E4; }
+.journal .page.missing { background: transparent; }
+.journal .incl-art { width: 64px; height: 66px; flex: none; }
+.journal .page-text b { font-family: var(--display); font-size: 16px; }
+.journal .page-text p { margin: 3px 0 0; font-size: 13.5px; line-height: 1.45; }
+.journal .hint-tag { display: inline-block; font-weight: 900; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; background: var(--amber); border: 1.5px solid var(--ink); border-radius: 4px; padding: 0 5px; margin-right: 3px; }
+.journal .note { font-size: 12.5px; line-height: 1.45; font-style: italic; color: var(--ink-soft); margin: 4px 2px 8px; }
+.plumage-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.pl { display: flex; flex-direction: column; align-items: center; gap: 2px; font-weight: 800; font-size: 12.5px; text-align: center; background: transparent; border: 2px solid transparent; border-radius: 8px; padding: 4px 6px; color: var(--ink); font-family: inherit; }
+.pl small { font-weight: 700; font-size: 11px; color: var(--ink-soft); }
+.pl.locked { opacity: .75; }
+.pl.chosen { border-color: var(--ink); background: rgba(255, 178, 30, .25); }
+.swatch-art { width: 64px; height: 40px; }
+.plumage .pl-label { font-weight: 900; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 2px; }
+.plumage .pl-hint { font-size: 13px; font-weight: 700; color: var(--ink-soft); }

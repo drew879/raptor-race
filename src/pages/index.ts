@@ -11,7 +11,9 @@ import { Protoceratops } from '../render/prey/protoceratops';
 import { Herd } from '../render/prey/herd';
 import { Particles, SAND, SPARK } from '../render/fx';
 import { RaptorView } from '../render/raptor/view';
-import { GOBI, RAPTOR_GOBI_STREAK, col, mix } from '../render/palette';
+import { GOBI, RAPTOR_DUSK, RAPTOR_GOBI_STREAK, col, mix, type RaptorPlumage } from '../render/palette';
+import { BLUE_AMBER_NOTE, CHAPTERS, INCLUSION_PAGES, PLUMAGES, chapterFound, chapterUnlocked, levelUnlocked, lockReason, plumageUnlocked, recordMisses, showHint as hintShown } from '../game/journal';
+import { inclusionArt, plumageSwatch } from '../ui/journal-art';
 import { Session, type GameEvent } from '../game/session';
 import { CONFIG } from '../game/config';
 import { LEVEL1 } from '../game/level1';
@@ -28,7 +30,7 @@ import { amberIconSVG, inclusionIconSVG as eggIconSVG, logoSVG } from '../ui/log
 import type { RunnerAction } from '../game/runner';
 import type { HintKind } from '../game/level';
 
-type AppState = 'title' | 'prerun' | 'intro' | 'playing' | 'paused' | 'caught' | 'lost' | 'finishing' | 'results';
+type AppState = 'title' | 'journal' | 'prerun' | 'intro' | 'playing' | 'paused' | 'caught' | 'lost' | 'finishing' | 'results';
 const params = new URLSearchParams(location.search);
 const SHOT = params.has('shot');
 let DEBUG = params.has('debug');
@@ -89,7 +91,15 @@ root.innerHTML = `
     <div class="latin">Velociraptor mongoliensis · Gobi Desert · ~75 million years ago</div>
     <p class="fact">The first Velociraptor fossil was found here, at the Flaming Cliffs, in 1923. Quill knobs on its forearm bones show it carried wing feathers. Today it's hunting: a Protoceratops is somewhere ahead in the dunes.</p>
     <ul id="objectives"></ul>
+    <div class="plumage" id="plumagePick"></div>
     <div class="buttons"><button class="btn-amber" id="btnGo">Run</button><button class="btn-paper" id="btnBack">Back</button></div>
+  </div>
+</section>
+
+<section class="screen sheet journal" id="scrJournal" hidden>
+  <div class="card journal-card">
+    <div class="journal-head"><div class="eyebrow">Field Journal</div><button class="btn-paper small" id="btnJournalBack">Close</button></div>
+    <div id="journalBody"></div>
   </div>
 </section>
 
@@ -174,7 +184,21 @@ const items = new CollectibleField(400, FOG);
 const powerups = new PowerupView();
 const dust = new Particles(260, THREE.NormalBlending, FOG);
 const sparks = new Particles(200, THREE.AdditiveBlending, FOG);
-const raptor = new RaptorView(RAPTOR_GOBI_STREAK);
+const PLUMAGE_COLORS: Record<string, RaptorPlumage> = { 'gobi-streak': RAPTOR_GOBI_STREAK, dusk: RAPTOR_DUSK };
+const chosenPlumage = () => {
+  const id = save.plumage?.[LEVEL.id] ?? 'gobi-streak';
+  const idx = (PLUMAGES[LEVEL.id] ?? []).findIndex((p) => p.id === id);
+  return idx > 0 && plumageUnlocked(save, LEVEL.id, idx) ? id : 'gobi-streak';
+};
+let raptor = new RaptorView(PLUMAGE_COLORS[chosenPlumage()]);
+/** Rebuild the raptor in another plumage (menus only). */
+function applyPlumage(id: string) {
+  save.plumage = { ...(save.plumage ?? {}), [LEVEL.id]: id };
+  writeSave(save);
+  stage.world.remove(raptor.root);
+  raptor = new RaptorView(PLUMAGE_COLORS[id] ?? RAPTOR_GOBI_STREAK);
+  stage.world.add(raptor.root);
+}
 const prey = new Protoceratops();
 stage.world.add(items.group, powerups.group, dust.field.points, sparks.field.points, raptor.root, prey.root);
 // A distant herd walks the dunes through the level's 'herd' stretch.
@@ -218,7 +242,21 @@ function resetWorld() {
   streamer.prewarm(session.distance);
 }
 
+/** Inclusion distances, in the order the session numbers them. */
+const INCLUSION_D = LEVEL.pickups.filter((p) => p.kind === 'egg').map((p) => p.d);
+let furthestD = 0, missesRecorded = false;
+/** End of a run: count each inclusion passed without finding it, for the journal's hints. */
+function endRunForHints() {
+  if (missesRecorded || session.state === 'ready') return;
+  missesRecorded = true;
+  recordMisses(save, LEVEL.id, INCLUSION_D, furthestD, session.eggs);
+  writeSave(save);
+}
+
 function newSession() {
+  endRunForHints();
+  furthestD = 0;
+  missesRecorded = false;
   session = new Session(LEVEL);
   if (bot) bot = new Bot(session, PERFECT);
   resetWorld();
@@ -230,6 +268,7 @@ function setApp(s: AppState) {
   app = s;
   show('scrTitle', s === 'title');
   show('scrPrerun', s === 'prerun');
+  show('scrJournal', s === 'journal');
   show('scrPause', s === 'paused');
   show('scrCaught', s === 'caught');
   show('scrLost', s === 'lost');
@@ -260,12 +299,60 @@ function renderEggs() {
   $('eggs').innerHTML = session.eggs.map((e) => eggIconSVG(e)).join('');
 }
 
+// ---------------- Field Journal ----------------
+const stars3 = (st: boolean[]) => st.map((v) => star(v)).join('');
+function renderJournal() {
+  const parts: string[] = [];
+  CHAPTERS.forEach((ch, ci) => {
+    const open = chapterUnlocked(save, ci);
+    parts.push(`<h2 class="ch-title">${ch.title}</h2>`);
+    if (!open) { parts.push(`<p class="lock-note">🔒 ${lockReason(save, ci, 0)}</p>`); return; }
+    parts.push(`<div class="ch-progress">Amber inclusions: ${chapterFound(save, ch)} of ${ch.levels.length * 3}</div>`);
+    ch.levels.forEach((lv, li) => {
+      const unlocked = lv.available && levelUnlocked(save, ci, li);
+      const st = save.stars[lv.id] ?? [false, false, false];
+      parts.push(`<div class="lvl ${unlocked ? 'open' : 'locked'}"><div class="lvl-n">${li + 1}</div><div class="lvl-main"><b>${lv.name}</b><span>${lv.raptor}</span>${
+        unlocked ? `<span class="lvl-stars">${stars3(st)}${save.best[lv.id] ? ` · best ${save.best[lv.id].toLocaleString('en-US')}` : ''}</span>` : `<span class="lock-note">🔒 ${lv.available ? lockReason(save, ci, li) : levelUnlocked(save, ci, li) ? 'Coming soon' : lockReason(save, ci, li)}</span>`
+      }</div></div>`);
+      // The open level's spread: its inclusion pages and plumages.
+      const pages = INCLUSION_PAGES[lv.id];
+      if (!unlocked || !pages) return;
+      const found = save.eggs[lv.id] ?? [];
+      parts.push(`<div class="pages">${pages.map((pg, i) => `<div class="page ${found[i] ? 'found' : 'missing'}">${inclusionArt(pg.art, !!found[i])}<div class="page-text"><b>${found[i] ? pg.title : `Inclusion ${i + 1}: not found yet`}</b><p>${
+        found[i] ? pg.fact : hintShown(save, lv.id, i) ? `<span class="hint-tag">Hint</span> ${pg.hint}` : 'Find it in a run to fill this page. If you miss it twice, a hint appears here.'
+      }</p></div></div>`).join('')}</div>`);
+      parts.push(`<p class="note">${BLUE_AMBER_NOTE}</p>`);
+      const pls = PLUMAGES[lv.id] ?? [];
+      parts.push(`<div class="plumage-row">${pls.map((p, i) => {
+        const ok = plumageUnlocked(save, lv.id, i);
+        return `<div class="pl ${ok ? '' : 'locked'}">${plumageSwatch(PLUMAGE_COLORS[p.id], !ok)}<span>${p.name}${ok ? '' : '<br><small>Find all 3 inclusions</small>'}</span></div>`;
+      }).join('')}</div>`);
+    });
+  });
+  $('journalBody').innerHTML = parts.join('');
+}
+
+/** Plumage picker on the pre-run card (once there's more than one to choose). */
+function renderPlumagePick() {
+  const pls = PLUMAGES[LEVEL.id] ?? [];
+  const cur = chosenPlumage();
+  const el = $('plumagePick');
+  if (!pls.some((_, i) => i > 0 && plumageUnlocked(save, LEVEL.id, i))) {
+    el.innerHTML = `<div class="pl-hint">Find all 3 amber inclusions to unlock the ${pls[1]?.name ?? 'new'} plumage.</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="pl-label">Plumage</div><div class="plumage-row">${pls.map((p, i) => plumageUnlocked(save, LEVEL.id, i)
+    ? `<button class="pl ${p.id === cur ? 'chosen' : ''}" data-pl="${p.id}">${plumageSwatch(PLUMAGE_COLORS[p.id], false)}<span>${p.name}</span></button>` : '').join('')}</div>`;
+  el.querySelectorAll<HTMLButtonElement>('button[data-pl]').forEach((b) => b.addEventListener('click', () => { applyPlumage(b.dataset.pl!); renderPlumagePick(); }));
+}
+
 // ---------------- Input ----------------
 const input = new Input(root, (a: RunnerAction) => { if (app === 'playing') session.input(a); });
 input.enabled = false;
 
-$('btnRun').addEventListener('click', () => { renderObjectives(); setApp('prerun'); });
-$('btnJournal').addEventListener('click', () => { renderObjectives(); setApp('prerun'); });
+$('btnRun').addEventListener('click', () => { renderObjectives(); renderPlumagePick(); setApp('prerun'); });
+$('btnJournal').addEventListener('click', () => { renderJournal(); setApp('journal'); });
+$('btnJournalBack').addEventListener('click', () => setApp('title'));
 $('btnBack').addEventListener('click', () => setApp('title'));
 $('btnGo').addEventListener('click', startRun);
 $('btnSound').addEventListener('click', toggleSound);
@@ -389,8 +476,13 @@ function handle(e: GameEvent) {
       bump('amberTag');
       sparks.emit(e.x, e.y, -e.d, 7, { spread: 0.7, up: 0.9, back: -r.speed * 0.85, size: 0.13, grow: -0.6, life: 0.28, alpha: 0.85, color: SPARK, rand });
       break;
-    case 'egg':
-      if (!save.seenInclusion) { save.seenInclusion = true; writeSave(save); }
+    case 'egg': {
+      // Found inclusions are kept forever, saved the moment you pick one up (even if you crash right after).
+      save.seenInclusion = true;
+      const found = save.eggs[LEVEL.id] ?? session.eggs.map(() => false);
+      found[e.index] = true;
+      save.eggs[LEVEL.id] = found;
+      writeSave(save);
       audio.play('egg');
       audio.music?.duckFor(0.6);
       haptic(20);
@@ -398,6 +490,7 @@ function handle(e: GameEvent) {
       floatText('Amber inclusion found!', 'banner', 30);
       sparks.emit(e.x, e.y, -e.d, 22, { spread: 1, up: 1.2, back: -r.speed * 0.85, size: 0.16, grow: -0.5, life: 0.5, alpha: 0.9, color: SPARK, rand });
       break;
+    }
     case 'power':
       audio.play('powerup');
       floatText(e.kind === 'updraft' ? 'Updraft!' : 'Amber Sense', 'banner', 30);
@@ -485,6 +578,7 @@ function showResults() {
   const st = session.stars;
   const prevStars = save.stars[LEVEL.id] ?? [false, false, false];
   save.stars[LEVEL.id] = prevStars.map((v, i) => v || st[i]);
+  endRunForHints();
   const prevEggs = save.eggs[LEVEL.id] ?? [false, false, false];
   save.eggs[LEVEL.id] = prevEggs.map((v, i) => v || session.eggs[i]);
   const score = Math.round(session.score);
@@ -568,6 +662,7 @@ function syncWorld(dt: number) {
   pinW = damp(pinW, pinned, 14, dt);
   idleW = damp(idleW, idle, 12, dt); // a quick ease, so a crash stops the legs without a pose snap
   raptor.sync(r, dt, idleW, pinW);
+  furthestD = Math.max(furthestD, r.distance);
 
   // Prey: runs ahead in its lane, hops ledges; hidden on the menus.
   const pz = app === 'intro' ? introPreyD() : session.preyD;

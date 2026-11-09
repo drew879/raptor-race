@@ -10,6 +10,10 @@ export interface SaveData {
   music: boolean;
   runs: number;
   seenInclusion?: boolean;
+  /** Per level, how many runs passed each inclusion without finding it (hints show after two). */
+  misses?: Record<string, number[]>;
+  /** Per level, the chosen plumage id. */
+  plumage?: Record<string, string>;
 }
 const KEY = 'raptor-race-save-v1';
 const fresh = (): SaveData => ({ v: 1, best: {}, stars: {}, eggs: {}, amberBank: 0, sound: true, music: true, runs: 0 });

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { buildRaptor } from '../render/raptor/model';
 import { velociraptorBody } from '../render/raptor/assets';
 import { RaptorAnimator, defaultAnimInput } from '../render/raptor/anim';
-import { RAPTOR_GOBI_STREAK, GOBI } from '../render/palette';
+import { RAPTOR_DUSK, RAPTOR_GOBI_STREAK, GOBI } from '../render/palette';
 import { Protoceratops, type ProtoPose } from '../render/prey/protoceratops';
 import { CONFIG } from '../game/config';
 import { Herd } from '../render/prey/herd';
@@ -32,7 +32,7 @@ scene.add(ground);
 
 // ?subject=proto&pose=run|graze|alert|pinned shows the prey; ?subject=pin shows the finale pair.
 const subject = q.get('subject') ?? 'raptor';
-const { mesh, bones } = buildRaptor(RAPTOR_GOBI_STREAK, q.get('body') === 'blender' ? { body: velociraptorBody() } : {});
+const { mesh, bones } = buildRaptor(q.get('plumage') === 'dusk' ? RAPTOR_DUSK : RAPTOR_GOBI_STREAK, q.get('body') === 'blender' ? { body: velociraptorBody() } : {});
 if (subject !== 'proto') scene.add(mesh);
 if (subject === 'pin') mesh.position.set(0, CONFIG.hunt.pinHeight, CONFIG.hunt.pinOffset);
 if (subject === 'proto' || subject === 'pin') {
