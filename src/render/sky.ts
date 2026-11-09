@@ -133,7 +133,7 @@ export function createBackdrop() {
   }
   const mat = MATS.backdrop;
   mat.side = THREE.DoubleSide;
-  mat.depthWrite = false;
+  mat.depthWrite = true; // real depth, so post effects can tell distant buttes from sky
   const mesh = new THREE.Mesh(g.build(), mat);
   mesh.renderOrder = -5;
   mesh.frustumCulled = false;

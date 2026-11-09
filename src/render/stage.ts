@@ -14,6 +14,9 @@ export class Stage {
   readonly camera: THREE.PerspectiveCamera;
   readonly world = new THREE.Group();
   readonly sun: THREE.DirectionalLight;
+  readonly hemi: THREE.HemisphereLight;
+  /** Direction toward the sun; looks may change it (call syncSun after). */
+  readonly sunDir = SUN_DIR.clone();
   readonly sky: THREE.Mesh;
   readonly backdrop: THREE.Mesh;
   private camX = 0;
@@ -31,7 +34,8 @@ export class Stage {
     container.appendChild(this.renderer.domElement);
 
     this.scene.fog = new THREE.Fog(col(GOBI.horizon), FOG.near, FOG.far);
-    this.scene.add(new THREE.HemisphereLight(GOBI.hemiSky, GOBI.hemiGround, 2.6));
+    this.hemi = new THREE.HemisphereLight(GOBI.hemiSky, GOBI.hemiGround, 2.6);
+    this.scene.add(this.hemi);
     this.sun = new THREE.DirectionalLight(GOBI.keyLight, 2.9);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
@@ -73,9 +77,13 @@ export class Stage {
   follow(x: number, z: number) {
     const focus = new THREE.Vector3(x, 0, z - 8);
     this.sun.target.position.copy(focus);
-    this.sun.position.copy(focus).addScaledVector(SUN_DIR, 40);
+    this.sun.position.copy(focus).addScaledVector(this.sunDir, 40);
     this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);
     this.backdrop.position.set(this.camera.position.x, 0, this.camera.position.z);
+  }
+
+  syncSun() {
+    ((this.sky.material as THREE.ShaderMaterial).uniforms.sunDir.value as THREE.Vector3).copy(this.sunDir);
   }
 
   render() {
