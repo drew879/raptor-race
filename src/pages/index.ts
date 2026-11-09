@@ -10,6 +10,7 @@ import { Particles, SAND, SPARK } from '../render/fx';
 import { RaptorView } from '../render/raptor/view';
 import { GOBI, RAPTOR_GOBI_STREAK, col, mix } from '../render/palette';
 import { Session, type GameEvent } from '../game/session';
+import { CONFIG } from '../game/config';
 import { LEVEL1 } from '../game/level1';
 import { Input } from '../core/input';
 import { AudioEngine } from '../audio/sfx';
@@ -36,7 +37,9 @@ root.id = 'game';
 root.innerHTML = `
 <div id="stage"></div>
 <div class="vignette"></div>
+<div class="speed" id="speed"></div>
 <div class="storm" id="storm"><div class="streaks"></div></div>
+<div class="flash" id="flash"></div>
 <div class="hud" id="hud" hidden>
   <div class="hud-row">
     <div class="tag score"><div><small>Score</small><span id="score">0</span></div></div>
@@ -115,6 +118,7 @@ root.innerHTML = `
     <div class="big-score" id="rScore">0</div>
     <div class="stats"><div class="tag" style="font-size:18px">${amberIconSVG.replace('class="rr-amber-icon"', 'class="rr-amber-icon" style="width:15px;height:20px"')} <span id="rAmber">0</span></div><div class="eggrow" id="rEggs"></div><span class="newbest" id="rBest" hidden>New best</span></div>
     <ul id="rStars"></ul>
+    <div class="perf" id="rPerf"></div>
     <div class="buttons"><button class="btn-amber" id="btnAgain">Run again</button><button class="btn-paper" id="btnTitle">Title</button></div>
   </div>
 </section>
@@ -242,6 +246,8 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && app
 
 function startRun() {
   if (session.state !== 'ready') newSession();
+  while (!pregenerate(1000)) { /* finish any terrain not built yet */ }
+  hitches.length = 0;
   session.start();
   save.runs++;
   writeSave(save);
@@ -260,7 +266,7 @@ const HINTS: Record<HintKind, [string, string, string, string]> = {
   jump: ['↑', 'Swipe up to jump the ledges', '0', '-6px'],
   slide: ['↓', 'Swipe down to slide under arches and bones', '0', '6px'],
   magnet: ['◈', 'Amber Sense pulls nearby amber to you', '0', '0'],
-  updraft: ['≋', 'Grab the updraft to glide over the boulders', '0', '-6px'],
+  updraft: ['≋', 'Grab the updraft to glide over the boulders. Steer left and right while you fly', '0', '-6px'],
 };
 function showHint(h: HintKind) {
   const [g, t, nx, ny] = HINTS[h];
@@ -329,13 +335,19 @@ function handle(e: GameEvent) {
     case 'stumble':
       audio.play('stumble');
       haptic(30);
-      shake = Math.max(shake, 0.25);
-      floatText('The storm is closing in', 'banner', 30);
+      shake = Math.max(shake, 0.45);
+      flash();
+      floatText('Stumbled! The storm is closing in', 'banner', 30);
       break;
-    case 'crash':
+    case 'crash': {
       audio.play('stumble');
       haptic(60);
-      shake = Math.max(shake, 0.5);
+      shake = Math.max(shake, 0.6);
+      flash();
+      const copy = CRASH_COPY[e.cause];
+      $('caughtEyebrow').textContent = copy[0];
+      $('caughtTitle').textContent = copy[1];
+      $('caughtFact').textContent = copy[2];
       setTimeout(() => {
         if (session.state !== 'caught') return;
         $('btnRevive').hidden = session.reviveUsed;
@@ -343,6 +355,7 @@ function handle(e: GameEvent) {
         setApp('caught');
       }, 650);
       break;
+    }
     case 'checkpoint':
       audio.play('checkpoint');
       floatText('Checkpoint', 'banner', 30);
@@ -357,6 +370,21 @@ function handle(e: GameEvent) {
       break;
   }
 }
+
+function flash() {
+  const el = $('flash');
+  el.classList.remove('on');
+  void el.offsetWidth;
+  el.classList.add('on');
+}
+const CRASH_COPY: Record<string, [string, string, string]> = {
+  boulder: ['Ouch', 'Ran into a boulder', 'Boulders can\'t be jumped. Swipe left or right to go around them.'],
+  ledge: ['Ouch', 'Tripped on a ledge', 'Swipe up to jump low rock ledges.'],
+  ledgeWide: ['Ouch', 'Tripped on a ledge', 'Swipe up to jump low rock ledges.'],
+  arch: ['Ouch', 'Hit the arch', 'Swipe down to slide under arches.'],
+  ribArch: ['Ouch', 'Hit the fallen bone', 'Swipe down to slide under giant bones.'],
+  storm: ['Two stumbles in a row', 'The sandstorm caught you', 'After a stumble, run clean for a few seconds and the storm falls back.'],
+};
 
 function showResults() {
   const st = session.stars;
@@ -374,6 +402,7 @@ function showResults() {
   $('rBest').hidden = !isBest;
   const labels = ['Reached the nest', `Eggs found: ${session.eggs.filter(Boolean).length} of 3`, `Score ${LEVEL.parScore.toLocaleString('en-US')}`];
   $('rStars').innerHTML = labels.map((l, i) => `<li>${star(st[i], st[i], 300 + i * 220)} ${l}</li>`).join('');
+  $('rPerf').textContent = hitches.length ? `Smoothness: ${hitches.length} hitch${hitches.length > 1 ? 'es' : ''}, worst ${Math.max(...hitches)} ms` : 'Smoothness: no hitches';
   setApp('results');
   const t0 = performance.now();
   const tick = (now: number) => {
@@ -392,7 +421,8 @@ function syncWorld(dt: number) {
   const r = session.runner;
   const z = -r.distance;
   // Hazards.
-  const live = new Set<number>();
+  const live = liveSet;
+  live.clear();
   for (const h of session.hazards) {
     live.add(h.id);
     if (!hazardMeshes.has(h.id)) {
@@ -404,7 +434,8 @@ function syncWorld(dt: number) {
   }
   for (const [id, m] of hazardMeshes) if (!live.has(id)) { stage.world.remove(m); hazardMeshes.delete(id); }
   // Amber and eggs.
-  const seen = new Set<number>();
+  const seen = seenSet;
+  seen.clear();
   for (const p of session.pickups) {
     if (p.taken || (p.kind !== 'amber' && p.kind !== 'egg')) continue;
     seen.add(p.id);
@@ -413,7 +444,9 @@ function syncWorld(dt: number) {
     v.x = p.x; v.y = p.y;
   }
   for (const id of pickupViews.keys()) if (!seen.has(id)) pickupViews.delete(id);
-  items.items = [...pickupViews.values()];
+  itemsArr.length = 0;
+  for (const v of pickupViews.values()) itemsArr.push(v);
+  items.items = itemsArr;
   items.hideNear = camBlend < 0.9 ? stage.camera.position : null;
   items.update(clock);
   powerups.sync(session.pickups, clock);
@@ -446,6 +479,9 @@ function syncWorld(dt: number) {
 }
 let footAcc = 0;
 let clock = 0;
+const liveSet = new Set<number>();
+const seenSet = new Set<number>();
+const itemsArr: Collectible[] = [];
 
 function updateCamera(dt: number) {
   const r = session.runner;
@@ -473,7 +509,8 @@ function updateCamera(dt: number) {
     stage.camera.position.y += (fxRng.next() - 0.5) * shake * 0.2;
     shake = damp(shake, 0, 9, dt);
   }
-  const fov = stage.baseFov + r.glideWeight * 6;
+  const fov = stage.baseFov + Math.max(0, r.speed - LEVEL.speed.start) * CONFIG.camera.speedFovKick * camBlend + r.glideWeight * 6;
+  $('speed').style.opacity = (camBlend * clamp((r.speed - 13) / 8, 0, 1) * (app === 'playing' ? 0.55 : 0)).toFixed(3);
   if (Math.abs(stage.camera.fov - fov) > 0.01) { stage.camera.fov = fov; stage.camera.updateProjectionMatrix(); }
   stage.follow(r.x, z);
 }
@@ -520,6 +557,8 @@ function frame(now: number) {
   let n = 0;
   while (acc >= STEP && n < 6) { step(STEP); acc -= STEP; n++; }
   if (n === 6) acc = 0;
+  if (app === 'title' || app === 'prerun' || app === 'results') pregenerate(6);
+  if (app === 'playing' && dt > 0.05) hitches.push(Math.round(dt * 1000));
   hud();
   stage.render();
   if (DEBUG) {
@@ -531,12 +570,34 @@ function frame(now: number) {
   }
 }
 
+// Terrain for the whole level is built while the player is on the menus (never mid-run).
+const LAST_CHUNK = Math.ceil((LEVEL.length + 40) / CONFIG.world.chunkLength) + CONFIG.world.chunksAhead;
+function pregenerate(budgetMs: number) {
+  const t0 = performance.now();
+  while (performance.now() - t0 < budgetMs) if (streamer.pregenerateStep(LAST_CHUNK)) return true;
+  return false;
+}
+// Compile every material once up front so the first boulder, arch, egg or power-up doesn't hitch.
+function warmShaders() {
+  const g = new THREE.Group();
+  for (const t of ['boulder', 'ledge', 'ledgeWide', 'arch', 'ribArch'] as const) g.add(createHazard(t));
+  g.position.set(0, -50, 0);
+  stage.world.add(g);
+  stage.renderer.compile(stage.scene, stage.camera);
+  stage.render();
+  stage.world.remove(g);
+}
+
+// Hitch log: frames over 50 ms during a run, summarized on the results screen.
+const hitches: number[] = [];
+
 // Boot.
 renderEggs();
 renderObjectives();
 setApp('title');
 streamer.prewarm(0);
 stage.chase(0, 0, 0, 1 / 60, true);
+warmShaders();
 
 declare global { interface Window { __rr?: unknown } }
 window.__rr = {
@@ -544,7 +605,7 @@ window.__rr = {
   start() { renderObjectives(); startRun(); },
   autoplay() { bot = new Bot(session, PERFECT); },
   advance(seconds: number) { const n = Math.round(seconds / STEP); for (let i = 0; i < n; i++) step(STEP); hud(); stage.render(); },
-  state: () => ({ app, distance: session.distance, score: Math.round(session.score), amber: session.amber, eggs: session.eggs, sstate: session.state }),
+  state: () => ({ app, length: LEVEL.length, distance: session.distance, score: Math.round(session.score), amber: session.amber, eggs: session.eggs, sstate: session.state }),
   input: (a: RunnerAction) => session.input(a),
   click: (id: string) => $(id).click(),
   stats: () => ({ ...streamer.stats(), calls: stage.renderer.info.render.calls, tris: stage.renderer.info.render.triangles }),

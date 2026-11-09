@@ -2,7 +2,16 @@
 
 Newest first. Every session updates this before pushing.
 
-## Current milestone: M0 + M1 gate (awaiting owner review; see docs/GATE-M0-M1.md)
+## Current milestone: rework after owner playtest (fun 1-2/5, graphics 1-2/5)
+- [x] Speed: Level 1 runs 15-21 m/s (was 10-14), course scaled 1.5x so every reaction window keeps its duration; snappier lane change (0.14 s); lower, closer camera with speed FOV kick; edge streaks; near-track scenery
+- [x] Fixes: swipe down no longer cancels the updraft; crash screen names the real cause; stumbles flash, shake and thicken the storm; hitches logged on the results screen
+- [x] Stutters: terrain for the whole level is pregenerated on the menus (chunks cost 10-27 ms each on desktop), shaders precompiled, per-frame allocations removed
+- [x] Bot look-ahead is time-based; perfect run 16,300 with 3 eggs; human-like 96% within one revive; par raised to 14,000
+- [ ] Free asset research (subagent) -> docs/research/free-assets.md
+- [ ] Art direction references + in-engine examples for 4 directions (owner wants to see them)
+- [ ] Hunt and pounce redesign (prey ahead, pounce finale, amber inclusions replace eggs)
+
+## Previous milestone: M0 + M1 gate (see docs/GATE-M0-M1.md)
 
 ### Blender raptor (owner decision)
 - [x] Headless Blender 5.2.3 verified (on-demand install: scripts/setup-blender.sh)

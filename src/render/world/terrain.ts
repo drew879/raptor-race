@@ -102,6 +102,14 @@ export function buildChunk(index: number, opts: { mesas?: boolean } = {}): Chunk
   }
 
   // ---------- Scenery ----------
+  // Near-field detail right at the track edge: whips past the camera and sells speed.
+  for (const sgn of [-1, 1]) {
+    for (let d = rng.range(0, 3); d < L; d += rng.range(2.2, 4.5)) {
+      const x = sgn * rng.range(2.85, 4.6), z = z0 - d;
+      if (rng.chance(0.55)) addRock(g, new THREE.Vector3(x, groundHeight(x, z) - 0.05, z), rng.range(0.12, 0.32), rng);
+      else addBush(g, new THREE.Vector3(x, groundHeight(x, z) - 0.04, z), rng.range(0.28, 0.5), rng);
+    }
+  }
   for (const sgn of [-1, 1]) {
     const nb = rng.int(5, 9);
     for (let i = 0; i < nb; i++) {
@@ -140,28 +148,51 @@ export function buildChunk(index: number, opts: { mesas?: boolean } = {}): Chunk
   return { index, mesh };
 }
 
-/** Keeps chunks streamed around the player's distance. */
+/**
+ * Keeps chunks visible around the player's distance. Building a chunk costs ~10-30 ms (more on phones),
+ * so levels pregenerate every chunk up front (`pregenerateStep` during menus) and keep them cached;
+ * the run itself then never builds terrain. Endless contexts can disable `retain` to evict.
+ */
 export class ChunkStreamer {
-  private chunks = new Map<number, Chunk>();
-  constructor(private parent: THREE.Object3D) {}
+  private cache = new Map<number, Chunk>();
+  private attached = new Set<number>();
+  private nextToBuild = 0;
+  constructor(private parent: THREE.Object3D, private retain = true) {}
+
+  /** Build at most one missing chunk up to `maxIndex`. Returns true when all are built. */
+  pregenerateStep(maxIndex: number) {
+    while (this.nextToBuild <= maxIndex && this.cache.has(this.nextToBuild)) this.nextToBuild++;
+    if (this.nextToBuild > maxIndex) return true;
+    this.cache.set(this.nextToBuild, buildChunk(this.nextToBuild));
+    this.nextToBuild++;
+    return this.nextToBuild > maxIndex;
+  }
+  get built() { return this.cache.size; }
+
   update(distance: number) {
     const L = CONFIG.world.chunkLength;
     const cur = Math.floor(distance / L);
     const lo = cur - CONFIG.world.chunksBehind, hi = cur + CONFIG.world.chunksAhead;
-    for (const [i, ch] of this.chunks) {
+    for (const i of [...this.attached]) {
       if (i < lo || i > hi) {
+        const ch = this.cache.get(i)!;
         this.parent.remove(ch.mesh);
-        ch.mesh.geometry.dispose();
-        this.chunks.delete(i);
+        this.attached.delete(i);
+        if (!this.retain) { ch.mesh.geometry.dispose(); this.cache.delete(i); }
       }
     }
+    let builtThisFrame = false;
     for (let i = Math.max(0, lo); i <= hi; i++) {
-      if (!this.chunks.has(i)) {
-        const ch = buildChunk(i);
-        this.chunks.set(i, ch);
-        this.parent.add(ch.mesh);
-        return; // build at most one chunk per frame to avoid hitches
+      if (this.attached.has(i)) continue;
+      let ch = this.cache.get(i);
+      if (!ch) {
+        if (builtThisFrame) continue; // fallback path: at most one build per frame
+        ch = buildChunk(i);
+        this.cache.set(i, ch);
+        builtThisFrame = true;
       }
+      this.parent.add(ch.mesh);
+      this.attached.add(i);
     }
   }
   prewarm(distance: number) {
@@ -169,7 +200,7 @@ export class ChunkStreamer {
   }
   stats() {
     let tris = 0;
-    for (const ch of this.chunks.values()) tris += ch.mesh.geometry.getAttribute('position').count / 3;
-    return { chunks: this.chunks.size, tris };
+    for (const i of this.attached) tris += this.cache.get(i)!.mesh.geometry.getAttribute('position').count / 3;
+    return { chunks: this.attached.size, cached: this.cache.size, tris };
   }
 }

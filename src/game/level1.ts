@@ -4,7 +4,10 @@ import { LevelBuilder, type LevelDef } from './level';
  * Level 1: Flaming Cliffs (Velociraptor, Gobi, ~75 mya). Fairly easy, never trivial.
  * Beats follow docs/GDD.md section 8. Decisions are spaced at least ~1 s apart at running speed.
  */
-const B = new LevelBuilder({ start: 10, end: 14 }, 1100);
+// Authored in design meters at the original 10-14 m/s; K scales to world meters for 15-21 m/s so every
+// reaction window keeps the same duration (owner playtest: "too slow", deaths "felt fair").
+const K = 1.5;
+const B = new LevelBuilder({ start: 15, end: 21 }, 1100 * K, K);
 
 // Beat 1: dawn dunes, teaches lane changes (0-150).
 B.hint(10, 'lanes');
@@ -94,7 +97,7 @@ B.line(1074, 1094, 0);
 export const LEVEL1: LevelDef = B.build({
   id: 'flaming-cliffs',
   name: 'Flaming Cliffs',
-  checkpoints: [425, 772],
-  stormRises: 772,
-  parScore: 12000,
+  checkpoints: [425 * K, 772 * K],
+  stormRises: 772 * K,
+  parScore: 14000,
 });

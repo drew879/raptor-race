@@ -82,7 +82,9 @@ export class Bot {
     const pending = this.queue.filter((q) => q.a === 'left' || q.a === 'right').reduce((acc, q) => acc + (q.a === 'left' ? -1 : 1), 0);
     const planned = Math.max(-1, Math.min(1, cur + pending)) as Lane;
     let target: Lane = planned;
-    if (!gliding && rows.length) {
+    // Only commit to dodging rows within ~1.1 s; until then, follow pickups like a player would.
+    const urgent = rows.filter(([d]) => d - s.distance < v * 1.1 + lead);
+    if (!gliding && urgent.length) {
       const [, r0] = rows[0];
       const r1 = rows[1]?.[1];
       let best = -1e9;
@@ -90,18 +92,21 @@ export class Bot {
         if (r0[l] === 'block') continue;
         let sc = -Math.abs(l - planned) * 3;
         if (r1 && r1[l] === 'block') sc -= 2;
-        sc += this.laneScore(l, s.distance, rows[0][0] + 10);
+        sc += this.laneScore(l, s.distance, rows[0][0] + v * 0.8);
         if (sc > best) { best = sc; target = l; }
       }
-    } else if (!rows.length || gliding) {
+    } else {
       let best = -1e9;
       for (const l of [-1, 0, 1] as Lane[]) {
-        const sc = this.laneScore(l, s.distance, s.distance + 16) * 2 - Math.abs(l - planned) * 1.5 + (gliding ? 0 : 0);
+        const sc = this.laneScore(l, s.distance, s.distance + v * 1.3) * 2 - Math.abs(l - planned) * 1.5;
         if (sc > best) { best = sc; target = l; }
       }
       if (gliding) {
         // Collect sky amber and the high egg while gliding.
-        for (const p of s.pickups) if (!p.taken && p.y > 2 && p.d > s.distance && p.d < s.distance + 14) { target = p.lane; break; }
+        // Prefer the high egg, then sky amber, within ~1.2 s.
+        const sky = s.pickups.filter((p) => !p.taken && p.y > 2 && p.d > s.distance && p.d < s.distance + v * 1.2);
+        const pick = sky.find((p) => p.kind === 'egg') ?? sky[0];
+        if (pick) target = pick.lane;
       }
     }
     if (target !== planned && this.laneCooldown <= 0) {

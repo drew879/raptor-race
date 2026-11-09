@@ -23,7 +23,9 @@ await shot('01-prerun');
 await page.evaluate(() => { window.__rr.autoplay(); window.__rr.start(); window.__rr.advance(1.2); });
 await shot('02-run-hint-lanes');
 // Capture at chosen distances along the course.
-const marks = [[150, '03-jump-hint'], [300, '04-slide'], [372, '05-egg-arch'], [450, '06-magnet'], [622, '07-updraft-glide'], [660, '08-glide-egg'], [800, '09-storm-combo'], [960, '10-storm-late'], [1090, '11-final-dash']];
+// Marks as fractions of the course (authored in design meters for an 1100 m course).
+const len = (await page.evaluate(() => window.__rr.state())).length;
+const marks = [[150, '03-jump-hint'], [300, '04-slide'], [372, '05-egg-arch'], [450, '06-magnet'], [622, '07-updraft-glide'], [660, '08-glide-egg'], [800, '09-storm-combo'], [960, '10-storm-late'], [1090, '11-final-dash']].map(([d, n]) => [(d / 1100) * len, n]);
 for (const [d, name] of marks) {
   for (let i = 0; i < 400; i++) {
     const s = await page.evaluate(() => { window.__rr.advance(0.25); return window.__rr.state(); });
@@ -31,7 +33,7 @@ for (const [d, name] of marks) {
   }
   await shot(name);
 }
-for (let i = 0; i < 60; i++) { const s = await page.evaluate(() => { window.__rr.advance(0.25); return window.__rr.state(); }); if (s.app === 'results') break; }
+for (let i = 0; i < 160; i++) { const s = await page.evaluate(() => { window.__rr.advance(0.25); return window.__rr.state(); }); if (s.app === 'results') break; }
 await page.waitForTimeout(1600);
 await page.evaluate(() => window.__rr.advance(0.5));
 await shot('12-results');

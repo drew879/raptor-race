@@ -70,7 +70,7 @@ export class Runner {
         return true;
       }
       case 'slide': {
-        if (this.glideLeft > 0) this.glideLeft = 0; // dive out of a glide
+        if (this.glideLeft > 0) return true; // the updraft holds you up; swiping down does nothing
         if (!this.grounded) {
           this.vy = Math.min(this.vy, -CONFIG.fastFallSpeed);
           this.slideOnLand = true;

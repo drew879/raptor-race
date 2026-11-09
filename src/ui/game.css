@@ -6,7 +6,7 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; backgrou
 
 /* Sandstorm chaser: creeps in from the edges */
 .storm { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s linear;
-  background: radial-gradient(85% 70% at 50% 52%, transparent 38%, rgba(214, 150, 84, .55) 70%, rgba(176, 108, 52, .92) 100%); }
+  background: radial-gradient(80% 62% at 50% 52%, transparent 28%, rgba(214, 150, 84, .7) 62%, rgba(150, 90, 40, .96) 100%); }
 .storm .streaks { position: absolute; inset: -20%; opacity: .55;
   background: repeating-linear-gradient(100deg, transparent 0 22px, rgba(255, 226, 170, .28) 22px 25px, transparent 25px 61px);
   animation: streak 0.9s linear infinite; mask-image: radial-gradient(80% 65% at 50% 50%, transparent 45%, #000 85%); -webkit-mask-image: radial-gradient(80% 65% at 50% 50%, transparent 45%, #000 85%); }
@@ -83,3 +83,15 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; backgrou
 .root-padded .hint { top: 108px; }
 .root-padded .screen { padding-top: 16px; padding-bottom: 16px; }
 @media (prefers-reduced-motion: reduce) { .storm .streaks, .hint .glyph { animation: none; } }
+
+/* Stumble flash and speed streaks */
+.flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(90% 70% at 50% 50%, rgba(255, 220, 160, .0) 30%, rgba(214, 120, 50, .55) 100%); }
+.flash.on { animation: flashOn .5s ease-out; }
+@keyframes flashOn { 0% { opacity: 1; } 100% { opacity: 0; } }
+.speed { position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: repeating-conic-gradient(from 0deg at 50% 38%, rgba(255, 246, 225, .0) 0deg 5deg, rgba(255, 246, 225, .55) 5deg 5.6deg, rgba(255, 246, 225, .0) 5.6deg 11deg);
+  mask-image: radial-gradient(75% 65% at 50% 40%, transparent 55%, #000 95%); -webkit-mask-image: radial-gradient(75% 65% at 50% 40%, transparent 55%, #000 95%);
+  animation: speedSpin 0.35s steps(3) infinite; }
+@keyframes speedSpin { 0% { transform: rotate(0deg) scale(1.15); } 100% { transform: rotate(4deg) scale(1.15); } }
+.results .perf { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+@media (prefers-reduced-motion: reduce) { .speed { display: none; } }

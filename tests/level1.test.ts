@@ -27,7 +27,8 @@ describe('level 1 data', () => {
     const rows = new Map<number, Set<number>>();
     for (const h of LEVEL1.hazards) if (h.type === 'boulder') rows.set(h.d, (rows.get(h.d) ?? new Set()).add(h.lane));
     const walls = [...rows.entries()].filter(([, s]) => s.size === 3).map(([d]) => d);
-    expect(walls.every((d) => d > 620 && d < 700)).toBe(true);
+    const k = LEVEL1.length / 1100;
+    expect(walls.every((d) => d > 620 * k && d < 700 * k)).toBe(true);
   });
 });
 

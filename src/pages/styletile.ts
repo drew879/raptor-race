@@ -124,7 +124,7 @@ swatches(document.getElementById('sw-raptor')!, [
 // ---------------- Scene ----------------
 const container = document.getElementById('stage')!;
 const stage = new Stage(container, { preserveDrawingBuffer: SHOT });
-const streamer = new ChunkStreamer(stage.world);
+const streamer = new ChunkStreamer(stage.world, false);
 const items = new CollectibleField(400, FOG);
 stage.world.add(items.group);
 const dust = new Particles(260, THREE.NormalBlending, FOG);

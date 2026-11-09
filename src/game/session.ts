@@ -12,7 +12,7 @@ export type GameEvent =
   | { t: 'egg'; x: number; y: number; d: number; index: number }
   | { t: 'power'; kind: 'magnet' | 'updraft'; x: number; y: number; d: number }
   | { t: 'stumble' }
-  | { t: 'crash' }
+  | { t: 'crash'; cause: HazardType | 'storm' }
   | { t: 'clear'; bonus: number }
   | { t: 'combo'; combo: number }
   | { t: 'checkpoint'; index: number }
@@ -98,7 +98,7 @@ export class Session {
     this.combo = 1;
     this.chain = 0;
     if (this.storm > 0) {
-      this.crash();
+      this.crash('storm');
       return;
     }
     this.storm = 1;
@@ -106,10 +106,10 @@ export class Session {
     this.events.push({ t: 'stumble' });
   }
 
-  private crash() {
+  private crash(cause: HazardType | 'storm') {
     this.state = 'caught';
     this.runner.stumble = 1;
-    this.events.push({ t: 'crash' });
+    this.events.push({ t: 'crash', cause });
   }
 
   step(dt: number) {
@@ -117,7 +117,7 @@ export class Session {
     if (this.state !== 'running') {
       if (this.state === 'finished') {
         // Coast into the nest.
-        this.runner.speed = Math.max(0, this.runner.speed - 10 * dt);
+        this.runner.speed = Math.max(0, this.runner.speed - 22 * dt); // stop within ~10 m
         this.runner.update(dt);
       }
       return;
@@ -151,7 +151,7 @@ export class Session {
       const hit = testHit({ x: r.x, prevX, y: r.y, sliding: r.sliding, airborne: !r.grounded }, dz, h.x, HAZARD_BOXES[h.type]);
       if (hit === 'none') continue;
       h.hit = true;
-      if (hit === 'front') { this.crash(); return; }
+      if (hit === 'front') { this.crash(h.type); return; }
       if (hit === 'side') r.bounce();
       this.stumble();
       if (this.state !== 'running') return;
