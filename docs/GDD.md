@@ -84,5 +84,5 @@ Splash, title (raptor idling, amber logo), level map (Level 1 open, 4 locked sil
 | M3 Release candidate | Perf on device, packaging | Ship decision |
 
 ## 12. Open questions
-- Owner's laptop OS (decides where the iOS build happens at M3).
-- Dedicated cloud environment for this repo (setup script that preinstalls Blender) pending owner approval.
+- **[Decided by owner]** Owner has a MacBook Pro: the iOS build (Capacitor + Xcode) happens there at M3.
+- **[Approved by owner]** Dedicated cloud environment for this repo with a setup script that preinstalls npm deps and headless Blender.
