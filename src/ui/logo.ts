@@ -50,11 +50,20 @@ export const amberIconSVG = `
   <path d="M36 32 L20 50 L20 34 Z" fill="#E0800F"/>
 </svg>`;
 
+export const raptorHeadSVG = `
+<svg viewBox="0 0 40 24" aria-hidden="true"><path d="M2 14 C 8 6, 18 4, 26 6 L 38 9 L 37 12 L 26 13 C 20 15, 14 19, 6 20 Z" fill="#5C4C42" stroke="#3A2A1E" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="24" cy="8.6" r="1.8" fill="#F2B33D" stroke="#3A2A1E" stroke-width="1"/><path d="M19 7 L23 6 L22 10 Z" fill="#3F7FBF"/></svg>`;
+
+export const protoSVG = `
+<svg viewBox="0 0 44 28" aria-hidden="true"><path d="M4 18 C 6 10, 16 8, 24 10 L 28 4 C 33 2, 37 5, 37 9 L 42 13 L 39 17 L 33 17 C 30 21, 24 23, 16 23 C 10 23, 6 22, 4 18 Z" fill="#CBA579" stroke="#3A2A1E" stroke-width="2" stroke-linejoin="round"/>
+<path d="M28 4 C 31 9, 31 12, 28 16" fill="none" stroke="#6E3F2A" stroke-width="2"/><circle cx="34" cy="10" r="1.4" fill="#3A2A1E"/>
+<path d="M8 22 L8 27 M14 23 L14 27 M20 23 L20 27 M26 22 L26 27" stroke="#3A2A1E" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+
 /** HUD/results icon for the rare collectible: amber with a trapped insect (empty slot when not found). */
 export const inclusionIconSVG = (filled: boolean) => `
 <svg class="rr-egg-icon" viewBox="0 0 32 40" aria-hidden="true">
-  <path d="M16 2 L27 14 L29 26 L16 38 L3 26 L5 14 Z" fill="${filled ? '#E0800F' : '#EAD9B8'}" stroke="#3A2A1E" stroke-width="3" stroke-linejoin="round" ${filled ? '' : 'stroke-opacity="0.5"'}/>
-  ${filled ? '<path d="M16 2 L27 14 L16 17 Z" fill="#FFE08A"/><path d="M16 2 L5 14 L16 17 Z" fill="#FFF3C4" opacity=".8"/><ellipse cx="16" cy="24" rx="2.2" ry="4" fill="#3A2A1E"/><path d="M14 22 L9 19 M18 22 L23 19 M14 26 L9 29 M18 26 L23 29" stroke="#3A2A1E" stroke-width="1.6" stroke-linecap="round"/>' : ''}
+  <path d="M16 2 L27 14 L29 26 L16 38 L3 26 L5 14 Z" fill="${filled ? '#2FA3C7' : '#EAD9B8'}" stroke="#3A2A1E" stroke-width="3" stroke-linejoin="round" ${filled ? '' : 'stroke-opacity="0.5"'}/>
+  ${filled ? '<path d="M16 2 L27 14 L16 17 Z" fill="#BFF4FF"/><path d="M16 2 L5 14 L16 17 Z" fill="#E6FBFF" opacity=".85"/><ellipse cx="16" cy="24" rx="2.2" ry="4" fill="#3A2A1E"/><path d="M14 22 L9 19 M18 22 L23 19 M14 26 L9 29 M18 26 L23 29" stroke="#3A2A1E" stroke-width="1.6" stroke-linecap="round"/>' : ''}
 </svg>`;
 
 export const eggIconSVG = (filled: boolean) => `

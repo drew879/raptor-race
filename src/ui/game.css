@@ -111,3 +111,26 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; backgrou
 .plate-card p { margin: 0; font-size: 14px; line-height: 1.5; }
 #stage.freeze canvas { filter: sepia(.35) contrast(1.05) saturate(.9); transition: filter .4s; }
 @keyframes plateIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Hunt meter: raptor on the left, the prey further right the bigger the gap. */
+.hunt { position: relative; flex: 1; max-width: 170px; height: 40px; margin-top: 2px; }
+.hunt-track { position: absolute; left: 22px; right: 10px; top: 13px; border-top: 2.5px dashed rgba(58, 42, 30, .55); }
+.hunt-me { position: absolute; left: 0; top: 2px; width: 30px; }
+.hunt-them { position: absolute; top: 0; width: 32px; transition: left .25s linear; }
+.hunt svg { width: 100%; height: auto; display: block; filter: drop-shadow(0 1px 0 rgba(243,230,204,.9)); }
+.hunt-label { position: absolute; left: 0; right: 0; top: 26px; text-align: center; font-weight: 900; font-size: 11px; letter-spacing: .04em; color: var(--ink);
+  text-shadow: 0 1px 0 rgba(243,230,204,.9); }
+.hunt.close .hunt-label { color: var(--amber-deep); }
+.hunt.far .hunt-label { color: #a63d2a; }
+.hunt.far .hunt-them { animation: nudge2 .5s ease-in-out infinite alternate; }
+@keyframes nudge2 { from { transform: translateX(0); } to { transform: translateX(3px); } }
+
+/* First-encounter callout for amber inclusions */
+.spot { position: absolute; width: 74px; height: 74px; margin: -37px 0 0 -37px; border-radius: 50%; border: 3px solid #7fe3ff;
+  box-shadow: 0 0 0 4px rgba(58,42,30,.55), 0 0 24px rgba(127,227,255,.9); pointer-events: none; animation: spotPulse .8s ease-in-out infinite alternate; }
+@keyframes spotPulse { from { transform: scale(.9); } to { transform: scale(1.12); } }
+.callout { position: absolute; left: 0; right: 0; margin: 0 auto; width: min(calc(100% - 32px), 330px); bottom: calc(env(safe-area-inset-bottom, 0px) + 120px);
+  background: var(--paper); background-image: var(--grain); border: 2px solid var(--ink); border-radius: 10px; box-shadow: 4px 5px 0 var(--ink); padding: 14px 16px; }
+.callout h3 { font-family: var(--display); font-weight: 900; font-size: 21px; margin: 2px 0 6px; }
+.callout p { margin: 0 0 8px; font-size: 14px; line-height: 1.45; }
+.callout .tap { font-weight: 900; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--amber-deep); }

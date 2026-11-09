@@ -28,8 +28,9 @@ export function amberGeometry(): THREE.BufferGeometry {
 export function inclusionGeometry(): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const base = amberGeometry();
-  g.appendGeometry(base, new THREE.Matrix4().makeScale(1.25, 1.25, 1.25), (_i, c) =>
-    c.y > 0.12 ? mix(GOBI.amberCore, GOBI.amberLight, 0.5) : c.y > -0.02 ? mix(GOBI.amberDeep, GOBI.amberCore, 0.45) : col(GOBI.amberDeep));
+  // Rare blue amber (as found in the Dominican Republic): cool and luminous, unmistakable next to regular amber.
+  g.appendGeometry(base, new THREE.Matrix4().makeScale(1.3, 1.3, 1.3), (_i, c) =>
+    c.y > 0.12 ? col(0xd4f8ff) : c.y > -0.02 ? col(0x4cc3e6) : col(0x1f7fa6));
   base.dispose();
   // The insect: a small dark body with legs, sitting just under the front and back facets.
   const ink = col(0x2a1a10);
@@ -160,7 +161,7 @@ export class CollectibleField {
   private s = new THREE.Vector3();
   private p = new THREE.Vector3();
   private amberHalo = mix(GOBI.amberCore, GOBI.amberLight, 0.4);
-  private eggHalo = mix(GOBI.amberCore, GOBI.amberLight, 0.35);
+  private eggHalo = col(0x7fe3ff);
   constructor(capacity = 300, fog = { near: 30, far: 150 }) {
     this.amberMesh = new THREE.InstancedMesh(amberGeometry(), MATS.glow, capacity);
     const eggGeo = inclusionGeometry();
@@ -206,7 +207,7 @@ export class CollectibleField {
         this.m.compose(this.p, this.q, this.s);
         this.eggMesh.setMatrixAt(ne, this.m);
         this.eggInk.setMatrixAt(ne++, this.ms.copy(this.m).multiply(INK_SCALE));
-        this.halos.set(nh++, it.x, it.y + bob, it.z, 2.3 + 0.2 * Math.sin(time * 4), 0.75, this.eggHalo);
+        this.halos.set(nh++, it.x, it.y + bob, it.z, 2.8 + 0.5 * Math.sin(time * 5), 1.0, this.eggHalo);
       }
     }
     this.amberMesh.count = this.amberInk.count = na;

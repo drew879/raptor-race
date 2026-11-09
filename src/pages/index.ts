@@ -20,7 +20,7 @@ import { loadSave, writeSave } from '../game/save';
 import { Bot, PERFECT } from '../game/bot';
 import { Rng } from '../core/rng';
 import { clamp, damp, lerp } from '../core/math';
-import { amberIconSVG, inclusionIconSVG as eggIconSVG, logoSVG } from '../ui/logo';
+import { amberIconSVG, inclusionIconSVG as eggIconSVG, logoSVG, protoSVG, raptorHeadSVG } from '../ui/logo';
 import type { RunnerAction } from '../game/runner';
 import type { HintKind } from '../game/level';
 
@@ -45,22 +45,26 @@ root.innerHTML = `
 <div class="hud" id="hud" hidden>
   <div class="hud-row">
     <div class="tag score"><div><small>Score</small><span id="score">0</span></div></div>
-    <div class="progress" aria-hidden="true"><div class="line"></div><div class="done" id="pdone"></div>
-      ${LEVEL.checkpoints.map((c) => `<div class="cp" style="left:calc(${((c / LEVEL.length) * 100).toFixed(1)}% - 10px)"></div>`).join('')}
-      <div class="nest"></div><div class="me" id="pme"></div></div>
+    <div class="hunt" id="hunt" aria-label="Distance to the Protoceratops">
+      <div class="hunt-track"></div>
+      <div class="hunt-me">${raptorHeadSVG}</div>
+      <div class="hunt-them" id="huntThem">${protoSVG}</div>
+      <div class="hunt-label" id="huntLabel">24 m</div>
+    </div>
     <div class="right">
       <div class="hud-row" style="gap:7px">
         <div class="tag amber" id="amberTag">${amberIconSVG}<span id="amber">0</span></div>
         <button class="tag pause" id="btnPause" aria-label="Pause"><i></i><i></i></button>
       </div>
       <div class="tag combo" id="comboTag">×<span id="combo">1</span></div>
-      <div class="tag prey" id="preyTag">Prey <span id="preyGap">24</span> m</div>
       <div class="eggs" id="eggs"></div>
       <div class="tag power" id="power" hidden></div>
     </div>
   </div>
 </div>
 <div class="pounce" id="pounce" hidden>Swipe up to pounce!</div>
+<div class="spot" id="spot" hidden></div>
+<div class="callout" id="callout" hidden><div class="eyebrow">Rare find</div><h3>Blue amber, with an insect inside</h3><p>Trapped 75 million years ago. Find all 3 in this level for a star.</p><div class="tap">Tap to continue</div></div>
 <div class="plate" id="plate" hidden><div class="plate-card"><div class="eyebrow">Field Journal · Plate I</div><h2>Fighting Dinosaurs</h2><p>Velociraptor and Protoceratops, locked together in the red sand of the Gobi. In 1971 a fossil of exactly this moment was found in these same rocks: ~75 million years ago, preserved by a collapsing dune.</p></div></div>
 <div class="hint" id="hint" hidden><span class="glyph" id="hintGlyph"></span><span id="hintText"></span></div>
 <div class="floats" id="floats"></div>
@@ -271,6 +275,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && app
 
 function startRun() {
   if (session.state !== 'ready') newSession();
+  inclusionIntro = 'pending';
   while (!pregenerate(1000)) { /* finish any terrain not built yet */ }
   hitches.length = 0;
   session.start();
@@ -346,6 +351,7 @@ function handle(e: GameEvent) {
       sparks.emit(e.x, e.y, -e.d, 7, { spread: 0.7, up: 0.9, back: -r.speed * 0.85, size: 0.13, grow: -0.6, life: 0.28, alpha: 0.85, color: SPARK, rand });
       break;
     case 'egg':
+      if (!save.seenInclusion) { save.seenInclusion = true; writeSave(save); }
       audio.play('egg');
       haptic(20);
       renderEggs();
@@ -521,7 +527,7 @@ function syncWorld(dt: number) {
   sparks.update(dt);
   streamer.update(r.distance);
 
-  const idle = app === 'title' || app === 'prerun' ? 1 : app === 'results' ? 1 : 0;
+  const idle = app === 'title' || app === 'prerun' || app === 'results' || app === 'caught' || app === 'lost' ? 1 : 0;
   raptor.sync(r, dt, idle);
 
   // Prey: runs ahead in its lane, hops ledges; hidden on the menus.
@@ -598,11 +604,13 @@ function hud() {
   $('amber').textContent = String(session.amber);
   $('combo').textContent = String(session.combo);
   const pct = session.progress * 100;
-  $('pdone').style.width = `calc(${pct.toFixed(2)}% - ${(pct / 10).toFixed(2)}px)`;
-  $('pme').style.left = `calc(${pct.toFixed(2)}% - ${(pct / 10).toFixed(2)}px)`;
+  void pct;
   const gap = Math.max(0, Math.round(session.gap));
-  $('preyGap').textContent = String(gap);
-  $('preyTag').className = `tag prey ${gap <= 14 ? 'close' : gap >= 32 ? 'far' : ''}`;
+  // Hunt meter: the Protoceratops icon sits further along the track the bigger the gap.
+  const f = clamp(gap / CONFIG.hunt.lostGap, 0, 1);
+  $('huntThem').style.left = `calc(30px + (100% - 66px) * ${f.toFixed(3)})`;
+  $('huntLabel').textContent = gap >= 32 ? `${gap} m · losing it!` : `${gap} m`;
+  $('hunt').className = `hunt ${gap <= 14 ? 'close' : gap >= 32 ? 'far' : ''}`;
   const pw = $('power');
   const r = session.runner;
   if (session.magnetLeft > 0 || r.glideLeft > 0) {
@@ -616,7 +624,7 @@ const STEP = 1 / 60;
 function step(dt: number) {
   clock += dt;
   if (app === 'playing' || app === 'finishing' || app === 'results') {
-    if (app === 'playing') bot?.step(dt);
+    if (app === 'playing') { bot?.step(dt * timeScale); checkInclusionIntro(); }
     session.step(dt * timeScale);
     for (const e of session.drainEvents()) handle(e);
   } else if (app === 'caught') {
@@ -683,6 +691,33 @@ function adaptQuality(dt: number) {
     resize();
   }
 }
+
+// First encounter with an amber inclusion: pause, circle it on screen, explain, continue on tap.
+let inclusionIntro: 'pending' | 'showing' | 'done' = 'pending';
+const projV = new THREE.Vector3();
+function checkInclusionIntro() {
+  if (inclusionIntro !== 'pending' || save.seenInclusion || app !== 'playing') return;
+  if (bot && !params.has('introshot')) { inclusionIntro = 'done'; return; } // autoplay never waits for a tap
+  const first = session.pickups.find((p) => p.kind === 'egg' && !p.taken && p.d - session.distance > 14 && p.d - session.distance < 30);
+  if (!first) return;
+  inclusionIntro = 'showing';
+  timeScale = 0;
+  projV.set(first.x, first.y, -first.d).project(stage.camera);
+  const spot = $('spot');
+  spot.style.left = `${((projV.x + 1) / 2) * 100}%`;
+  spot.style.top = `${((1 - projV.y) / 2) * 100}%`;
+  spot.hidden = false;
+  $('callout').hidden = false;
+  input.enabled = false;
+}
+root.addEventListener('pointerdown', () => {
+  if (inclusionIntro !== 'showing') return;
+  inclusionIntro = 'done';
+  timeScale = 1;
+  $('spot').hidden = true;
+  $('callout').hidden = true;
+  setTimeout(() => { if (app === 'playing') input.enabled = true; }, 120);
+});
 
 // Hitch log: frames over 50 ms during a run, summarized on the results screen.
 const hitches: number[] = [];

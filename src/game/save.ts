@@ -7,6 +7,7 @@ export interface SaveData {
   amberBank: number;
   sound: boolean;
   runs: number;
+  seenInclusion?: boolean;
 }
 const KEY = 'raptor-race-save-v1';
 const fresh = (): SaveData => ({ v: 1, best: {}, stars: {}, eggs: {}, amberBank: 0, sound: true, runs: 0 });
