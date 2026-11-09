@@ -34,7 +34,7 @@ Feel rules: 120 ms input buffer, 100 ms coyote time, hitboxes ~80% of visual siz
 ## 6. Scoring and stars
 - Score = distance (1 per m) + amber (10 each) x combo multiplier + near-miss bonus (+50) + eggs (500 each).
 - Combo multiplier x1 to x5: +1 per 25 amber collected without stumbling. Stumble resets to x1.
-- Stars per level: (1) finish, (2) all 3 eggs, (3) beat par score. Par is set from bot runs (~70% of a perfect run).
+- Stars per level: (1) finish, (2) all 3 eggs, (3) beat par score. Par is set from bot runs: Level 1 par 12,000 (perfect bot 14,300; human-like bot average ~13,100).
 - Stars unlock subsequent levels.
 
 ## 7. Power-ups

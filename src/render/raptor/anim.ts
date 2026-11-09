@@ -12,9 +12,10 @@ export interface RaptorAnimInput {
   stumble: number;
   land: number;
   idle: number;
+  glide: number;
 }
 
-export const defaultAnimInput = (): RaptorAnimInput => ({ speed: 12, air: 0, vy: 0, slide: 0, lean: 0, stumble: 0, land: 0, idle: 0 });
+export const defaultAnimInput = (): RaptorAnimInput => ({ speed: 12, air: 0, vy: 0, slide: 0, lean: 0, stumble: 0, land: 0, idle: 0, glide: 0 });
 
 const KEYS = [
   'pY', 'pZ', 'pPitch', 'pYaw', 'pRoll', 'chX', 'chY', 'chZ', 'n1X', 'n1Y', 'n2X', 'n2Y', 'hX', 'hY', 'hZ',
@@ -46,7 +47,7 @@ export class RaptorAnimator {
   private hipLocal = { L: restPos('thighL').sub(restPos('pelvis')), R: restPos('thighR').sub(restPos('pelvis')) };
   private len = { thigh: 0, shin: 0, meta: 0 };
   private euler = new THREE.Euler();
-  private poses = { run: zeroPose(), idle: zeroPose(), slide: zeroPose(), air: zeroPose(), out: zeroPose() };
+  private poses = { run: zeroPose(), idle: zeroPose(), slide: zeroPose(), air: zeroPose(), glide: zeroPose(), out: zeroPose() };
 
   constructor(bones: THREE.Bone[]) {
     this.bones = bones;
@@ -176,7 +177,7 @@ export class RaptorAnimator {
 
     // ---------- Air ----------
     const air = this.poses.air;
-    if (inp.air > 0) {
+    if (inp.air > 0 || inp.glide > 0) {
       Object.assign(air, run);
       const rising = clamp(inp.vy / 6, -1, 1);
       air.pY = 0.02;
@@ -194,12 +195,28 @@ export class RaptorAnimator {
       air.fRY = lerp(0.34, 0.12, extend); air.fRZ = lerp(0.06, -0.06, extend); air.fRM = lerp(-1.5, 0.1, extend); air.fRT = lerp(0.35, 1.1, extend);
     }
 
+    // ---------- Glide (Updraft): wings spread wide, legs tucked, tail fanned ----------
+    const gl = this.poses.glide;
+    if (inp.glide > 0) {
+      Object.assign(gl, air);
+      const flap = Math.sin(t * 3.2) * 0.08;
+      gl.pPitch = -0.06 + 0.03 * Math.sin(t * 1.7);
+      gl.n1X = -0.12; gl.n2X = 0.06; gl.headPitch = -0.08;
+      gl.t1X = -0.08; gl.t2X = -0.02; gl.t3X = 0; gl.t4X = 0.02;
+      gl.uaLZ = -1.25 - flap; gl.uaRZ = 1.25 + flap; gl.uaLX = gl.uaRX = 0.35;
+      gl.faLY = 0.95; gl.faRY = -0.95; gl.faLZ = -0.2; gl.faRZ = 0.2;
+      gl.hdLY = 0.35; gl.hdRY = -0.35;
+      gl.fLY = 0.34; gl.fLZ = 0.05; gl.fLM = -1.55; gl.fLT = 0.3;
+      gl.fRY = 0.34; gl.fRZ = 0.1; gl.fRM = -1.55; gl.fRT = 0.3;
+    }
+
     // ---------- Blend ----------
     const out = this.poses.out;
     Object.assign(out, run);
     blendInto(out, idle, inp.idle);
     blendInto(out, sl, inp.slide);
     blendInto(out, air, inp.air);
+    blendInto(out, gl, inp.glide);
 
     // Additive layers.
     const L = inp.lean;

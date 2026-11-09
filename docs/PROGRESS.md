@@ -11,5 +11,6 @@ Newest first. Every session updates this before pushing.
 - [x] UI motif: amber logo, gem and paper buttons, HUD tags, field-journal card
 - [x] Screenshot harness (`npm run shots`, `scripts/lab-shots.mjs` for asset turntables)
 - [x] Art critic round 1 (fail, 5-7/10): relit (sun behind-right, physically correct intensities, neutral tone mapping), rebuilt raptor head/pattern/thighs/feathers, eroded arch, ink-outlined collectibles, new logo
-- [ ] Art critic round 2
+- [x] Art critic round 2 (fail, 5-7/10): fixed inside-out amber and egg faces (with a winding unit test), lengthwise streak pattern, S-neck, round eye and brow, fanned primaries, smooth hazard shading (no quilt), lower arch, weathered bone, layered backdrop with sunk bases
+- [ ] Art critic round 3
 - [ ] Publish style tile for owner review

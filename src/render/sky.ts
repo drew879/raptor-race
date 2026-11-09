@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GeomBuilder } from './geom';
 import { GOBI, col, mix, shade } from './palette';
-import { MATS } from './materials';
+import { MATS, worldUniforms } from './materials';
 import { Rng } from '../core/rng';
 
 /** Painterly gradient sky dome with sun glow. Follows the camera. */
@@ -61,11 +61,13 @@ export function createBackdrop() {
   const hazeNear = mix(GOBI.cliffRed, GOBI.horizon, 0.45);
   const hazeFar = mix(GOBI.cliffLight, GOBI.horizon, 0.66);
   const ringLayer = (dist: number, count: number, hMin: number, hMax: number, tint: THREE.Color, arc: number) => {
-    const bandA = tint, bandB = shade(tint, 1.06), lip = shade(tint, 0.9);
+    const bandA = tint, bandB = shade(tint, 1.13), lip = shade(tint, 0.84);
+    // The world bends away with distance; extend bases down to where the bent ground meets the horizon.
+    const sink = -worldUniforms.uCurve.value * dist * dist - 6;
     for (let i = 0; i < count; i++) {
       const a = -arc + (2 * arc * (i + rng.range(0.1, 0.9))) / count; // angle from -Z
       const cx = Math.sin(a) * dist, cz = -Math.cos(a) * dist;
-      const w = rng.range(22, 60), h = rng.range(hMin, hMax);
+      const w = rng.range(22, 66), h = rng.range(hMin, hMax) * rng.range(0.7, 1.3);
       const right = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
       const M = 9;
       // Tiered butte profile: steep flanks, a shoulder step, flat top.
@@ -76,7 +78,7 @@ export function createBackdrop() {
         const e = Math.min(t, 1 - t);
         prof.push(e < 0.08 ? 0 : e < 0.2 ? h * shoulder * rng.range(0.9, 1) : h * rng.range(0.95, 1.0));
       }
-      const levels = [-8, 0.3, 0.55, 0.78];
+      const levels = [sink, 0.3, 0.55, 0.78];
       for (let k = 0; k < M - 1; k++) {
         const x0 = (k / (M - 1) - 0.5) * w, x1 = ((k + 1) / (M - 1) - 0.5) * w;
         const p0 = new THREE.Vector3(cx, 0, cz).addScaledVector(right, x0), p1 = new THREE.Vector3(cx, 0, cz).addScaledVector(right, x1);
@@ -94,6 +96,17 @@ export function createBackdrop() {
   };
   ringLayer(430, 15, 16, 40, hazeFar, 1.45);
   ringLayer(310, 11, 14, 32, hazeNear, 1.3);
+  // Nearest layer: hazy dune ridges overlapping the butte bases.
+  const duneHaze = mix(GOBI.sandMid, GOBI.horizon, 0.5);
+  const dist = 215, sinkD = -worldUniforms.uCurve.value * dist * dist - 4;
+  const M = 64;
+  for (let k = 0; k < M; k++) {
+    const a0 = -1.5 + (3 * k) / M, a1 = -1.5 + (3 * (k + 1)) / M;
+    const h0 = 3 + 7 * Math.pow(Math.abs(Math.sin(a0 * 5.3 + 1.1)), 1.6) + 3 * Math.sin(a0 * 13.1);
+    const h1 = 3 + 7 * Math.pow(Math.abs(Math.sin(a1 * 5.3 + 1.1)), 1.6) + 3 * Math.sin(a1 * 13.1);
+    const p0 = new THREE.Vector3(Math.sin(a0) * dist, 0, -Math.cos(a0) * dist), p1 = new THREE.Vector3(Math.sin(a1) * dist, 0, -Math.cos(a1) * dist);
+    g.quad(p1.clone().setY(sinkD), p0.clone().setY(sinkD), p0.clone().setY(h0), p1.clone().setY(h1), shade(duneHaze, 0.97 + 0.06 * Math.sin(k * 1.7)));
+  }
   // Soft stylized clouds: rows of half-disc puffs, bright tops.
   const top = mix(0xffffff, GOBI.sunGlow, 0.35), low = mix(GOBI.sunGlow, GOBI.horizon, 0.55);
   for (let i = 0; i < 14; i++) {

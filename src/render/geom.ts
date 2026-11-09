@@ -33,6 +33,10 @@ export class GeomBuilder {
   }
 
   tri(a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, color: THREE.Color, skins?: [number[], number[], number[]]) {
+    // Skip degenerate (zero-area) triangles, e.g. at tube poles.
+    const ux = b.x - a.x, uy = b.y - a.y, uz = b.z - a.z, vx = c.x - a.x, vy = c.y - a.y, vz = c.z - a.z;
+    const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx;
+    if (cx * cx + cy * cy + cz * cz < 1e-14) return this;
     this.v(a, color, skins?.[0]);
     this.v(b, color, skins?.[1]);
     this.v(c, color, skins?.[2]);
@@ -61,6 +65,23 @@ export class GeomBuilder {
       this.tri(a, b, c, colorFn(i / 3, cen, n));
     }
     if (src !== g) src.dispose();
+    return this;
+  }
+
+  /** For closed convex shapes: flip any triangle whose normal points toward `center`. */
+  orientOutward(center: THREE.Vector3) {
+    const P = this.pos;
+    const v = (i: number) => new THREE.Vector3(P[i], P[i + 1], P[i + 2]);
+    for (let t = 0; t < P.length; t += 9) {
+      const a = v(t), b = v(t + 3), c = v(t + 6);
+      const n = new THREE.Vector3().crossVectors(b.clone().sub(a), c.clone().sub(a));
+      const cen = a.clone().add(b).add(c).multiplyScalar(1 / 3).sub(center);
+      if (n.dot(cen) < 0) {
+        for (let k = 0; k < 3; k++) { const tmp = P[t + 3 + k]; P[t + 3 + k] = P[t + 6 + k]; P[t + 6 + k] = tmp; }
+        const C = this.colors;
+        for (let k = 0; k < 3; k++) { const tmp = C[t + 3 + k]; C[t + 3 + k] = C[t + 6 + k]; C[t + 6 + k] = tmp; }
+      }
+    }
     return this;
   }
 

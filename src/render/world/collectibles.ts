@@ -21,7 +21,7 @@ export function amberGeometry(): THREE.BufferGeometry {
     g.tri(ringA[k1], ringB[k], ringB[k1], k % 2 ? mix(GOBI.amberCore, GOBI.amberDeep, 0.55) : mix(GOBI.amberCore, GOBI.amberLight, 0.4));
     g.tri(ringB[k1], ringB[k], bot, k % 2 ? deep : mix(GOBI.amberDeep, GOBI.amberCore, 0.5));
   }
-  return g.build();
+  return g.orientOutward(new THREE.Vector3(0, 0.03, 0)).build();
 }
 
 export function eggGeometry(): THREE.BufferGeometry {
@@ -44,7 +44,7 @@ export function eggGeometry(): THREE.BufferGeometry {
       g.quad(r0[k1], r0[k], r1[k], r1[k1], c);
     }
   }
-  return g.build();
+  return g.orientOutward(new THREE.Vector3(0, 0.0, 0)).build();
 }
 
 /** Soft additive halos rendered as bent, fog-faded points. */

@@ -1,4 +1,4 @@
-import type { HazardType } from '../render/world/hazards';
+import type { HazardType } from './types';
 
 /** Axis-aligned box relative to the hazard origin (lane center, ground, hazard z). */
 export interface Box { hx: number; y0: number; y1: number; hz: number }

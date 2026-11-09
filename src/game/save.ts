@@ -1,0 +1,30 @@
+/** Local save. Every access is guarded: storage can be missing or blocked (private mode, previews). */
+export interface SaveData {
+  v: 1;
+  best: Record<string, number>;
+  stars: Record<string, boolean[]>;
+  eggs: Record<string, boolean[]>;
+  amberBank: number;
+  sound: boolean;
+  runs: number;
+}
+const KEY = 'raptor-race-save-v1';
+const fresh = (): SaveData => ({ v: 1, best: {}, stars: {}, eggs: {}, amberBank: 0, sound: true, runs: 0 });
+
+export function loadSave(): SaveData {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return fresh();
+    const d = JSON.parse(raw) as SaveData;
+    return d && d.v === 1 ? { ...fresh(), ...d } : fresh();
+  } catch {
+    return fresh();
+  }
+}
+export function writeSave(d: SaveData) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(d));
+  } catch {
+    /* storage unavailable: progress lasts for this session only */
+  }
+}

@@ -25,13 +25,13 @@ export const GOBI = {
   amberDeep: 0xc8620a,
   keyLight: 0xffd9a8,
   hemiSky: 0xd6cce0,
-  hemiGround: 0xc58a55,
+  hemiGround: 0xb8987a,
 } as const;
 
 /** Default Velociraptor plumage, "Gobi Streak". */
 export const RAPTOR_GOBI_STREAK = {
-  base: 0x5a4434,
-  dark: 0x2e2420,
+  base: 0x664c39,
+  dark: 0x3b2e27,
   light: 0xe9dfc9,
   under: 0xd8c8a8,
   accent: 0x2c8a8f,

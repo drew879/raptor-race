@@ -26,6 +26,7 @@ export class RaptorView {
     i.land = r.landImpulse;
     i.stumble = r.stumble;
     i.idle = idle;
+    i.glide = r.glideWeight;
     this.anim.update(dt, i);
   }
 }

@@ -5,7 +5,7 @@
 export function logoSVG(opts: { glow?: boolean } = {}) {
   const id = Math.random().toString(36).slice(2, 7);
   const extrude = Array.from({ length: 7 }, (_, i) =>
-    `<text x="300" y="${128 + i}" text-anchor="middle" textLength="512" lengthAdjust="spacingAndGlyphs" font-family="Fraunces, Georgia, serif" font-weight="900" font-size="124" fill="${i < 6 ? '#C8620A' : '#3A2A1E'}" stroke="#3A2A1E" stroke-width="10" stroke-linejoin="round" paint-order="stroke">RAPTOR</text>`,
+    `<text x="300" y="${128 + i}" text-anchor="middle" textLength="512" lengthAdjust="spacingAndGlyphs" font-family="Fraunces, Georgia, serif" font-weight="900" font-size="124" fill="${i < 6 ? '#E8890F' : '#3A2A1E'}" stroke="#3A2A1E" stroke-width="10" stroke-linejoin="round" paint-order="stroke">RAPTOR</text>`,
   ).join('');
   return `
 <svg class="rr-logo" viewBox="0 0 600 300" role="img" aria-label="Raptor Race">
@@ -50,6 +50,6 @@ export const amberIconSVG = `
 export const eggIconSVG = (filled: boolean) => `
 <svg class="rr-egg-icon" viewBox="0 0 32 40" aria-hidden="true">
   <path d="M16 2 C 25 2, 30 16, 30 25 C 30 33, 24 38, 16 38 C 8 38, 2 33, 2 25 C 2 16, 7 2, 16 2 Z"
-    fill="${filled ? '#F6EBD5' : 'rgba(243,230,204,0.55)'}" stroke="#3A2A1E" stroke-width="3" ${filled ? '' : 'stroke-opacity="0.45"'}/>
+    fill="${filled ? '#F6EBD5' : '#EAD9B8'}" stroke="#3A2A1E" stroke-width="3" ${filled ? '' : 'stroke-opacity="0.5" fill-opacity="0.9"'}/>
   ${filled ? '<circle cx="11" cy="17" r="2" fill="#A98F6C"/><circle cx="19" cy="25" r="2.4" fill="#A98F6C"/><circle cx="21" cy="13" r="1.5" fill="#7D6650"/>' : ''}
 </svg>`;

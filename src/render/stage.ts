@@ -26,7 +26,7 @@ export class Stage {
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap; // PCFSoft was removed in this three.js; PCF + radius softens edges
     container.appendChild(this.renderer.domElement);
 
     this.scene.fog = new THREE.Fog(col(GOBI.horizon), FOG.near, FOG.far);
@@ -38,6 +38,7 @@ export class Stage {
     sc.left = -10; sc.right = 10; sc.top = 16; sc.bottom = -16; sc.near = 1; sc.far = 90;
     this.sun.shadow.bias = -0.0008;
     this.sun.shadow.normalBias = 0.02;
+    this.sun.shadow.radius = 2.5;
     this.scene.add(this.sun, this.sun.target);
 
     this.camera = new THREE.PerspectiveCamera(CONFIG.camera.fov, 1, 0.1, 900);

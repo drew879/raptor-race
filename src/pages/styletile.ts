@@ -293,11 +293,11 @@ function step(dt: number) {
   if (mode === 'run') stage.chase(runner.x, runner.y, rz, dt);
   else if (mode === 'hero') {
     const cam = stage.camera;
-    tmp.set(runner.x + 1.75, 0.55, rz - 2.7);
+    tmp.set(runner.x + 1.9, 0.6, rz - 2.2);
     cam.position.x = damp(cam.position.x, tmp.x, 6, dt);
     cam.position.y = damp(cam.position.y, tmp.y + runner.y * 0.5, 6, dt);
-    cam.position.z = rz - 2.7;
-    cam.lookAt(runner.x - 0.05, 0.72 + runner.y * 0.7, rz + 0.1);
+    cam.position.z = rz - 2.2;
+    cam.lookAt(runner.x - 0.35, 0.7 + runner.y * 0.7, rz - 0.35);
     stage.follow(runner.x, rz);
   } else {
     heroOrbit += dt * 0.12;

@@ -2,7 +2,8 @@ import { CONFIG, laneX } from './config';
 import { clamp, easeOutCubic } from '../core/math';
 
 export type RunnerAction = 'left' | 'right' | 'jump' | 'slide';
-export type RunnerEvent = 'lane' | 'jump' | 'land' | 'slide' | 'fastfall';
+export type RunnerEvent = 'lane' | 'jump' | 'land' | 'slide' | 'fastfall' | 'glide';
+export const GLIDE_HEIGHT = 2.6;
 
 /**
  * Player movement model: lanes, jump, slide, fast-fall, input buffering and coyote time.
@@ -22,6 +23,9 @@ export class Runner {
   private coyote = 0;
   private buffered: { a: RunnerAction; t: number } | null = null;
   private slideOnLand = false;
+  private lastDir = 0;
+  glideLeft = 0;
+  glideWeight = 0;
   landImpulse = 0;
   stumble = 0;
   lean = 0;
@@ -50,10 +54,12 @@ export class Runner {
         this.laneFromX = this.x;
         this.lane = target;
         this.laneT = 0;
+        this.lastDir = dir;
         this.listener('lane', dir);
         return true;
       }
       case 'jump': {
+        if (this.glideLeft > 0) return true; // already airborne on the updraft
         if (!(this.grounded || this.coyote > 0)) return false;
         this.slideLeft = 0;
         this.slideOnLand = false;
@@ -64,6 +70,7 @@ export class Runner {
         return true;
       }
       case 'slide': {
+        if (this.glideLeft > 0) this.glideLeft = 0; // dive out of a glide
         if (!this.grounded) {
           this.vy = Math.min(this.vy, -CONFIG.fastFallSpeed);
           this.slideOnLand = true;
@@ -75,6 +82,32 @@ export class Runner {
         return true;
       }
     }
+  }
+
+  /** Ride an updraft: rise to glide height and stay there for `seconds`. Lanes still work. */
+  startGlide(seconds: number) {
+    this.slideLeft = 0;
+    this.slideOnLand = false;
+    this.glideLeft = Math.max(this.glideLeft, seconds);
+    this.grounded = false;
+    this.listener('glide');
+  }
+
+  /** Knocked back toward the lane we came from after clipping something sideways. */
+  bounce() {
+    const back = Math.max(-1, Math.min(1, this.lane - this.lastDir));
+    this.laneFromX = this.x;
+    this.lane = back;
+    this.laneT = 0;
+    this.lastDir = -this.lastDir;
+  }
+
+  /** Reset for a fresh start or checkpoint restart. */
+  reset(distance: number) {
+    this.lane = 0; this.x = 0; this.y = 0; this.vy = 0; this.distance = distance;
+    this.grounded = true; this.slideLeft = 0; this.laneT = 1; this.laneFromX = 0; this.coyote = 0;
+    this.buffered = null; this.slideOnLand = false; this.glideLeft = 0; this.glideWeight = 0;
+    this.landImpulse = 0; this.stumble = 0; this.lean = 0; this.airWeight = 0; this.slideWeight = 0;
   }
 
   update(dt: number) {
@@ -94,7 +127,14 @@ export class Runner {
     this.lean += (leanTarget - this.lean) * (1 - Math.exp(-14 * dt));
 
     // Vertical.
-    if (!this.grounded) {
+    if (this.glideLeft > 0) {
+      this.glideLeft = Math.max(0, this.glideLeft - dt);
+      const prevY = this.y;
+      this.y += (GLIDE_HEIGHT - this.y) * (1 - Math.exp(-5 * dt));
+      this.vy = (this.y - prevY) / Math.max(dt, 1e-4);
+      this.grounded = false;
+      if (this.glideLeft === 0) this.vy = 0;
+    } else if (!this.grounded) {
       // Exact for constant gravity, so jump height and air time match CONFIG at any step size.
       this.y += this.vy * dt - 0.5 * Runner.G * dt * dt;
       this.vy -= Runner.G * dt;
@@ -122,6 +162,7 @@ export class Runner {
     // Animation weights.
     const k = 1 - Math.exp(-18 * dt);
     this.airWeight += ((this.grounded ? 0 : 1) - this.airWeight) * k;
+    this.glideWeight += ((this.glideLeft > 0 ? 1 : 0) - this.glideWeight) * (1 - Math.exp(-6 * dt));
     this.slideWeight += ((this.sliding ? 1 : 0) - this.slideWeight) * (1 - Math.exp(-22 * dt));
     this.landImpulse = Math.max(0, this.landImpulse - dt * 5);
     this.stumble = Math.max(0, this.stumble - dt * 1.8);
