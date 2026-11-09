@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import '../ui/theme.css';
 import '../ui/game.css';
 import { Stage, FOG } from '../render/stage';
+import { LookPipeline } from '../render/post/looks';
 import { ChunkStreamer } from '../render/world/terrain';
 import { CollectibleField, type Collectible } from '../render/world/collectibles';
 import { createHazard } from '../render/world/hazards';
@@ -156,8 +157,12 @@ nest.position.set(0, 0, -(LEVEL.length + 9.6));
 stage.world.add(items.group, powerups.group, dust.field.points, sparks.field.points, raptor.root, nest);
 const fxRng = new Rng(7);
 const rand = () => fxRng.next();
+// The owner-chosen hybrid look: field-journal ink and wash on a bold graphic value plan (one post pass).
+const look = new LookPipeline(stage.renderer, stage.scene, stage.camera, 'game');
+const draw = () => look.render();
 const resize = () => {
   stage.resize(container.clientWidth, container.clientHeight);
+  look.setSize(container.clientWidth, container.clientHeight, stage.renderer.getPixelRatio());
   for (const f of [items.halos, dust.field, sparks.field]) f.setScale(stage.renderer.domElement.height, stage.camera.fov);
 };
 addEventListener('resize', resize);
@@ -559,8 +564,9 @@ function frame(now: number) {
   if (n === 6) acc = 0;
   if (app === 'title' || app === 'prerun' || app === 'results') pregenerate(6);
   if (app === 'playing' && dt > 0.05) hitches.push(Math.round(dt * 1000));
+  adaptQuality(dt);
   hud();
-  stage.render();
+  draw();
   if (DEBUG) {
     fpsAcc += dt; fpsFrames++; worst = Math.max(worst, dt);
     if (fpsAcc > 0.5) { fpsShown = fpsFrames / fpsAcc; fpsAcc = 0; fpsFrames = 0; }
@@ -584,8 +590,22 @@ function warmShaders() {
   g.position.set(0, -50, 0);
   stage.world.add(g);
   stage.renderer.compile(stage.scene, stage.camera);
-  stage.render();
+  draw();
   stage.world.remove(g);
+}
+
+// Adaptive resolution: if frames run slow for ~2 s, step the render resolution down (2 -> 1.5 -> 1.25).
+let slowFrames = 0, quality = 0;
+const DPR_STEPS = [Math.min(window.devicePixelRatio, 2), 1.5, 1.25];
+function adaptQuality(dt: number) {
+  if (SHOT || app !== 'playing') return;
+  slowFrames = dt > 0.022 ? slowFrames + 1 : Math.max(0, slowFrames - 2);
+  if (slowFrames > 120 && quality < DPR_STEPS.length - 1 && DPR_STEPS[quality + 1] < DPR_STEPS[quality]) {
+    quality++;
+    slowFrames = 0;
+    stage.renderer.setPixelRatio(DPR_STEPS[quality]);
+    resize();
+  }
 }
 
 // Hitch log: frames over 50 ms during a run, summarized on the results screen.
@@ -604,11 +624,12 @@ window.__rr = {
   ready: true,
   start() { renderObjectives(); startRun(); },
   autoplay() { bot = new Bot(session, PERFECT); },
-  advance(seconds: number) { const n = Math.round(seconds / STEP); for (let i = 0; i < n; i++) step(STEP); hud(); stage.render(); },
+  advance(seconds: number, render = false) { const n = Math.round(seconds / STEP); for (let i = 0; i < n; i++) step(STEP); hud(); if (render) draw(); },
+  draw() { draw(); },
   state: () => ({ app, length: LEVEL.length, distance: session.distance, score: Math.round(session.score), amber: session.amber, eggs: session.eggs, sstate: session.state }),
   input: (a: RunnerAction) => session.input(a),
   click: (id: string) => $(id).click(),
   stats: () => ({ ...streamer.stats(), calls: stage.renderer.info.render.calls, tris: stage.renderer.info.render.triangles }),
 };
 if (!SHOT) requestAnimationFrame(frame);
-else stage.render();
+else draw();

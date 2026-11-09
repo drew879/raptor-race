@@ -15,7 +15,7 @@ page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 await page.goto(`${base}/index.html?shot=1`);
 await page.waitForFunction(() => window.__rr?.ready === true, null, { timeout: 60000 });
 await page.evaluate(() => document.fonts.ready);
-const shot = async (name) => { await page.waitForTimeout(350); await page.screenshot({ path: `${outDir}/${name}.png` }); console.log('shot', name, JSON.stringify(await page.evaluate(() => window.__rr.state()))); };
+const shot = async (name) => { await page.evaluate(() => window.__rr.draw()); await page.waitForTimeout(350); await page.screenshot({ path: `${outDir}/${name}.png` }); console.log('shot', name, JSON.stringify(await page.evaluate(() => window.__rr.state()))); };
 await page.evaluate(() => window.__rr.advance(1.5));
 await shot('00-title');
 await page.evaluate(() => window.__rr.click('btnRun'));

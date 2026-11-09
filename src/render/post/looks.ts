@@ -4,8 +4,9 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { bakeNoiseTexture } from './noiseTex';
 
-export type LookName = 'journal' | 'mural' | 'amber' | 'graphic' | 'hybrid' | 'current';
+export type LookName = 'journal' | 'mural' | 'amber' | 'graphic' | 'hybrid' | 'game' | 'current';
 
 /** Shared GLSL helpers: value noise, fbm, linear depth, depth-edge detection. */
 const COMMON = /* glsl */ `
@@ -179,6 +180,56 @@ const HYBRID = /* glsl */ `${COMMON}
     gl_FragColor = vec4(col, 1.0);
   }`;
 
+/**
+ * Production hybrid pass (the owner-chosen look). Same treatment as HYBRID, but all noise comes from a baked
+ * tiling texture (tNoise) to keep the per-pixel cost low on phones.
+ */
+const HYBRID_FAST = /* glsl */ `
+  #include <packing>
+  uniform sampler2D tDiffuse, tDepth, tNoise;
+  uniform vec2 res;
+  uniform float cNear, cFar, dpr;
+  varying vec2 vUv;
+  float viewZ(vec2 uv) { return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, cNear, cFar); }
+  float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+  vec3 rgb2hsv(vec3 c) { vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0); vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r)); float d = q.x - min(q.w, q.y); float e = 1.0e-10;
+    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x); }
+  vec3 hsv2rgb(vec3 c) { vec3 p = abs(fract(c.xxx + vec3(1.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0); return c.z * mix(vec3(1.0), clamp(p - 1.0, 0.0, 1.0), c.y); }
+  void main() {
+    vec2 uv = vUv;
+    vec2 px = uv * res / dpr;                       // CSS-pixel coordinates, so the look is resolution independent
+    vec4 nz = texture2D(tNoise, px / 512.0);         // R grain, G medium wash, B large wash, A wobble
+    vec4 nf = texture2D(tNoise, px / 96.0);
+    vec2 wob = (vec2(nz.a, nf.a) - 0.5) * 1.6 * dpr / res;
+    vec3 c = texture2D(tDiffuse, uv + wob).rgb;
+    float d0 = texture2D(tDepth, uv).x;
+    float sky = step(0.9999, d0);
+    vec3 h = rgb2hsv(c);
+    float v = h.z;
+    float vb = v < 0.45 ? 0.36 : v < 0.75 ? 0.68 : 0.92;
+    h.z = mix(v, vb, 0.8);
+    h.y = min(h.y * 1.05, 0.85);
+    vec3 col = hsv2rgb(h);
+    vec3 paper = vec3(0.965, 0.925, 0.845);
+    float grain = nf.r * 0.55 + nz.g * 0.45;
+    col = mix(paper, col, 0.84 + 0.12 * nz.b) * (0.93 + 0.09 * grain);
+    vec3 skyTop = mix(paper, vec3(0.55, 0.72, 0.84), 0.75), skyLow = mix(paper, vec3(0.98, 0.82, 0.62), 0.6);
+    col = mix(col, mix(skyLow, skyTop, step(0.74, uv.y)) * (0.95 + 0.07 * grain), sky);
+    // Ink: Laplacian depth breaks (contours) plus light interior lines from value breaks.
+    vec2 o = 1.2 * dpr / res;
+    float z = -perspectiveDepthToViewZ(d0, cNear, cFar);
+    float lx = abs(viewZ(uv + vec2(o.x, 0.0)) + viewZ(uv - vec2(o.x, 0.0)) - 2.0 * z);
+    float ly = abs(viewZ(uv + vec2(0.0, o.y)) + viewZ(uv - vec2(0.0, o.y)) - 2.0 * z);
+    float e = smoothstep(0.02, 0.04, max(lx, ly) / max(z, 0.5)) * (1.0 - smoothstep(60.0, 160.0, z) * 0.6);
+    float gx = luma(texture2D(tDiffuse, uv + vec2(o.x, 0.0)).rgb) - luma(texture2D(tDiffuse, uv - vec2(o.x, 0.0)).rgb);
+    float gy = luma(texture2D(tDiffuse, uv + vec2(0.0, o.y)).rgb) - luma(texture2D(tDiffuse, uv - vec2(0.0, o.y)).rgb);
+    float inner = smoothstep(0.14, 0.26, length(vec2(gx, gy))) * (1.0 - sky);
+    float broken = smoothstep(0.3, 0.6, texture2D(tNoise, px / 40.0).a + 0.3);
+    col = mix(col, vec3(0.19, 0.13, 0.1), clamp(e * 0.95 + inner * 0.35 * broken, 0.0, 1.0));
+    gl_FragColor = vec4(col, 1.0);
+  }`;
+
 export class LookPipeline {
   readonly composer: EffectComposer;
   private pass: ShaderPass | null = null;
@@ -190,16 +241,26 @@ export class LookPipeline {
     this.composer.addPass(new RenderPass(scene, camera));
     if (look === 'amber') this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.55, 0.7, 0.8));
     this.composer.addPass(new OutputPass());
-    const frag = { journal: JOURNAL, mural: MURAL, amber: AMBER, graphic: GRAPHIC, hybrid: HYBRID, current: '' }[look];
+    const frag = { journal: JOURNAL, mural: MURAL, amber: AMBER, graphic: GRAPHIC, hybrid: HYBRID, game: HYBRID_FAST, current: '' }[look];
     if (frag) {
       const uniforms: Record<string, THREE.IUniform> = {
         tDiffuse: { value: null }, tDepth: { value: rt.depthTexture }, res: { value: new THREE.Vector2(size.x, size.y) },
         cNear: { value: camera.near }, cFar: { value: camera.far }, time: { value: 0 }, dpr: { value: renderer.getPixelRatio() },
+        tNoise: { value: look === 'game' ? bakeNoiseTexture() : null },
       };
       this.pass = new ShaderPass(new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: frag }));
       this.composer.addPass(this.pass);
     }
   }
+  setSize(w: number, h: number, dpr: number) {
+    this.composer.setPixelRatio(dpr);
+    this.composer.setSize(w, h);
+    if (this.pass) {
+      this.pass.uniforms.res.value.set(Math.round(w * dpr), Math.round(h * dpr));
+      this.pass.uniforms.dpr.value = dpr;
+    }
+  }
+
   render() {
     // The scene renders into the composer's current read buffer (a clone of our target), so bind
     // that buffer's depth each frame.
@@ -227,6 +288,7 @@ export function applyLookLighting(look: LookName, ctx: { sun: THREE.DirectionalL
       break;
     case 'graphic':
     case 'hybrid':
+    case 'game':
       sun.intensity = 2.6; hemi.intensity = 2.8;
       break;
   }
