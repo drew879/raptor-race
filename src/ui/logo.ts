@@ -1,34 +1,39 @@
-/** Raptor Race wordmark: heavy Fraunces in an amber gradient with an ink outline and a sickle-claw slash. */
+/**
+ * Raptor Race wordmark. A stamped cream-and-ink "RAPTOR" with an amber extrusion, over an amber
+ * specimen plate reading "RACE", hooked by a sickle claw. textLength keeps it inside the viewBox at any font metrics.
+ */
 export function logoSVG(opts: { glow?: boolean } = {}) {
   const id = Math.random().toString(36).slice(2, 7);
+  const extrude = Array.from({ length: 7 }, (_, i) =>
+    `<text x="300" y="${128 + i}" text-anchor="middle" textLength="512" lengthAdjust="spacingAndGlyphs" font-family="Fraunces, Georgia, serif" font-weight="900" font-size="124" fill="${i < 6 ? '#C8620A' : '#3A2A1E'}" stroke="#3A2A1E" stroke-width="10" stroke-linejoin="round" paint-order="stroke">RAPTOR</text>`,
+  ).join('');
   return `
-<svg class="rr-logo" viewBox="0 0 620 330" role="img" aria-label="Raptor Race">
+<svg class="rr-logo" viewBox="0 0 600 300" role="img" aria-label="Raptor Race">
   <defs>
-    <linearGradient id="amb-${id}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFF3C4"/>
-      <stop offset="0.28" stop-color="#FFE08A"/>
-      <stop offset="0.58" stop-color="#FFB21E"/>
-      <stop offset="1" stop-color="#C8620A"/>
+    <linearGradient id="plate-${id}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE08A"/><stop offset="0.45" stop-color="#FFB21E"/><stop offset="1" stop-color="#D9730C"/>
     </linearGradient>
-    <linearGradient id="claw-${id}" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#3A2A1E" stop-opacity="0"/>
-      <stop offset="0.18" stop-color="#3A2A1E"/>
-      <stop offset="1" stop-color="#3A2A1E"/>
+    <linearGradient id="paper-${id}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF8E6"/><stop offset="1" stop-color="#EBD8B2"/>
     </linearGradient>
-    <filter id="glow-${id}" x="-20%" y="-30%" width="140%" height="160%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="b"/>
-      <feFlood flood-color="#FFB21E" flood-opacity="${opts.glow === false ? 0 : 0.55}"/>
+    <filter id="soft-${id}" x="-10%" y="-20%" width="120%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="b"/>
+      <feFlood flood-color="#FFB21E" flood-opacity="${opts.glow === false ? 0 : 0.35}"/>
       <feComposite in2="b" operator="in" result="g"/>
       <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <g filter="url(#glow-${id})">
-    <path d="M58 182 C 190 214, 380 222, 560 168 C 420 236, 196 238, 58 182 Z" fill="url(#claw-${id})"/>
-    <path d="M300 205 C 410 203, 500 190, 560 168 C 520 196, 430 214, 300 214 Z" fill="#FFB21E" opacity="0.9"/>
-    <text x="310" y="146" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-weight="900" font-size="132" letter-spacing="1"
-      fill="url(#amb-${id})" stroke="#3A2A1E" stroke-width="11" stroke-linejoin="round" paint-order="stroke">RAPTOR</text>
-    <text x="318" y="300" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-weight="900" font-size="124" letter-spacing="10"
-      fill="url(#amb-${id})" stroke="#3A2A1E" stroke-width="11" stroke-linejoin="round" paint-order="stroke">RACE</text>
+  <g filter="url(#soft-${id})">
+    ${extrude}
+    <text x="300" y="120" text-anchor="middle" textLength="512" lengthAdjust="spacingAndGlyphs" font-family="Fraunces, Georgia, serif" font-weight="900" font-size="124"
+      fill="url(#paper-${id})" stroke="#3A2A1E" stroke-width="10" stroke-linejoin="round" paint-order="stroke">RAPTOR</text>
+    <!-- Sickle claw hooking the plate -->
+    <path d="M150 214 C 118 188, 112 156, 136 140 C 132 166, 146 192, 176 206 Z" fill="#3A2A1E"/>
+    <path d="M141 150 C 136 170, 146 190, 168 203" fill="none" stroke="#FFE08A" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+    <!-- Amber specimen plate -->
+    <path d="M168 180 L432 180 L456 210 L432 240 L168 240 L144 210 Z" fill="url(#plate-${id})" stroke="#3A2A1E" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M168 180 L432 180 L444 195 L156 195 Z" fill="#FFF3C4" opacity="0.55"/>
+    <text x="300" y="228" text-anchor="middle" textLength="200" lengthAdjust="spacingAndGlyphs" font-family="'Nunito Sans', system-ui, sans-serif" font-weight="900" font-size="46" fill="#3A2A1E">RACE</text>
   </g>
 </svg>`;
 }
@@ -45,6 +50,6 @@ export const amberIconSVG = `
 export const eggIconSVG = (filled: boolean) => `
 <svg class="rr-egg-icon" viewBox="0 0 32 40" aria-hidden="true">
   <path d="M16 2 C 25 2, 30 16, 30 25 C 30 33, 24 38, 16 38 C 8 38, 2 33, 2 25 C 2 16, 7 2, 16 2 Z"
-    fill="${filled ? '#F4EAD6' : 'none'}" stroke="#3A2A1E" stroke-width="3" ${filled ? '' : 'stroke-dasharray="4 4"'}/>
+    fill="${filled ? '#F6EBD5' : 'rgba(243,230,204,0.55)'}" stroke="#3A2A1E" stroke-width="3" ${filled ? '' : 'stroke-opacity="0.45"'}/>
   ${filled ? '<circle cx="11" cy="17" r="2" fill="#A98F6C"/><circle cx="19" cy="25" r="2.4" fill="#A98F6C"/><circle cx="21" cy="13" r="1.5" fill="#7D6650"/>' : ''}
 </svg>`;

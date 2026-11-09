@@ -27,8 +27,10 @@ export function createSky(sunDir: THREE.Vector3) {
       void main() {
         vec3 d = normalize(vDir);
         float h = d.y;
-        vec3 c = mix(horizon, mid, smoothstep(0.0, 0.22, h));
-        c = mix(c, zenith, smoothstep(0.22, 0.9, h));
+        vec3 c = mix(horizon, mid, smoothstep(0.0, 0.14, h));
+        c = mix(c, zenith, smoothstep(0.14, 0.55, h));
+        // Golden-hour warmth hugging the horizon.
+        c += sunColor * 0.16 * (1.0 - smoothstep(0.0, 0.2, h));
         // Warm haze band hugging the horizon.
         c = mix(c, horizon * 1.04, (1.0 - smoothstep(-0.02, 0.06, h)) * 0.9);
         float s = max(dot(d, normalize(sunDir)), 0.0);
@@ -56,8 +58,8 @@ export function createSky(sunDir: THREE.Vector3) {
 export function createBackdrop() {
   const g = new GeomBuilder(false);
   const rng = new Rng(75);
-  const hazeNear = mix(GOBI.cliffRed, GOBI.horizon, 0.62);
-  const hazeFar = mix(GOBI.cliffLight, GOBI.horizon, 0.8);
+  const hazeNear = mix(GOBI.cliffRed, GOBI.horizon, 0.45);
+  const hazeFar = mix(GOBI.cliffLight, GOBI.horizon, 0.66);
   const ringLayer = (dist: number, count: number, hMin: number, hMax: number, tint: THREE.Color, arc: number) => {
     const bandA = tint, bandB = shade(tint, 1.06), lip = shade(tint, 0.9);
     for (let i = 0; i < count; i++) {
@@ -94,10 +96,10 @@ export function createBackdrop() {
   ringLayer(310, 11, 14, 32, hazeNear, 1.3);
   // Soft stylized clouds: rows of half-disc puffs, bright tops.
   const top = mix(0xffffff, GOBI.sunGlow, 0.35), low = mix(GOBI.sunGlow, GOBI.horizon, 0.55);
-  for (let i = 0; i < 7; i++) {
-    const a = rng.range(-1.2, 1.2);
+  for (let i = 0; i < 14; i++) {
+    const a = i < 7 ? rng.range(-1.2, 1.2) : rng.range(-3.1, 3.1);
     const dist = rng.range(400, 470);
-    const cx = Math.sin(a) * dist, cz = -Math.cos(a) * dist, cy = rng.range(70, 150);
+    const cx = Math.sin(a) * dist, cz = -Math.cos(a) * dist, cy = i < 7 ? rng.range(70, 150) : rng.range(150, 260);
     const right = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
     const puffs = rng.int(3, 6);
     let off = -puffs * 6;

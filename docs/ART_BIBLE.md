@@ -50,12 +50,12 @@ Stylized low-poly 3D: flat-shaded facets with smooth vertex-color gradients, war
 | Amber light | `#FFE08A` |
 | Amber deep | `#C8620A` |
 
-## 6. Hero raptor: Velociraptor, "Roadrunner" morph (default plumage)
-Inspired by desert-running birds: dark streaked body for contrast on sand, cool iridescent accent.
+## 6. Hero raptor: Velociraptor, "Gobi Streak" (default plumage)
+Dark streaked back over a pale belly for contrast on sand, a small blue cheek patch, cool teal accents on wing and tail tips. Bold bands only on the distal tail. Keep the cheek patch small (no side stripes) to stay clear of any film raptor's look.
 | Part | Hex |
 |---|---|
-| Body base | `#4B3A2F` |
-| Dark streaks | `#1F1915` |
+| Body base | `#5A4434` |
+| Dark streaks | `#2E2420` |
 | Light streaks | `#E9DFC9` |
 | Underside | `#D8C8A8` |
 | Iridescent accent (wing and tail tips) | `#2C8A8F` |
@@ -67,16 +67,20 @@ Inspired by desert-running birds: dark streaked body for contrast on sand, cool 
 Anatomy notes: long low skull with a slightly upturned snout; S-curved neck; arms folded like wings with long primary feathers; enlarged sickle claw on the second toe held raised (dromaeosaur trackways are two-toed for this reason); stiff tail roughly half the body length ending in a feather fan. Game proportions: head ~15% larger, eye ~30% larger than life.
 
 ## 7. Lighting
-- Key: warm directional `#FFD9A8`, low sun (~25 degrees elevation), from front-right so the raptor's side and cliff faces catch light and shadows rake across dunes.
-- Fill: hemisphere sky `#A9C7DC` / ground bounce `#C58A55`.
+- Key: warm directional `#FFD9A8`, intensity 2.9, ~31 degrees elevation, **behind and to the right of the chase camera** (~120 degrees from the run direction) so camera-facing surfaces are lit and shadows rake forward-left across the lanes. Hero and menu cameras may use a front-right sun.
+- Fill: hemisphere sky `#D6CCE0` (warm lavender keeps shadows warm, never olive) / ground bounce `#C58A55`, intensity 2.6.
+- Three.js lights are physically based: a white light needs intensity ~3.14 to reproduce albedo. Verify by sampling pixels: lit track should render near `#E6B27D`, shadowed track near `#A98365`, and nothing in the raptor or hazards darker than RGB 35 except eyes and claws.
 - Rim: fresnel rim term on characters and hazards for silhouette pop.
 - Fog: exponential-squared toward horizon color.
-- Tone mapping: ACES filmic, slight warm grade, soft vignette (CSS overlay, zero GPU cost).
+- Tone mapping: Khronos Neutral (keeps palette hues; only compresses highlights), soft vignette (CSS overlay, zero GPU cost). Sky is tone mapped the same way so the horizon blends with fog.
 
 ## 8. Camera
 Third-person behind and above, portrait. Follows the raptor's lane partially (about 60%) for a sense of motion. Slight lag, FOV kick on speed-ups, small shake on stumble and landing.
 
-## 9. Effects
+## 9. Collectibles
+Amber and eggs carry a dark ink outline shell (inverted hull, `#5A2C0C`), echoing the ink-outlined UI icons and separating them from pale sand in grayscale. Eggs are 1.65x scale with a soft self-glow and a larger halo.
+
+## 9b. Effects
 Sand puffs on footfalls, landing and slides; amber sparkle and soft halo; heat shimmer is not used (expensive). The sandstorm chaser is a screen-edge sand vignette with drifting streaks.
 
 ## 10. UI motif: Expedition Field Journal
@@ -84,7 +88,7 @@ Sand puffs on footfalls, landing and slides; amber sparkle and soft halo; heat s
 - Buttons: amber gem buttons (faceted amber gradient, dark ink outline, soft glow).
 - Icons: ink line illustrations, 2 px strokes, rounded caps.
 - Typography: display **Fraunces** (heavy weights) for titles and the logo; **Nunito Sans** for UI and body. Numbers in HUD: Nunito Sans Black with tabular figures.
-- Logo: "RAPTOR RACE" in heavy Fraunces, amber gradient fill, dark ink outline, warm glow, a sickle-claw slash accent.
+- Logo: a stamped "RAPTOR" (cream paper fill, ink outline, amber extrusion) over an amber specimen plate reading "RACE", hooked by an ink sickle claw. Avoid gold-gradient stacked lettering (too close to other runners' wordmarks). Use textLength so it never clips on narrow phones.
 
 ## 11. Do / Don't
 - Do: keep silhouettes bold; reuse the palette; keep geometry faceted and clean; animate everything a little (idle bob, feather flutter).

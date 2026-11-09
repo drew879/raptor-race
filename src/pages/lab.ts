@@ -1,21 +1,21 @@
 import * as THREE from 'three';
 import { buildRaptor } from '../render/raptor/model';
 import { RaptorAnimator, defaultAnimInput } from '../render/raptor/anim';
-import { RAPTOR_ROADRUNNER, GOBI } from '../render/palette';
+import { RAPTOR_GOBI_STREAK, GOBI } from '../render/palette';
 
 // Asset lab: ?pose=run|idle|slide|air|land&t=0.3&view=side|back|front|three&speed=12
 const q = new URLSearchParams(location.search);
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMapping = THREE.NeutralToneMapping;
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(GOBI.horizon);
-scene.add(new THREE.HemisphereLight(GOBI.hemiSky, GOBI.hemiGround, 1.3));
-const sun = new THREE.DirectionalLight(GOBI.keyLight, 2.6);
+scene.add(new THREE.HemisphereLight(GOBI.hemiSky, GOBI.hemiGround, 2.6));
+const sun = new THREE.DirectionalLight(GOBI.keyLight, 2.9);
 sun.position.set(3, 2.2, -2.5);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
@@ -26,7 +26,7 @@ ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-const { mesh, bones } = buildRaptor(RAPTOR_ROADRUNNER);
+const { mesh, bones } = buildRaptor(RAPTOR_GOBI_STREAK);
 scene.add(mesh);
 const anim = new RaptorAnimator(bones);
 const inp = defaultAnimInput();

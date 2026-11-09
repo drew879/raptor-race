@@ -95,8 +95,9 @@ export class Runner {
 
     // Vertical.
     if (!this.grounded) {
+      // Exact for constant gravity, so jump height and air time match CONFIG at any step size.
+      this.y += this.vy * dt - 0.5 * Runner.G * dt * dt;
       this.vy -= Runner.G * dt;
-      this.y += this.vy * dt;
       if (this.y <= 0) {
         this.y = 0;
         this.vy = 0;

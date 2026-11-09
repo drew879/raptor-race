@@ -62,4 +62,6 @@ export const MATS = {
   character: litMaterial({ rim: 0.45, side: THREE.DoubleSide }),
   glow: unlitMaterial({ toneMapped: false }),
   backdrop: unlitMaterial({ fog: false, bend: false }),
+  egg: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color(0x6a5638) }), { rim: 0.5 }),
+  outline: patchWorld(new THREE.MeshBasicMaterial({ color: new THREE.Color(0x5a2c0c), side: THREE.BackSide, fog: true }), {}),
 };

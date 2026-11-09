@@ -4,8 +4,8 @@ import { createBackdrop, createSky } from './sky';
 import { CONFIG } from '../game/config';
 import { damp } from '../core/math';
 
-export const SUN_DIR = new THREE.Vector3(0.62, 0.86, -0.22).normalize();
-export const FOG = { near: 28, far: 165 };
+export const SUN_DIR = new THREE.Vector3(0.76, 0.52, 0.44).normalize();
+export const FOG = { near: 42, far: 235 };
 
 /** Renderer, scene, lights, sky and the chase camera. */
 export class Stage {
@@ -23,19 +23,19 @@ export class Stage {
   constructor(container: HTMLElement, opts: { preserveDrawingBuffer?: boolean } = {}) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: opts.preserveDrawingBuffer ?? false });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     container.appendChild(this.renderer.domElement);
 
     this.scene.fog = new THREE.Fog(col(GOBI.horizon), FOG.near, FOG.far);
-    this.scene.add(new THREE.HemisphereLight(GOBI.hemiSky, GOBI.hemiGround, 1.6));
-    this.sun = new THREE.DirectionalLight(GOBI.keyLight, 2.5);
+    this.scene.add(new THREE.HemisphereLight(GOBI.hemiSky, GOBI.hemiGround, 2.6));
+    this.sun = new THREE.DirectionalLight(GOBI.keyLight, 2.9);
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(1024, 1024);
+    this.sun.shadow.mapSize.set(2048, 2048);
     const sc = this.sun.shadow.camera;
-    sc.left = -9; sc.right = 9; sc.top = 14; sc.bottom = -10; sc.near = 1; sc.far = 80;
+    sc.left = -10; sc.right = 10; sc.top = 16; sc.bottom = -16; sc.near = 1; sc.far = 90;
     this.sun.shadow.bias = -0.0008;
     this.sun.shadow.normalBias = 0.02;
     this.scene.add(this.sun, this.sun.target);
@@ -69,7 +69,7 @@ export class Stage {
 
   /** Keep sun shadow box, sky and backdrop centered on the action. */
   follow(x: number, z: number) {
-    const focus = new THREE.Vector3(x, 0, z - 6);
+    const focus = new THREE.Vector3(x, 0, z - 8);
     this.sun.target.position.copy(focus);
     this.sun.position.copy(focus).addScaledVector(SUN_DIR, 40);
     this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);

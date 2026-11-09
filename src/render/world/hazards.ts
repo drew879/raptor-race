@@ -9,7 +9,7 @@ export type HazardType = 'boulder' | 'ledge' | 'ledgeWide' | 'arch' | 'ribArch';
 
 const rockTone = (n: THREE.Vector3, rng: Rng, base = GOBI.hazardRock, light = GOBI.hazardRockLight) => {
   const up = n.y;
-  const c = up > 0.45 ? mix(base, light, 0.75) : up < -0.3 ? shade(col(base), 0.75) : col(base);
+  const c = up > 0.45 ? mix(base, light, 0.9) : up < -0.3 ? shade(col(base), 0.8) : mix(base, light, 0.35);
   return shade(c, 0.94 + rng.next() * 0.12);
 };
 
@@ -17,7 +17,7 @@ function boulder(): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const rng = new Rng(11);
   const main = jitterGeometry(new THREE.IcosahedronGeometry(1, 1), 0.28, () => rng.next());
-  g.appendGeometry(main, new THREE.Matrix4().compose(new THREE.Vector3(0, 0.55, 0), new THREE.Quaternion(), new THREE.Vector3(0.66, 0.6, 0.58)), (_i, _c, n) => rockTone(n, rng));
+  g.appendGeometry(main, new THREE.Matrix4().compose(new THREE.Vector3(0, 0.68, 0), new THREE.Quaternion(), new THREE.Vector3(0.66, 0.74, 0.58)), (_i, _c, n) => rockTone(n, rng));
   for (const [x, z, s] of [[-0.55, 0.25, 0.28], [0.5, 0.3, 0.22], [0.35, -0.4, 0.18]] as const) {
     const pebble = jitterGeometry(new THREE.IcosahedronGeometry(1, 0), 0.3, () => rng.next());
     g.appendGeometry(pebble, new THREE.Matrix4().compose(new THREE.Vector3(x, s * 0.5, z), new THREE.Quaternion(), new THREE.Vector3(s, s * 0.8, s)), (_i, _c, n) => rockTone(n, rng));
@@ -39,20 +39,33 @@ function ledge(width: number): THREE.BufferGeometry {
   return g.build();
 }
 
-/** Natural sandstone arch over one lane: slide under the lintel (clearance 0.62 m). */
+/** Eroded sandstone arch over one lane: tapered legs, banded strata, curved span. Slide under (clearance 0.66 m). */
 function arch(): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const rng = new Rng(23);
-  const red = mix(GOBI.cliffShadow, GOBI.cliffRed, 0.55), redL = mix(GOBI.cliffRed, GOBI.cliffLight, 0.35);
-  const tone = (n: THREE.Vector3) => shade(n.y > 0.4 ? redL : red, 0.93 + rng.next() * 0.14);
+  const bands = [col(GOBI.cliffRed), col(GOBI.cliffLight), col(GOBI.cliffRed), mix(GOBI.cliffRed, GOBI.cliffShadow, 0.45)];
+  const tone = (c: THREE.Vector3, n: THREE.Vector3) => {
+    const b = bands[Math.floor((c.y + 0.4) / 0.28) % bands.length];
+    return shade(n.y > 0.5 ? mix(GOBI.cliffLight, GOBI.cliffPale, 0.3) : b, (n.y < -0.3 ? 0.82 : 1) * (0.94 + rng.next() * 0.12));
+  };
   for (const sx of [-1, 1]) {
-    const pillar = jitterGeometry(new THREE.CylinderGeometry(0.3, 0.42, 1.3, 7, 3), 0.08, () => rng.next());
-    g.appendGeometry(pillar, new THREE.Matrix4().makeTranslation(sx * 0.98, 0.64, 0), (_i, _c, n) => tone(n));
+    const leg = jitterGeometry(new THREE.CylinderGeometry(0.24, 0.4, 1.2, 7, 4), 0.07, () => rng.next());
+    g.appendGeometry(leg, new THREE.Matrix4().makeTranslation(sx * 0.95, 0.6, 0), (_i, c, n) => tone(c, n));
   }
-  const lintel = jitterGeometry(new THREE.CylinderGeometry(0.34, 0.34, 2.7, 8, 6), 0.09, () => rng.next());
-  lintel.rotateZ(Math.PI / 2);
-  lintel.scale(1, 0.85, 1.05);
-  g.appendGeometry(lintel, new THREE.Matrix4().makeTranslation(0, 0.62 + 0.29, 0), (_i, _c, n) => tone(n));
+  // Curved span: a bent tube from leg top to leg top, thick in the middle.
+  const span: THREE.Vector3[] = [];
+  const radii: number[] = [];
+  for (let k = 0; k <= 8; k++) {
+    const t = k / 8;
+    const x = (t - 0.5) * 2.1;
+    span.push(new THREE.Vector3(x, 1.0 + 0.18 * Math.sin(Math.PI * t) + (rng.next() - 0.5) * 0.04, (rng.next() - 0.5) * 0.06));
+    radii.push(0.3 + 0.05 * Math.sin(Math.PI * t));
+  }
+  const tmp = new GeomBuilder();
+  addTube(tmp, span, radii, 8, () => col(GOBI.cliffRed));
+  const tg = tmp.build();
+  g.appendGeometry(tg, new THREE.Matrix4(), (_i, c, n) => tone(c, n));
+  tg.dispose();
   return g.build();
 }
 
@@ -61,7 +74,7 @@ function ribArch(): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const rng = new Rng(31);
   const bone = col(GOBI.bone);
-  const boneD = mix(GOBI.bone, GOBI.sandShadow, 0.45);
+  const boneD = mix(GOBI.bone, GOBI.sandShadow, 0.55);
   // Two support rocks.
   for (const sx of [-1, 1]) {
     const r = jitterGeometry(new THREE.IcosahedronGeometry(1, 0), 0.3, () => rng.next());
@@ -70,6 +83,11 @@ function ribArch(): THREE.BufferGeometry {
   // Main bone shaft with knobbed ends.
   const y = 0.9;
   addTube(g, [new THREE.Vector3(-3.0, y + 0.08, 0), new THREE.Vector3(-1.5, y - 0.02, 0.05), new THREE.Vector3(0, y - 0.05, 0), new THREE.Vector3(1.5, y - 0.02, -0.05), new THREE.Vector3(3.0, y + 0.08, 0)], [0.26, 0.21, 0.2, 0.21, 0.26], 7, (s) => (s % 2 ? bone : shade(bone, 0.95)));
+  // Darken downward-facing bone faces (shadowed underside).
+  for (let i = 0; i < g.colors.length; i += 9) {
+    const yA = g.pos[i + 1], yB = g.pos[i + 4], yC = g.pos[i + 7];
+    if (yA + yB + yC < (y - 0.08) * 3 && yA > 0.5) for (let k = 0; k < 9; k++) g.colors[i + k] *= 0.62;
+  }
   for (const sx of [-1, 1]) {
     const knob = jitterGeometry(new THREE.IcosahedronGeometry(1, 0), 0.2, () => rng.next());
     g.appendGeometry(knob, new THREE.Matrix4().compose(new THREE.Vector3(sx * 3.05, y + 0.1, 0), new THREE.Quaternion(), new THREE.Vector3(0.3, 0.26, 0.28)), () => shade(boneD, 1.1 + rng.next() * 0.1));

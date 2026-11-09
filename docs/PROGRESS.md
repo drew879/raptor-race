@@ -2,7 +2,7 @@
 
 Newest first. Every session updates this before pushing.
 
-## Current milestone: M0 Style tile
+## Current milestone: M0 Style tile (M1 groundwork started: swipe input, runner + collision unit tests, synthesized SFX with loudness check)
 - [x] Design docs (GDD, Art Bible, Audio Bible, Tech)
 - [x] Project scaffold (Vite + TS + Three.js), fonts bundled (OFL)
 - [x] Procedural raptor: skinned low-poly mesh, IK run cycle, jump, slide, idle, lean, stumble, land
@@ -10,5 +10,6 @@ Newest first. Every session updates this before pushing.
 - [x] Amber (instanced, glow halos), eggs, hazards (boulder, ledge, wide ledge, arch, rib arch), dust and sparkle particles
 - [x] UI motif: amber logo, gem and paper buttons, HUD tags, field-journal card
 - [x] Screenshot harness (`npm run shots`, `scripts/lab-shots.mjs` for asset turntables)
-- [ ] Art critic loop
+- [x] Art critic round 1 (fail, 5-7/10): relit (sun behind-right, physically correct intensities, neutral tone mapping), rebuilt raptor head/pattern/thighs/feathers, eroded arch, ink-outlined collectibles, new logo
+- [ ] Art critic round 2
 - [ ] Publish style tile for owner review

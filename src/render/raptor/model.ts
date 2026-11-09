@@ -39,28 +39,28 @@ type Ring = { y: number; z: number; rx: number; ry: number; a: BoneName; b?: Bon
 
 /** Body loft from snout to tail. Tip points are added at each end. */
 const BODY: Ring[] = [
-  { y: 0.968, z: -0.97, rx: 0.03, ry: 0.028, a: 'head', tag: 'snout' },
-  { y: 0.966, z: -0.9, rx: 0.045, ry: 0.046, a: 'head', tag: 'snout' },
-  { y: 0.97, z: -0.83, rx: 0.058, ry: 0.061, a: 'head', tag: 'snout' },
-  { y: 0.982, z: -0.765, rx: 0.072, ry: 0.076, a: 'head', tag: 'head' },
-  { y: 0.978, z: -0.7, rx: 0.078, ry: 0.08, a: 'head', tag: 'head' },
-  { y: 0.948, z: -0.645, rx: 0.07, ry: 0.075, a: 'head', b: 'neck2', w: 0.5, tag: 'neck' },
-  { y: 0.893, z: -0.59, rx: 0.07, ry: 0.078, a: 'neck2', tag: 'neck' },
-  { y: 0.833, z: -0.53, rx: 0.078, ry: 0.088, a: 'neck2', b: 'neck1', w: 0.5, tag: 'neck' },
-  { y: 0.773, z: -0.465, rx: 0.095, ry: 0.105, a: 'neck1', tag: 'neck' },
-  { y: 0.725, z: -0.385, rx: 0.13, ry: 0.14, a: 'neck1', b: 'chest', w: 0.7, tag: 'body' },
-  { y: 0.695, z: -0.28, rx: 0.18, ry: 0.168, a: 'chest', tag: 'body' },
-  { y: 0.678, z: -0.16, rx: 0.19, ry: 0.172, a: 'chest', b: 'pelvis', w: 0.5, tag: 'body' },
+  { y: 0.952, z: -1.04, rx: 0.026, ry: 0.022, a: 'head', tag: 'snout' },
+  { y: 0.955, z: -0.97, rx: 0.038, ry: 0.034, a: 'head', tag: 'snout' },
+  { y: 0.962, z: -0.89, rx: 0.05, ry: 0.044, a: 'head', tag: 'snout' },
+  { y: 0.972, z: -0.81, rx: 0.062, ry: 0.054, a: 'head', tag: 'head' },
+  { y: 0.975, z: -0.73, rx: 0.068, ry: 0.06, a: 'head', tag: 'head' },
+  { y: 0.952, z: -0.66, rx: 0.056, ry: 0.058, a: 'head', b: 'neck2', w: 0.5, tag: 'neck' },
+  { y: 0.895, z: -0.6, rx: 0.054, ry: 0.06, a: 'neck2', tag: 'neck' },
+  { y: 0.835, z: -0.535, rx: 0.06, ry: 0.068, a: 'neck2', b: 'neck1', w: 0.5, tag: 'neck' },
+  { y: 0.775, z: -0.468, rx: 0.078, ry: 0.088, a: 'neck1', tag: 'neck' },
+  { y: 0.725, z: -0.385, rx: 0.125, ry: 0.13, a: 'neck1', b: 'chest', w: 0.7, tag: 'body' },
+  { y: 0.695, z: -0.28, rx: 0.175, ry: 0.165, a: 'chest', tag: 'body' },
+  { y: 0.678, z: -0.16, rx: 0.188, ry: 0.17, a: 'chest', b: 'pelvis', w: 0.5, tag: 'body' },
   { y: 0.678, z: -0.04, rx: 0.172, ry: 0.156, a: 'pelvis', tag: 'body' },
   { y: 0.682, z: 0.07, rx: 0.14, ry: 0.124, a: 'pelvis', tag: 'body' },
   { y: 0.685, z: 0.19, rx: 0.106, ry: 0.088, a: 'pelvis', b: 'tail1', w: 0.6, tag: 'tail' },
   { y: 0.681, z: 0.33, rx: 0.082, ry: 0.066, a: 'tail1', tag: 'tail' },
-  { y: 0.676, z: 0.49, rx: 0.057, ry: 0.05, a: 'tail1', b: 'tail2', w: 0.7, tag: 'tail' },
-  { y: 0.671, z: 0.66, rx: 0.044, ry: 0.038, a: 'tail2', b: 'tail3', w: 0.6, tag: 'tail' },
-  { y: 0.667, z: 0.83, rx: 0.032, ry: 0.028, a: 'tail3', b: 'tail4', w: 0.4, tag: 'tail' },
-  { y: 0.663, z: 0.98, rx: 0.022, ry: 0.019, a: 'tail4', tag: 'tail' },
+  { y: 0.676, z: 0.49, rx: 0.06, ry: 0.05, a: 'tail1', b: 'tail2', w: 0.7, tag: 'tail' },
+  { y: 0.671, z: 0.66, rx: 0.046, ry: 0.038, a: 'tail2', b: 'tail3', w: 0.6, tag: 'tail' },
+  { y: 0.667, z: 0.83, rx: 0.034, ry: 0.028, a: 'tail3', b: 'tail4', w: 0.4, tag: 'tail' },
+  { y: 0.663, z: 0.98, rx: 0.024, ry: 0.019, a: 'tail4', tag: 'tail' },
 ];
-const SNOUT_TIP = new THREE.Vector3(0, 0.97, -1.015);
+const SNOUT_TIP = new THREE.Vector3(0, 0.948, -1.09);
 const TAIL_TIP = new THREE.Vector3(0, 0.66, 1.09);
 
 const skinOf = (a: number, b = a, w = 0) => [a, b, 0, 0, 1 - w, w, 0, 0];
@@ -191,27 +191,32 @@ export function buildRaptor(pl: RaptorPlumage): RaptorBuild {
       return i === 0 ? C.dark : C.skin;
     }
     if (r.tag === 'head') {
-      if (s > 0.6) return C.dark;
-      if (s > 0 && lateral) return i === 3 ? C.patch : C.rim;
+      if (s > 0.6) return C.base;
+      if (s > 0 && lateral) return i === 4 ? C.patch : C.baseDark;
       if (s < -0.3) return C.under;
       return C.light;
     }
     if (s < -0.5) return r.tag === 'tail' ? C.underWarm : C.under;
-    const band = i % 2 === 0;
     if (r.tag === 'tail') {
-      // Bold bands read clearly from the chase camera.
-      if (s > 0) return band ? C.light : C.dark;
-      return band ? mix(pl.light, pl.under, 0.5) : C.baseDark;
+      // Proximal tail continues the streaks; bold bands only toward the tip (reads from the chase camera).
+      if (i >= 17) {
+        const band = i % 2 === 1;
+        if (s > 0) return band ? C.light : C.dark;
+        return band ? mix(pl.light, pl.under, 0.5) : C.baseDark;
+      }
+      if (s > 0.5) return C.base;
+      if (s > 0) return j === 0 || j === 3 ? C.light : C.base;
+      return C.baseLight;
     }
     if (r.tag === 'neck') {
-      if (s > 0.5) return C.dark;
-      if (s > 0) return C.base;
+      if (s > 0.5) return C.base;
+      if (s > 0) return j === 0 || j === 3 ? C.baseLight : C.base;
       return C.underWarm;
     }
-    // Body: dark banded back over a pale belly, with a light flank streak.
-    if (s > 0.5) return band ? C.base : C.dark;
-    if (s > 0) return band ? C.baseLight : C.base;
-    return lateral && i > 9 && i < 13 ? C.light : C.underWarm;
+    // Body: lengthwise streaks. Dark spine stripe, cream flank streak, pale belly.
+    if (s > 0.5) return i % 3 === 0 ? C.baseDark : C.base;
+    if (s > 0) return i % 2 === 0 ? C.light : C.baseLight;
+    return C.under;
   };
 
   for (let i = 0; i < rings.length - 1; i++) {
@@ -230,8 +235,8 @@ export function buildRaptor(pl: RaptorPlumage): RaptorBuild {
 
   // ---------- Eyes ----------
   for (const sx of [-1, 1]) {
-    const c0 = new THREE.Vector3(sx * 0.07, 1.005, -0.77);
-    const nrm = new THREE.Vector3(sx, 0.2, -0.3).normalize();
+    const c0 = new THREE.Vector3(sx * 0.062, 0.99, -0.79);
+    const nrm = new THREE.Vector3(sx, 0.25, -0.25).normalize();
     const { side, up } = ringFrame(nrm);
     const ring = (rad: number, out: number) =>
       Array.from({ length: 6 }, (_, k) => {
@@ -256,31 +261,30 @@ export function buildRaptor(pl: RaptorPlumage): RaptorBuild {
   // ---------- Feathers: crest, neck ruff, back, tail fan ----------
   const upV = new THREE.Vector3(0, 1, 0);
   const crest: Array<[number, number, number, number, BoneName]> = [
-    // z, y, length, tilt-back, bone
-    [-0.73, 1.05, 0.07, 1.0, 'head'],
-    [-0.68, 1.05, 0.09, 1.05, 'head'],
-    [-0.63, 1.02, 0.1, 1.1, 'neck2'],
-    [-0.575, 0.97, 0.1, 1.15, 'neck2'],
-    [-0.52, 0.915, 0.1, 1.2, 'neck1'],
+    // z, y, length, tilt-back (radians from vertical), bone
+    [-0.75, 1.02, 0.1, 1.25, 'head'],
+    [-0.69, 1.02, 0.13, 1.3, 'head'],
+    [-0.635, 0.995, 0.13, 1.32, 'neck2'],
   ];
   for (const [z, y, len, tilt, bone] of crest) {
     const dir = new THREE.Vector3(0, Math.cos(tilt), Math.sin(tilt));
-    feather(g, new THREE.Vector3(0, y, z), dir, new THREE.Vector3(1, 0, 0), len, 0.035, C.dark, C.accent, skinOf(B[bone]));
+    feather(g, new THREE.Vector3(0, y, z), dir, new THREE.Vector3(1, 0, 0), len, 0.05, C.base, C.accent, skinOf(B[bone]));
   }
   // Neck ruff: shards around the base of the neck, pointing back.
   for (let k = 0; k < 7; k++) {
     const th = Math.PI * (0.05 + (k / 6) * 0.9);
-    const base = new THREE.Vector3(Math.cos(th) * 0.11, 0.74 + Math.sin(th) * 0.115, -0.42);
-    const dir = new THREE.Vector3(Math.cos(th) * 0.5, Math.sin(th) * 0.4, 1).normalize();
+    const base = new THREE.Vector3(Math.cos(th) * 0.1, 0.74 + Math.sin(th) * 0.1, -0.43);
+    const dir = new THREE.Vector3(Math.cos(th) * 0.35, Math.sin(th) * 0.2, 1).normalize();
     const nrm = new THREE.Vector3(-Math.sin(th), Math.cos(th), 0);
-    feather(g, base, dir, nrm, 0.12, 0.05, k % 2 ? C.base : C.baseDark, k % 2 ? C.light : C.dark, skinOf(B.neck1, B.chest, 0.3));
+    feather(g, base, dir, nrm, 0.14, 0.075, k % 2 ? C.base : C.baseDark, k % 2 ? C.light : C.baseDark, skinOf(B.neck1, B.chest, 0.3));
   }
-  // Back ridge shards, lying almost flat.
-  for (let k = 0; k < 4; k++) {
-    const z = -0.3 + k * 0.11;
-    const y = 0.86 - k * 0.012 - (k > 1 ? (k - 1) * 0.022 : 0);
-    const bone = k < 2 ? 'chest' : 'pelvis';
-    feather(g, new THREE.Vector3(0, y - 0.012, z), new THREE.Vector3(0, 0.28, 1), new THREE.Vector3(1, 0, 0), 0.09, 0.05, C.dark, C.base, skinOf(B[bone]));
+  // Mantle: broad swept blades over the shoulders and hips (no reptile-like ridge).
+  for (let k = 0; k < 6; k++) {
+    const sx = k % 2 ? 1 : -1;
+    const z = -0.3 + Math.floor(k / 2) * 0.16;
+    const base = new THREE.Vector3(sx * 0.06, 0.835 - Math.floor(k / 2) * 0.012, z);
+    const dir = new THREE.Vector3(sx * 0.45, -0.05, 1).normalize();
+    feather(g, base, dir, new THREE.Vector3(sx * 0.3, 1, 0).normalize(), 0.2, 0.09, C.base, k < 2 ? C.baseDark : C.light, skinOf(k < 4 ? B.chest : B.pelvis));
   }
   // Tail fan: pairs of shards spreading outward, longest near the tip.
   const fan: Array<[number, number, BoneName, number]> = [
@@ -308,17 +312,17 @@ export function buildRaptor(pl: RaptorPlumage): RaptorBuild {
     const bT = B[`thigh${side}`], bS = B[`shin${side}`], bM = B[`meta${side}`], bToe = B[`toe${side}`];
     const hipTop = H.clone().add(new THREE.Vector3(sx * 0.015, 0.05, 0.02));
     // Thigh: thick feathered drumstick.
-    limbTube(g, [hipTop, H.clone().lerp(K, 0.5).add(new THREE.Vector3(sx * 0.012, 0, -0.01)), K], [0.09, 0.08, 0.045], [bT, bT, bT], 7, (_s, j, up) =>
-      up > 0.4 ? C.baseDark : j % 3 === 0 ? C.light : C.base, false);
+    limbTube(g, [hipTop, H.clone().lerp(K, 0.55).add(new THREE.Vector3(sx * 0.03, 0, -0.015)), K.clone().add(new THREE.Vector3(sx * 0.008, 0.01, 0))], [0.1, 0.095, 0.07], [bT, bT, bT], 7, (_s, j, up) =>
+      up > 0.4 ? C.base : j % 3 === 0 ? C.baseLight : C.base, false);
     // Thigh "trousers": downward shards.
     for (let k = 0; k < 5; k++) {
       const th = Math.PI * 2 * (k / 5) + 0.3;
-      const base = H.clone().lerp(K, 0.7).add(new THREE.Vector3(Math.cos(th) * 0.045, 0, Math.sin(th) * 0.045));
+      const base = H.clone().lerp(K, 0.78).add(new THREE.Vector3(Math.cos(th) * 0.07, 0, Math.sin(th) * 0.07));
       const dir = new THREE.Vector3(Math.cos(th) * 0.3, -1, 0.35 + Math.sin(th) * 0.3).normalize();
-      feather(g, base, dir, new THREE.Vector3(-Math.sin(th), 0, Math.cos(th)), 0.09, 0.045, C.base, C.dark, skinOf(bT));
+      feather(g, base, dir, new THREE.Vector3(-Math.sin(th), 0, Math.cos(th)), 0.11, 0.07, C.base, C.baseDark, skinOf(bT));
     }
     // Shin (knee to ankle), metatarsus (ankle to ball).
-    limbTube(g, [K, K.clone().lerp(A, 0.5), A], [0.038, 0.03, 0.022], [bS, bS, bS], 6, (_s, _j, up) => (up > 0 ? C.base : C.baseDark), false);
+    limbTube(g, [K, K.clone().lerp(A, 0.5), A], [0.045, 0.033, 0.023], [bS, bS, bS], 6, (_s, _j, up) => (up > 0 ? C.base : C.baseDark), false);
     limbTube(g, [A, A.clone().lerp(F, 0.5), F], [0.022, 0.019, 0.017], [bM, bM, bM], 6, () => C.skin, false);
     // Toes III and IV forward, with dark claw tips.
     for (const off of [-0.012, 0.016]) {
@@ -353,9 +357,9 @@ export function buildRaptor(pl: RaptorPlumage): RaptorBuild {
       const onHand = t > 0.6;
       const base = onHand ? W.clone().lerp(tipH, (t - 0.6) / 0.4) : E.clone().lerp(W, t / 0.6);
       base.x += sx * 0.012;
-      const len = 0.2 + t * 0.14;
+      const len = 0.22 + t * 0.16;
       const dir = new THREE.Vector3(sx * 0.12, -0.3 + t * 0.12, 1).normalize();
-      feather(g, base, dir, nrm, len, 0.07, k % 2 ? C.base : C.dark, t > 0.45 ? C.accent : C.light, skinOf(onHand ? bH : bF));
+      feather(g, base, dir, nrm, len, 0.1, k % 2 ? C.base : C.baseDark, t > 0.45 ? C.accent : C.light, skinOf(onHand ? bH : bF));
     }
   }
 

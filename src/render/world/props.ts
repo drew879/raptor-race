@@ -87,13 +87,13 @@ export function addMesa(g: GeomBuilder, pos: THREE.Vector3, radius: number, heig
     const r = radius * rng.range(0.75, 1.15);
     return new THREE.Vector2(Math.cos(a) * r, Math.sin(a) * r * rng.range(0.7, 1.0));
   });
-  const strata = [GOBI.cliffRed, GOBI.cliffLight, GOBI.cliffRed, GOBI.cliffPale, GOBI.cliffLight, GOBI.cliffRed, GOBI.cliffPale];
+  const strata = [GOBI.cliffRed, GOBI.cliffLight, GOBI.cliffRed, 0xa8452f, GOBI.cliffLight, GOBI.cliffRed, GOBI.cliffPale];
   const layers = rng.int(4, 6);
   const talusH = height * 0.12;
   const ringAt = (scale: number, y: number, wobble: number) =>
     basePoly.map((v) => new THREE.Vector3(pos.x + v.x * scale * (1 + rng.range(-wobble, wobble)), pos.y + y, pos.z + v.y * scale * (1 + rng.range(-wobble, wobble))));
   // Talus skirt.
-  const skirt = ringAt(1.45, -0.6, 0.12);
+  const skirt = ringAt(1.5, -2.5, 0.12);
   let prev = ringAt(1.0, talusH, 0.04);
   const talusCol = mix(GOBI.cliffRed, GOBI.sandMid, 0.55);
   for (let k = 0; k < M; k++) {

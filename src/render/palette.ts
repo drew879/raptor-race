@@ -15,8 +15,8 @@ export const GOBI = {
   cliffLight: 0xe8875a,
   cliffPale: 0xf2b582,
   cliffShadow: 0x7e3528,
-  hazardRock: 0x6e4c3b,
-  hazardRockLight: 0x8f6650,
+  hazardRock: 0x74503e,
+  hazardRockLight: 0x9a6e55,
   scrubSage: 0x8c9a5e,
   scrubOlive: 0x5e6b3e,
   bone: 0xeee4d0,
@@ -24,13 +24,14 @@ export const GOBI = {
   amberLight: 0xffe08a,
   amberDeep: 0xc8620a,
   keyLight: 0xffd9a8,
-  hemiSky: 0xa9c7dc,
+  hemiSky: 0xd6cce0,
   hemiGround: 0xc58a55,
 } as const;
 
-export const RAPTOR_ROADRUNNER = {
-  base: 0x4b3a2f,
-  dark: 0x1f1915,
+/** Default Velociraptor plumage, "Gobi Streak". */
+export const RAPTOR_GOBI_STREAK = {
+  base: 0x5a4434,
+  dark: 0x2e2420,
   light: 0xe9dfc9,
   under: 0xd8c8a8,
   accent: 0x2c8a8f,
@@ -41,7 +42,7 @@ export const RAPTOR_ROADRUNNER = {
   skin: 0x8a6a55,
 } as const;
 
-export type RaptorPlumage = { [K in keyof typeof RAPTOR_ROADRUNNER]: number };
+export type RaptorPlumage = { [K in keyof typeof RAPTOR_GOBI_STREAK]: number };
 
 /** sRGB hex to linear working-space Color. */
 export const col = (hex: number) => new Color(hex);

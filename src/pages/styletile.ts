@@ -8,7 +8,7 @@ import { createHazard, type HazardType } from '../render/world/hazards';
 import { Particles, SAND, SPARK } from '../render/fx';
 import { RaptorView } from '../render/raptor/view';
 import { Runner, type RunnerAction } from '../game/runner';
-import { GOBI, RAPTOR_ROADRUNNER } from '../render/palette';
+import { GOBI, RAPTOR_GOBI_STREAK } from '../render/palette';
 import { Rng } from '../core/rng';
 import { damp } from '../core/math';
 import { amberIconSVG, eggIconSVG, logoSVG } from '../ui/logo';
@@ -84,7 +84,7 @@ app.innerHTML = `
   <section>
     <h2>Components</h2>
     <div class="row"><button class="btn-amber">Run</button><button class="btn-paper">Retry</button></div>
-    <div class="row"><div class="tag" style="font-size:22px">${amberIconSVG.replace('class="rr-amber-icon"', 'class="rr-amber-icon" style="width:18px;height:24px"')} 248</div><div class="tag combo" style="font-family:var(--display);font-size:18px;background:var(--amber)">×4</div></div>
+    <div class="row"><div class="tag" style="font-size:22px">${amberIconSVG.replace('class="rr-amber-icon"', 'class="rr-amber-icon" style="width:18px;height:24px"')} 248</div><div class="tag combo" style="font-size:18px;background:var(--amber)">×4</div></div>
     <div class="card prerun">
       <div class="eyebrow">Field Journal · Level 1</div>
       <div class="species">Velociraptor</div>
@@ -100,6 +100,8 @@ app.innerHTML = `
   </section>
 </main>`;
 document.body.appendChild(app);
+// Hosts that already pad the root for safe areas (e.g. the artifact viewer) should not get a second inset.
+if (parseFloat(getComputedStyle(document.documentElement).paddingTop) > 0) document.documentElement.classList.add('root-padded');
 
 function starSVG() {
   return `<svg class="star" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 20.9l1.6-7L2 9.2l7.1-.6z" fill="none" stroke="#3A2A1E" stroke-width="2.2" stroke-linejoin="round"/></svg>`;
@@ -115,8 +117,8 @@ swatches(document.getElementById('sw-world')!, [
   ['Amber', GOBI.amberCore], ['Amber light', GOBI.amberLight],
 ]);
 swatches(document.getElementById('sw-raptor')!, [
-  ['Body', RAPTOR_ROADRUNNER.base], ['Bands', RAPTOR_ROADRUNNER.dark], ['Streak', RAPTOR_ROADRUNNER.light], ['Belly', RAPTOR_ROADRUNNER.under],
-  ['Teal accent', RAPTOR_ROADRUNNER.accent], ['Cheek', RAPTOR_ROADRUNNER.eyePatch], ['Eye', RAPTOR_ROADRUNNER.eye],
+  ['Body', RAPTOR_GOBI_STREAK.base], ['Bands', RAPTOR_GOBI_STREAK.dark], ['Streak', RAPTOR_GOBI_STREAK.light], ['Belly', RAPTOR_GOBI_STREAK.under],
+  ['Teal accent', RAPTOR_GOBI_STREAK.accent], ['Cheek', RAPTOR_GOBI_STREAK.eyePatch], ['Eye', RAPTOR_GOBI_STREAK.eye],
 ]);
 
 // ---------------- Scene ----------------
@@ -128,7 +130,7 @@ stage.world.add(items.group);
 const dust = new Particles(260, THREE.NormalBlending, FOG);
 const sparks = new Particles(160, THREE.AdditiveBlending, FOG);
 stage.world.add(dust.field.points, sparks.field.points);
-const raptor = new RaptorView(RAPTOR_ROADRUNNER);
+const raptor = new RaptorView(RAPTOR_GOBI_STREAK);
 stage.world.add(raptor.root);
 const runner = new Runner();
 runner.speed = 11;
@@ -255,7 +257,7 @@ function step(dt: number) {
     const ry = runner.y + (runner.sliding ? 0.35 : 0.75);
     if (Math.abs(it.x - runner.x) < 0.7 && Math.abs(it.y - ry) < 0.75) {
       it.active = false;
-      sparks.emit(it.x, it.y, it.z, it.kind === 'egg' ? 18 : 7, { spread: 0.7, up: 0.9, back: -runner.speed * 0.85, size: 0.13, grow: -0.6, life: 0.28, alpha: 0.85, color: SPARK, rand });
+      if (mode === 'run') sparks.emit(it.x, it.y, it.z, it.kind === 'egg' ? 18 : 7, { spread: 0.7, up: 0.9, back: -runner.speed * 0.85, size: 0.13, grow: -0.6, life: 0.28, alpha: 0.85, color: SPARK, rand });
       if (it.kind === 'amber') {
         amber++; chain++; score += 10 * combo;
         if (chain % 25 === 0) combo = Math.min(5, combo + 1);
@@ -282,6 +284,7 @@ function step(dt: number) {
   if (runner.sliding) dust.emit(runner.x, 0.04, rz - 0.2, 1, { spread: 1.2, up: 0.35, back: 1, size: 0.24, grow: 1.6, life: 0.4, alpha: 0.32, color: SAND, rand });
 
   raptor.sync(runner, dt, idle ? 1 : 0);
+  items.hideNear = mode === 'run' ? null : stage.camera.position;
   items.update(simTime);
   dust.update(dt);
   sparks.update(dt);
@@ -290,17 +293,17 @@ function step(dt: number) {
   if (mode === 'run') stage.chase(runner.x, runner.y, rz, dt);
   else if (mode === 'hero') {
     const cam = stage.camera;
-    tmp.set(runner.x + 2.0, 1.35, rz - 3.4);
+    tmp.set(runner.x + 1.75, 0.55, rz - 2.7);
     cam.position.x = damp(cam.position.x, tmp.x, 6, dt);
-    cam.position.y = damp(cam.position.y, tmp.y + runner.y * 0.4, 6, dt);
-    cam.position.z = rz - 3.4;
-    cam.lookAt(runner.x - 0.2, 0.55 + runner.y * 0.6, rz + 0.4);
+    cam.position.y = damp(cam.position.y, tmp.y + runner.y * 0.5, 6, dt);
+    cam.position.z = rz - 2.7;
+    cam.lookAt(runner.x - 0.05, 0.72 + runner.y * 0.7, rz + 0.1);
     stage.follow(runner.x, rz);
   } else {
     heroOrbit += dt * 0.12;
     const a = 0.75 + Math.sin(heroOrbit) * 0.35;
-    stage.camera.position.set(runner.x + Math.sin(a) * 3.0, 0.85, rz - Math.cos(a) * 3.0);
-    stage.camera.lookAt(runner.x, 0.72, rz);
+    stage.camera.position.set(runner.x + Math.sin(a) * 3.1, 0.7, rz - Math.cos(a) * 3.1);
+    stage.camera.lookAt(runner.x, 0.5, rz);
     stage.follow(runner.x, rz);
   }
 }

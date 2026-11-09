@@ -125,7 +125,10 @@ export function buildChunk(index: number, opts: { mesas?: boolean } = {}): Chunk
       const nm = rng.chance(0.75) ? rng.int(1, 2) : 0;
       for (let i = 0; i < nm; i++) {
         const x = sgn * rng.range(34, 95), z = z0 - rng.range(0, L);
-        addMesa(g, new THREE.Vector3(x, groundHeight(x, z) - 1, z), rng.range(7, 16), rng.range(12, 34), rng);
+        const r = rng.range(7, 16);
+        let base = Infinity;
+        for (let a = 0; a < 6.28; a += 0.8) base = Math.min(base, groundHeight(x + Math.cos(a) * r * 1.4, z + Math.sin(a) * r * 1.4));
+        addMesa(g, new THREE.Vector3(x, base - 1.5, z), r, rng.range(14, 36), rng);
       }
     }
   }
