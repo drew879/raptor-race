@@ -12,6 +12,9 @@ export const worldUniforms = {
   uRimColor: { value: new THREE.Color(GOBI.sunGlow) },
 };
 
+/** Bends grow with distance squared, softening past this many meters so the far terrain never swings off its edge. */
+export const BEND_KNEE = 90;
+
 export const rimColors: Record<string, THREE.Color> = {};
 type Patchable = THREE.MeshLambertMaterial | THREE.MeshBasicMaterial | THREE.PointsMaterial;
 
@@ -29,7 +32,8 @@ export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; be
         .replace(
           '#include <project_vertex>',
           `#include <project_vertex>
-          { vec4 bentPos = mvPosition; float zz = bentPos.z * bentPos.z; bentPos.y -= uCurve * zz; bentPos.x += uBend * zz; gl_Position = projectionMatrix * bentPos; }`,
+          { vec4 bentPos = mvPosition; float zz = bentPos.z * bentPos.z; bentPos.y -= uCurve * zz;
+            bentPos.x += uBend * zz / (1.0 + abs(bentPos.z) / ${BEND_KNEE.toFixed(1)}); gl_Position = projectionMatrix * bentPos; }`,
         );
     }
     if (rim > 0 && shader.fragmentShader.includes('vViewPosition')) {

@@ -54,14 +54,20 @@ B.hz(428, 'boulder', -1, 1);
 B.hint(436, 'magnet');
 B.power(442, 'magnet', [0]);
 B.line(452, 472, -1).line(452, 472, 1);
-B.hz(464, 'boulder', 0);
-B.hz(484, 'ledge', -1, 0).hz(484, 'boulder', 1).arcOver(484, 0);
-B.hz(502, 'arch', 0, 1).hz(502, 'boulder', -1).low(498, 506, 0);
-B.hz(519, 'ledge', 1).arcOver(519, 1);
-B.hz(536, 'boulder', 1, 0);
-B.line(538, 545, -1);
-B.hz(550, 'boulder', -1);
-B.line(548, 556, 0);
+B.hz(464, 'boulder', 0); // already in a side lane when the fin appears
+// Fork 1: a rock fin splits the trail. Left is rough and rich; right is easy and sparse (the prey goes right).
+// It sits mid-level on solid ground, well away from the updraft landing (owner playtest: landing into a fin).
+B.hint(456, 'fork'); // early enough to read before the fin
+B.fork(484, 530);
+B.line(486, 490, -1);
+B.hz(495, 'ledge', -1).arcOver(495, -1);
+B.hz(508, 'arch', -1).low(504, 512, -1);
+B.hz(521, 'ledge', -1).arcOver(521, -1);
+B.line(487, 501, 1, 4.6);
+B.hz(511, 'ledge', 1);
+B.line(516, 528, 1, 5);
+B.line(536, 552, -1);
+B.hz(547, 'boulder', 1, 0);
 B.hz(564, 'ribArch', 0).low(560, 568, -1);
 B.hz(580, 'ledgeWide', 0).arcOver(580, -1);
 B.hz(596, 'boulder', -1);
@@ -74,18 +80,11 @@ for (let d = 640; d <= 680; d += 10) B.hz(d, 'boulder', -1, 0, 1);
 B.sky(628, 692, 0, 2.75, 3.2);
 B.sky(644, 676, 1, 2.75, 4);
 B.egg(666, -1, 2.75);
-// Fork 1: a rock fin splits the trail. Left is rough and rich; right is easy and sparse (the prey goes right).
-B.hint(694, 'fork');
-B.fork(704, 750);
-B.line(706, 711, -1);
-B.hz(716, 'ledge', -1).arcOver(716, -1);
-B.hz(729, 'arch', -1).low(725, 733, -1);
-B.hz(742, 'ledge', -1).arcOver(742, -1);
-B.line(708, 722, 1, 4.6);
-B.hz(732, 'ledge', 1);
-B.line(738, 748, 1, 5);
-B.hz(762, 'boulder', 0);
-B.line(756, 768, 1);
+// After the glide: a clear landing (nothing for ~2.5 s), then a gentle run-in to the checkpoint.
+B.line(712, 730, 0);
+B.hz(742, 'ledgeWide', 0).arcOver(742, 0);
+B.hz(760, 'boulder', 0);
+B.line(754, 768, 1);
 
 // Checkpoint 2 at 772. Beat 6: the storm rises; combos (772-1020).
 B.hz(790, 'ledge', 0).hz(790, 'boulder', -1, 1).arcOver(790, 0);

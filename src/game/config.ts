@@ -13,6 +13,7 @@ export const CONFIG = {
     stumbleGap: 8,
     minGap: 9,
     lostGap: 46,
+    warnGap: 32, // "It's getting away!" when the prey pulls this far ahead
     pounceRange: 9, // the prompt appears inside this gap
     pounceWindow: 2.6, // seconds to swipe up before the prey recovers
     finaleCloseSpeed: 7, // m/s the gap shrinks once the prey tires
@@ -24,7 +25,7 @@ export const CONFIG = {
   world: { chunkLength: 40, chunksAhead: 6, chunksBehind: 1, trackHalfWidth: 2.6 },
   /** Automatic bends (visual only): world bend per unit of level curvature, how far ahead a bend shows,
    * how fast the far scenery swings round, and how much the camera banks. */
-  curves: { bend: 0.0006, lookAhead: 28, headingGain: 5, maxHeading: 0.7, roll: 0.045 },
+  curves: { bend: 0.004, lookAhead: 28, headingGain: 1.2, maxHeading: 0.7, roll: 0.07 }, // owner: 0.0006 was barely noticeable
   /** Opening shot (seconds, meters): the prey grazes, looks up, bolts; the camera swings back behind the raptor. */
   intro: { graze: 1.6, alert: 0.55, swing: 1.35, preyLead: 7, camAz: 0.6, camDist: 2.9, camHeight: 0.8, crane: 2.2 },
   /** The pinned finale, framed from ahead and to the side of the prey (prey-relative; +z is behind it). */

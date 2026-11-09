@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { LEVEL1 } from '../src/game/level1';
 import { Session } from '../src/game/session';
-import { hazardBox } from '../src/game/collision';
+import { HAZARD_BOXES, hazardBox } from '../src/game/collision';
+import { CRASH_COPY } from '../src/game/copy';
+import { speedAt } from '../src/game/level';
+import { GLIDE_SECONDS } from '../src/game/session';
 import { Bot } from '../src/game/bot';
 import { HUMANLIKE, PERFECT, playLevel } from '../src/game/bot';
 
@@ -68,6 +71,35 @@ describe('forks', () => {
     expect(refused).toBeGreaterThan(4);
     expect(alongsideInSpineLane).toBe(0);
     expect(preyInSpineLane).toBe(0);
+  });
+});
+
+describe('setbacks and fork placement (owner playtest 4)', () => {
+  const spines = LEVEL1.hazards.filter((h) => h.type === 'spine');
+  it('every obstacle type has crash screen text', () => {
+    for (const t of Object.keys(HAZARD_BOXES)) expect(CRASH_COPY[t as keyof typeof CRASH_COPY]?.[1], t).toBeTruthy();
+  });
+  it('running straight into a fin is a crash with the fin as its cause, and the run stays crashed', () => {
+    const s = new Session(LEVEL1);
+    s.start();
+    s.resumeAt(spines[0].d - 18); // past the boulder that guards the approach
+    let cause = '';
+    for (let t = 0; t < 6 && !cause; t += 1 / 60) {
+      s.step(1 / 60);
+      for (const e of s.drainEvents()) if (e.t === 'crash') cause = e.cause;
+    }
+    expect(cause).toBe('spine');
+    expect(s.state).toBe('caught');
+    // Reviving puts you beside the fin, never inside it.
+    expect(s.revive()).toBe(true);
+    expect(s.runner.lane).not.toBe(0);
+  });
+  it('no fork starts within 3 s of an updraft glide landing, and no checkpoint sits inside a fork', () => {
+    for (const p of LEVEL1.pickups.filter((q) => q.kind === 'updraft')) {
+      const landing = p.d + speedAt(LEVEL1, p.d) * GLIDE_SECONDS;
+      for (const sp of spines) if (sp.d > p.d) expect(sp.d - landing, `fork at ${sp.d}`).toBeGreaterThan(3 * speedAt(LEVEL1, landing));
+    }
+    for (const cp of LEVEL1.checkpoints) for (const sp of spines) expect(cp < sp.d - 5 || cp > sp.d + sp.len! + 5).toBe(true);
   });
 });
 

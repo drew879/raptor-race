@@ -21,8 +21,12 @@ Newest first. Every session updates this before pushing.
 - [x] Opening shot: close on the grazing Protoceratops (quarry card), it looks up and bolts, the camera cranes back behind the raptor, "Hunt!" (tap to skip; `?nointro` skips it)
 - [x] Finale: the pounce lands the raptor on the prey's back and holds it there (raptor-prey-restraint pose: crouched, feet gripping, wings beating, head down; no gore), framed from ahead in three-quarter view, then a true freeze-frame plate
 - [x] scripts/hunt-shots.mjs captures the intro, pounce and plate; lab.html shows `subject=proto|pin`
-- [ ] Jump obstacles that fit the Gobi (gullies and sandstone slabs proposed; awaiting owner)
-- [ ] Inclusion rewards (journal pages and a plumage proposed; awaiting owner)
+- [x] Playtest 4 fixes: crashing into a fork's fin froze the run (no crash text for the fin, so the crash screen never showed); crash text is now typed over every obstacle and the crash and "got away" screens follow from the game loop; smoke test drives the real page into the fin
+- [x] Fork 1 moved off the updraft landing into Beat 4 (tests: no fork within 3 s of a glide landing, no checkpoint inside a fork); the raptor stops the moment it crashes; distance meter removed with an "It's getting away!" warning at 32 m; bends about 3-6x stronger at mid range with a soft far limit
+- [ ] World pass (approved): dry gullies and flat sandstone slabs as the jumps; landmarks and set pieces
+- [ ] Music v2 (approved): real melody and groove, mallet timbres, 120 BPM, amber spaced on eighth notes, chimes snap to the beat
+- [ ] Field Journal (approved): inclusion pages with hints after two misses, dusk plumage for all 3, chapter gates (3 levels each; 8 of 9 inclusions open the next chapter; found inclusions kept forever; no amber trade)
+- [ ] Later: Level 2 (new raptor and prey); forks that split into two full three-lane paths
 - [x] Forks: a sandstone fin down the middle lane splits the trail into two routes (one rough and rich, one easy); swipes into the fin are refused with a soft bump; the prey takes the easy side; Level 1 has two (design 704-750 and 922-968)
 - [x] Automatic bends: a lateral view-space bend (sim stays straight), far scenery swings round, the camera banks; nine bends in Level 1
 - [x] Pacing pass: every decision-free stretch over ~2.5 s filled (was up to 6.3 s; now only the opener, which carries the "Hunt!" banner and lanes hint, runs 3.9 s). Fills favour dodges over jumps to keep it fairly easy: human-like bot 90% within one revive, never loses the prey

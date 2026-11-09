@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GeomBuilder } from '../geom';
 import { GOBI, col, mix, shade } from '../palette';
-import { MATS, worldUniforms } from '../materials';
+import { BEND_KNEE, MATS, worldUniforms } from '../materials';
 import { Rng } from '../../core/rng';
 
 const INK_SCALE = new THREE.Matrix4().makeScale(1.16, 1.12, 1.16);
@@ -100,7 +100,7 @@ export class HaloField {
           vAlpha = aAlpha * (1.0 - smoothstep(uFogNear, uFogFar, dist));
           vColor = aColor;
           mv.y -= uCurve * mv.z * mv.z;
-          mv.x += uBend * mv.z * mv.z;
+          mv.x += uBend * mv.z * mv.z / (1.0 + abs(mv.z) / ${BEND_KNEE.toFixed(1)});
           gl_Position = projectionMatrix * mv;
           gl_PointSize = aSize * uScale / max(dist, 0.1);
         }`,

@@ -15,6 +15,7 @@ import { Session, type GameEvent } from '../game/session';
 import { CONFIG } from '../game/config';
 import { LEVEL1 } from '../game/level1';
 import { curvatureAt } from '../game/level';
+import { crashCopy } from '../game/copy';
 import { worldUniforms } from '../render/materials';
 import { Input } from '../core/input';
 import { AudioEngine } from '../audio/sfx';
@@ -22,7 +23,7 @@ import { loadSave, writeSave } from '../game/save';
 import { Bot, PERFECT } from '../game/bot';
 import { Rng } from '../core/rng';
 import { clamp, damp, lerp, smoothstep } from '../core/math';
-import { amberIconSVG, inclusionIconSVG as eggIconSVG, logoSVG, protoSVG, raptorHeadSVG } from '../ui/logo';
+import { amberIconSVG, inclusionIconSVG as eggIconSVG, logoSVG } from '../ui/logo';
 import type { RunnerAction } from '../game/runner';
 import type { HintKind } from '../game/level';
 
@@ -47,12 +48,6 @@ root.innerHTML = `
 <div class="hud" id="hud" hidden>
   <div class="hud-row">
     <div class="tag score"><div><small>Score</small><span id="score">0</span></div></div>
-    <div class="hunt" id="hunt" aria-label="Distance to the Protoceratops">
-      <div class="hunt-track"></div>
-      <div class="hunt-me">${raptorHeadSVG}</div>
-      <div class="hunt-them" id="huntThem">${protoSVG}</div>
-      <div class="hunt-label" id="huntLabel">24 m</div>
-    </div>
     <div class="right">
       <div class="hud-row" style="gap:7px">
         <div class="tag amber" id="amberTag">${amberIconSVG}<span id="amber">0</span></div>
@@ -428,16 +423,11 @@ function handle(e: GameEvent) {
       haptic(60);
       shake = Math.max(shake, 0.6);
       flash();
-      const copy = CRASH_COPY[e.cause];
+      const copy = crashCopy(e.cause);
       $('caughtEyebrow').textContent = copy[0];
       $('caughtTitle').textContent = copy[1];
       $('caughtFact').textContent = copy[2];
-      setTimeout(() => {
-        if (session.state !== 'caught') return;
-        $('btnRevive').hidden = session.reviveUsed;
-        $('btnCheckpoint').textContent = session.checkpoint >= 0 ? 'Back to checkpoint' : 'Restart';
-        setApp('caught');
-      }, 650);
+      setbackT = 0; // the crash screen follows from the game loop (see step), so it can't be skipped
       break;
     }
     case 'checkpoint':
@@ -468,7 +458,7 @@ function handle(e: GameEvent) {
       $('lostFact').textContent = e.reason === 'missed'
         ? 'You were close! When "Swipe up to pounce" appears, swipe up right away.'
         : 'The Protoceratops slipped out of sight. Run clean to close the gap; every stumble lets it pull ahead.';
-      setTimeout(() => setApp('lost'), 500);
+      setbackT = 0;
       break;
     case 'finish':
       audio.play('finish');
@@ -486,15 +476,6 @@ function flash() {
   void el.offsetWidth;
   el.classList.add('on');
 }
-const CRASH_COPY: Record<string, [string, string, string]> = {
-  boulder: ['Ouch', 'Ran into a boulder', 'Boulders can\'t be jumped. Swipe left or right to go around them.'],
-  ledge: ['Ouch', 'Tripped on a ledge', 'Swipe up to jump low rock ledges.'],
-  ledgeWide: ['Ouch', 'Tripped on a ledge', 'Swipe up to jump low rock ledges.'],
-  arch: ['Ouch', 'Hit the arch', 'Swipe down to slide under arches.'],
-  ribArch: ['Ouch', 'Hit the fallen bone', 'Swipe down to slide under giant bones.'],
-  storm: ['Lost', 'The storm closed in', 'Run clean to keep the prey in sight.'],
-};
-
 function showResults() {
   const st = session.stars;
   const prevStars = save.stars[LEVEL.id] ?? [false, false, false];
@@ -576,9 +557,11 @@ function syncWorld(dt: number) {
   streamer.update(r.distance);
 
   const pinned = session.pinned ? 1 : 0;
-  const idle = !pinned && (app === 'title' || app === 'prerun' || app === 'intro' || app === 'results' || app === 'caught' || app === 'lost') ? 1 : 0;
+  const down = session.state === 'caught' || session.state === 'lost'; // stop the moment it happens, not when the screen shows
+  const idle = !pinned && (down || app === 'title' || app === 'prerun' || app === 'intro' || app === 'results' || app === 'caught' || app === 'lost') ? 1 : 0;
   pinW = damp(pinW, pinned, 14, dt);
-  raptor.sync(r, dt, idle, pinW);
+  idleW = damp(idleW, idle, 12, dt); // a quick ease, so a crash stops the legs without a pose snap
+  raptor.sync(r, dt, idleW, pinW);
 
   // Prey: runs ahead in its lane, hops ledges; hidden on the menus.
   const pz = app === 'intro' ? introPreyD() : session.preyD;
@@ -616,7 +599,10 @@ function syncWorld(dt: number) {
   fog.near = lerp(FOG.near, 22, ambient * 2.2);
 }
 let footAcc = 0;
+let setbackT = 0;
+let warnedFar = false;
 let pinW = 0;
+let idleW = 1;
 let frozen = false; // the Field Journal freeze-frame holds every animation still
 let clock = 0;
 const liveSet = new Set<number>();
@@ -709,14 +695,6 @@ function hud() {
   $('score').textContent = Math.round(session.score).toLocaleString('en-US');
   $('amber').textContent = String(session.amber);
   $('combo').textContent = String(session.combo);
-  const pct = session.progress * 100;
-  void pct;
-  const gap = Math.max(0, Math.round(session.gap));
-  // Hunt meter: the Protoceratops icon sits further along the track the bigger the gap.
-  const f = clamp(gap / CONFIG.hunt.lostGap, 0, 1);
-  $('huntThem').style.left = `calc(30px + (100% - 66px) * ${f.toFixed(3)})`;
-  $('huntLabel').textContent = gap >= 32 ? `${gap} m · losing it!` : `${gap} m`;
-  $('hunt').className = `hunt ${gap <= 14 ? 'close' : gap >= 32 ? 'far' : ''}`;
   const pw = $('power');
   const r = session.runner;
   if (session.magnetLeft > 0 || r.glideLeft > 0) {
@@ -737,6 +715,23 @@ function step(dt: number) {
     if (app === 'playing') { bot?.step(dt * timeScale); checkInclusionIntro(); }
     session.step(dt * timeScale);
     for (const e of session.drainEvents()) handle(e);
+    // No distance meter (owner: judge it by eye); one warning each time the prey pulls far ahead.
+    if (app === 'playing' && session.state === 'running') {
+      if (!warnedFar && session.gap >= CONFIG.hunt.warnGap) {
+        warnedFar = true;
+        floatText('It\'s getting away!', 'banner', 30);
+        haptic(25);
+      } else if (warnedFar && session.gap < CONFIG.hunt.warnGap - 6) warnedFar = false;
+    }
+    // Setbacks: after a short beat, a crash shows the crash screen and a lost prey shows "It got away".
+    if (app === 'playing' && (session.state === 'caught' || session.state === 'lost')) {
+      setbackT += dt;
+      if (session.state === 'caught' && setbackT >= 0.65) {
+        $('btnRevive').hidden = session.reviveUsed;
+        $('btnCheckpoint').textContent = session.checkpoint >= 0 ? 'Back to checkpoint' : 'Restart';
+        setApp('caught');
+      } else if (session.state === 'lost' && setbackT >= 0.5) setApp('lost');
+    }
   } else if (app === 'caught') {
     session.step(dt);
     session.drainEvents();
@@ -866,6 +861,11 @@ window.__rr = {
   state: () => ({ app, length: LEVEL.length, distance: session.distance, score: Math.round(session.score), amber: session.amber, eggs: session.eggs, sstate: session.state, pounceReady: session.pounceReady, pinned: session.pinned, music: audio.music ? { playing: audio.music.isPlaying, intensity: +audio.music.intensity.toFixed(2), ctx: audio.ctx?.state } : null }),
   input: (a: RunnerAction) => session.input(a),
   click: (id: string) => $(id).click(),
+  /** Test hook: carry the run on from design-meter distance d (smoke tests reach a fork without playing to it). */
+  warp: (d: number) => { session.resumeAt(d * (LEVEL.length / 1100)); resetWorld(); },
+  text: (id: string) => $(id).textContent,
+  /** Design-meter distance where the n-th fork's fin starts. */
+  forkNose: (n: number) => (LEVEL.hazards.filter((h) => h.type === 'spine')[n]?.d ?? 0) / (LEVEL.length / 1100),
   stats: () => ({ ...streamer.stats(), calls: stage.renderer.info.render.calls, tris: stage.renderer.info.render.triangles }),
 };
 if (!SHOT) requestAnimationFrame(frame);

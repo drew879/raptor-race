@@ -363,6 +363,11 @@ export class Session {
     } else {
       this.score = 0; this.amber = 0; this.combo = 1;
     }
+    this.resumeAt(cpD);
+  }
+
+  /** Carry on from distance d with a fresh stream of hazards and pickups ahead (checkpoints; tests warp here). */
+  resumeAt(cpD: number) {
     this.chain = 0; this.storm = 0; this.magnetLeft = 0; this.invuln = 0.5;
     this.runner.reset(cpD);
     this.hazards = []; this.pickups = [];
