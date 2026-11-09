@@ -79,10 +79,10 @@ node("c1", (0, 0.73, -0.39), 0.118, 0.128, "n4")
 node("c2", (0, 0.7, -0.28), 0.158, 0.16, "c1")
 node("c3", (0, 0.68, -0.16), 0.168, 0.165, "c2")
 node("p1", (0, 0.68, -0.04), 0.155, 0.15, "c3")
-node("p2", (0, 0.684, 0.07), 0.126, 0.12, "p1")
-node("t1", (0, 0.687, 0.19), 0.104, 0.094, "p2")
-node("t2", (0, 0.684, 0.33), 0.084, 0.072, "t1")
-node("t3", (0, 0.68, 0.49), 0.064, 0.054, "t2")
+node("p2", (0, 0.682, 0.07), 0.13, 0.135, "p1")
+node("t1", (0, 0.68, 0.19), 0.106, 0.112, "p2")
+node("t2", (0, 0.68, 0.33), 0.084, 0.085, "t1")
+node("t3", (0, 0.677, 0.49), 0.064, 0.06, "t2")
 node("t4", (0, 0.672, 0.66), 0.047, 0.04, "t3")
 node("t5", (0, 0.667, 0.83), 0.034, 0.029, "t4")
 node("t6", (0, 0.663, 0.98), 0.023, 0.02, "t5")
@@ -113,7 +113,7 @@ bpy.context.scene.collection.objects.link(obj)
 bpy.context.view_layer.objects.active = obj
 obj.select_set(True)
 mod = obj.modifiers.new("Skin", "SKIN")
-mod.branch_smoothing = 0.6
+mod.branch_smoothing = 1.0
 mod.use_smooth_shade = False
 sv = me.skin_vertices[0].data
 for i, n in enumerate(N):
@@ -149,46 +149,65 @@ def game(co):
     return Vector((co.x, co.z, -co.y))
 
 
+SPINE = sorted([(n[1][2], n[1][1], n[2], n[3]) for n in N if n[1][0] == 0], key=lambda t: t[0])
+
+
+def spine_at(z):
+    """Interpolated spine (y, side radius, vertical radius) at game depth z."""
+    if z <= SPINE[0][0]:
+        return SPINE[0][1:]
+    for a, b in zip(SPINE, SPINE[1:]):
+        if a[0] <= z <= b[0]:
+            t = (z - a[0]) / (b[0] - a[0])
+            return tuple(a[i] + (b[i] - a[i]) * t for i in range(1, 4))
+    return SPINE[-1][1:]
+
+
 def face_color(cen, nrm):
     x, y, z = cen
     up = nrm.y
     ax = abs(x)
-    # Feet and lower legs: scaly skin; claws dark.
+    sy, rs, rv = spine_at(z)
+    h = (y - sy) / max(rv, 1e-3)  # +1 top of body, -1 belly
+    # Feet and lower legs: scaly skin, dark claws.
     if y < 0.2:
-        return C["claw"] if (z < -0.06 or y > 0.07 and z < -0.03) else C["skin"]
-    if y < 0.43 and ax > 0.06:
-        return C["baseDark"] if up > 0 else C["base"]
+        return C["claw"] if (z < -0.06 or (y > 0.07 and z < -0.03)) else C["skin"]
+    # Legs below the body line (thighs and shins).
+    if h < -1.05 and ax > 0.04 and -0.25 < z < 0.2:
+        if y < 0.43:
+            return C["base"] if up > 0 else C["baseDark"]
+        return C["base"] if nrm.z > -0.2 else C["baseDark"]  # thigh: darker toward the back
     # Arms.
-    if ax > 0.17 and z < -0.2 and y > 0.55:
+    if ax > 0.165 and -0.46 < z < -0.2 and 0.55 < y < 0.72:
         return C["claw"] if z < -0.41 else C["base"]
     # Head.
     if z < -0.66:
         side = abs(nrm.x)
-        if z < -1.02:
+        if z < -1.03:
             return C["dark"]
         if up > 0.55:
             return C["base"]
-        if side > 0.5 and up > -0.1 and -0.82 < z < -0.74:
+        if side > 0.5 and up > -0.1 and -0.83 < z < -0.74:
             return C["patch"]
-        if up < -0.2 and z < -0.86:
-            return C["claw"] if up > -0.55 else C["under"]  # mouth line, pale chin
-        if up < -0.25:
+        if -0.45 < up < -0.1 and z < -0.86:
+            return C["claw"]  # mouth line
+        if up <= -0.45:
             return C["under"]
         return C["baseLight"]
     # Tail tip: bold bands for the chase camera.
     if z > 0.62:
         band = int((z - 0.62) / 0.085) % 2 == 0
-        if up > -0.3:
+        if h > -0.25:
             return C["light"] if band else C["dark"]
         return C["underWarm"]
-    # Body, neck, tail base: dark spine stripe, brown back, cream flank streak, pale belly.
-    if up > 0.8:
-        return C["baseDark"]
-    if up > 0.35:
+    # Body, neck and tail base, by height relative to the spine.
+    if h > 0.82:
+        return C["baseDark"]  # spine stripe
+    if h > 0.2:
         return C["base"]
-    if up > 0.0:
-        return C["light"] if (z > -0.45 and z < 0.55) else C["baseLight"]
-    if up > -0.4:
+    if h > -0.08:
+        return C["light"] if -0.62 < z < 0.6 else C["baseLight"]  # cream streak, cheek to tail
+    if h > -0.5:
         return C["baseLight"]
     return C["under"] if z < 0.3 else C["underWarm"]
 
@@ -210,7 +229,6 @@ scene.cycles.device = "CPU"
 scene.cycles.samples = 64
 ao = me.color_attributes.new("AO", "FLOAT_COLOR", "CORNER")
 mat = bpy.data.materials.new("Bake")
-mat.use_nodes = True
 obj.data.materials.append(mat)
 me.color_attributes.active_color = ao
 bpy.ops.object.bake(type="AO", target="VERTEX_COLORS")

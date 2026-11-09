@@ -4,6 +4,12 @@ Newest first. Every session updates this before pushing.
 
 ## Current milestone: M0 + M1 gate (awaiting owner review; see docs/GATE-M0-M1.md)
 
+### Blender raptor (owner decision)
+- [x] Headless Blender 5.2.3 verified (on-demand install: scripts/setup-blender.sh)
+- [x] scripts/blender/raptor.py: skin-modifier body, subdivision, decimation to 3,600 tris, spine-relative plumage, baked AO, auto-weighted rig matching BONE_DEFS, .rrm export (68 KB)
+- [x] Game uses the Blender body with code-built eyes and feathers; procedural animation unchanged
+- [ ] Blind A/B review vs the code-built raptor
+
 ### M1 Playable Level 1
 - [x] Swipe + keyboard input (fires on threshold, not release), runner with buffering, coyote time, fast-fall, glide, bounce
 - [x] Level DSL and Level 1 course (lanes, jumps, slides, magnet, updraft glide, storm combos, 3 eggs, 2 checkpoints, nest)

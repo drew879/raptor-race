@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { buildRaptor } from '../render/raptor/model';
+import { velociraptorBody } from '../render/raptor/assets';
 import { RaptorAnimator, defaultAnimInput } from '../render/raptor/anim';
 import { RAPTOR_GOBI_STREAK, GOBI } from '../render/palette';
 
@@ -26,7 +27,7 @@ ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-const { mesh, bones } = buildRaptor(RAPTOR_GOBI_STREAK);
+const { mesh, bones } = buildRaptor(RAPTOR_GOBI_STREAK, q.get('body') === 'code' ? {} : { body: velociraptorBody() });
 scene.add(mesh);
 const anim = new RaptorAnimator(bones);
 const inp = defaultAnimInput();

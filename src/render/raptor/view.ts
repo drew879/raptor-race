@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { buildRaptor } from './model';
+import { velociraptorBody } from './assets';
 import { RaptorAnimator, defaultAnimInput, type RaptorAnimInput } from './anim';
 import type { RaptorPlumage } from '../palette';
 import type { Runner } from '../../game/runner';
@@ -9,8 +10,8 @@ export class RaptorView {
   readonly root = new THREE.Group();
   readonly anim: RaptorAnimator;
   readonly input: RaptorAnimInput = defaultAnimInput();
-  constructor(plumage: RaptorPlumage) {
-    const { mesh, bones } = buildRaptor(plumage);
+  constructor(plumage: RaptorPlumage, opts: { codeBody?: boolean } = {}) {
+    const { mesh, bones } = buildRaptor(plumage, opts.codeBody ? {} : { body: velociraptorBody() });
     this.root.add(mesh);
     this.anim = new RaptorAnimator(bones);
   }

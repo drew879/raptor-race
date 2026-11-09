@@ -10,6 +10,7 @@ const pages: Record<string, string> = {
 
 export default defineConfig({
   base: './',
+  assetsInclude: ['**/*.rrm'],
   build: {
     target: 'es2022',
     assetsInlineLimit: 0,
