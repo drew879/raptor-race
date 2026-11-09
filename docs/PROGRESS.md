@@ -7,8 +7,10 @@ Newest first. Every session updates this before pushing.
 - [x] Fixes: swipe down no longer cancels the updraft; crash screen names the real cause; stumbles flash, shake and thicken the storm; hitches logged on the results screen
 - [x] Stutters: terrain for the whole level is pregenerated on the menus (chunks cost 10-27 ms each on desktop), shaders precompiled, per-frame allocations removed
 - [x] Bot look-ahead is time-based; perfect run 16,300 with 3 eggs; human-like 96% within one revive; par raised to 14,000
-- [ ] Free asset research (subagent) -> docs/research/free-assets.md
-- [ ] Art direction references + in-engine examples for 4 directions (owner wants to see them)
+- [x] Free asset research -> docs/research/free-assets.md (scenery, skies and textures are free and good; no free premium feathered rigged raptor; best bases are CC-BY; paid ~$79-110 or commission)
+- [x] Art direction research -> docs/research/art-direction-references.md (journal 22, graphic 22, mural 16, amber 15; recommends journal surface on graphic structure)
+- [x] In-engine treatments for all four looks plus the hybrid (src/render/post/looks.ts, looks.html, scripts/look-shots.mjs); published comparison page for the owner
+- [ ] Owner picks a direction (and whether to buy a premium raptor)
 - [ ] Hunt and pounce redesign (prey ahead, pounce finale, amber inclusions replace eggs)
 
 ## Previous milestone: M0 + M1 gate (see docs/GATE-M0-M1.md)
