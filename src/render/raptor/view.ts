@@ -10,8 +10,9 @@ export class RaptorView {
   readonly root = new THREE.Group();
   readonly anim: RaptorAnimator;
   readonly input: RaptorAnimInput = defaultAnimInput();
-  constructor(plumage: RaptorPlumage, opts: { codeBody?: boolean } = {}) {
-    const { mesh, bones } = buildRaptor(plumage, opts.codeBody ? {} : { body: velociraptorBody() });
+  /** Code-built body by default (it won the blind A/B review); `blenderBody` opts into the Blender mesh. */
+  constructor(plumage: RaptorPlumage, opts: { blenderBody?: boolean } = {}) {
+    const { mesh, bones } = buildRaptor(plumage, opts.blenderBody ? { body: velociraptorBody() } : {});
     this.root.add(mesh);
     this.anim = new RaptorAnimator(bones);
   }

@@ -27,7 +27,7 @@ ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-const { mesh, bones } = buildRaptor(RAPTOR_GOBI_STREAK, q.get('body') === 'code' ? {} : { body: velociraptorBody() });
+const { mesh, bones } = buildRaptor(RAPTOR_GOBI_STREAK, q.get('body') === 'blender' ? { body: velociraptorBody() } : {});
 scene.add(mesh);
 const anim = new RaptorAnimator(bones);
 const inp = defaultAnimInput();
