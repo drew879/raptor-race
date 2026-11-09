@@ -8,8 +8,6 @@ run() { $B scripts/blender/scenery.py "$@" 2>&1 | grep -E "wrote|Error|Traceback
 run --id namaqualand_boulder_02 --tris 700  --palette hazard  --fit 1.4,1.55,1.15 --out $O/boulder_a.rrs
 run --id namaqualand_boulder_03 --tris 700  --palette hazard  --fit 1.35,1.5,1.2  --out $O/boulder_b.rrs
 run --id namaqualand_boulder_05 --tris 700  --palette hazard  --fit 1.4,1.45,1.1  --out $O/boulder_c.rrs
-run --id namaqualand_boulders_01 --tris 600 --palette hazard  --fit 1.45,0.6,0.8   --out $O/ledge.rrs
-run --id namaqualand_boulders_01 --tris 1100 --palette hazard --fit 4.7,0.62,0.9  --out $O/ledge_wide.rrs
 run --id namaqualand_cliff_01   --tris 1800 --palette cliff   --height 22 --out $O/cliff_a.rrs
 run --id namaqualand_cliff_02   --tris 2200 --palette cliff   --height 28 --out $O/cliff_b.rrs
 run --id mountainside           --tris 2000 --palette cliff   --height 30 --out $O/cliff_c.rrs

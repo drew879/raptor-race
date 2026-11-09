@@ -83,6 +83,8 @@ Length ~1.1 km, speed 10 to 14 m/s (~92 s), 2 checkpoints.
 | CP2 | Storm rises: jump then slide, lane then jump, swooping pterosaur (slide), bleached ribcage arch, Egg 3 needs jump then lane change | Combos |
 | 7. Final dash | Run into the nest, raptor settles, camera orbits, results | Celebration |
 
+**As built after playtest 4 (supersedes the table above where they differ):** jumps are **dry gullies** (cut across all three lanes, banded walls) and **flat sandstone slabs** (one lane each, pale top, banded front); no logs (the owner: they don't belong in the Gobi), no cacti (they only evolved in the Americas, ~35 mya). Landmark stretches: dawn dunes (0-290, design m), a **Flaming Cliffs canyon** for the slide lessons (290-430), a **hoodoo garden** with the first fork (430-600), an open **basin** for the updraft glide (600-700), a **bone field** (700-790), a **herd of Protoceratops** along the trail's edges as the storm rises (790-1020), and open **flats** for the final dash (1020-1100).
+
 Difficulty target ("fairly easy"): a bot with ~300 ms reactions and occasional input errors clears it at least 85% of the time.
 
 ## 9. Roster

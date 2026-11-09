@@ -8,7 +8,6 @@ Simplified and recolored by `scripts/blender/scenery.py`; rebuilt with `scripts/
 | boulder_a | Namaqualand Boulder 02 (Greg Zaal, Rico Cilliers) | https://polyhaven.com/a/namaqualand_boulder_02 |
 | boulder_b | Namaqualand Boulder 03 | https://polyhaven.com/a/namaqualand_boulder_03 |
 | boulder_c | Namaqualand Boulder 05 | https://polyhaven.com/a/namaqualand_boulder_05 |
-| ledge, ledge_wide | Namaqualand Boulders 01 | https://polyhaven.com/a/namaqualand_boulders_01 |
 | cliff_a | Namaqualand Cliff 01 | https://polyhaven.com/a/namaqualand_cliff_01 |
 | cliff_b | Namaqualand Cliff 02 | https://polyhaven.com/a/namaqualand_cliff_02 |
 | cliff_c | Mountainside | https://polyhaven.com/a/mountainside |

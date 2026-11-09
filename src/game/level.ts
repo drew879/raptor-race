@@ -8,6 +8,9 @@ export type HintKind = 'lanes' | 'jump' | 'slide' | 'updraft' | 'magnet' | 'fork
 export interface HazardEvent { d: number; type: HazardType; lane: Lane; len?: number }
 export interface PickupEvent { d: number; kind: PickupKind; lane: Lane; y: number }
 export interface HintEvent { d: number; hint: HintKind }
+/** The kinds of landmark stretch a level is built from (terrain and scenery change per stretch). */
+export type SectionKind = 'dunes' | 'canyon' | 'hoodoos' | 'basin' | 'bones' | 'herd' | 'flats';
+export interface SectionEvent { from: number; kind: SectionKind }
 /** A visual bend in the track (the simulation stays straight). `amount` is signed curvature, + bends right. */
 export interface CurveEvent { d: number; len: number; amount: number }
 
@@ -30,6 +33,8 @@ export interface LevelDef {
   pickups: PickupEvent[];
   hints: HintEvent[];
   curves: CurveEvent[];
+  /** Landmark stretches in order; each runs to the next (world meters). */
+  sections: SectionEvent[];
   /** Distance where the storm visibly starts to build (story beat). */
   stormRises: number;
   parScore: number;
@@ -44,12 +49,15 @@ export class LevelBuilder {
   pickups: PickupEvent[] = [];
   hints: HintEvent[] = [];
   curves: CurveEvent[] = [];
+  sections: SectionEvent[] = [];
   /** `k` scales authored distances (design meters) to world meters, preserving timing at higher speeds. */
   constructor(private speed: { start: number; end: number }, private length: number, private k = 1) {}
   private v(d: number) { return speedAt({ speed: this.speed, length: this.length }, d); }
 
   hz(d: number, type: HazardType, ...lanes: Lane[]) {
-    for (const lane of lanes) this.hazards.push({ d: d * this.k, type, lane });
+    // Gullies are cut into the terrain on its row grid, so they sit on a row boundary.
+    const at = type === 'gully' ? Math.round((d * this.k) / CONFIG.world.trackRow) * CONFIG.world.trackRow : d * this.k;
+    for (const lane of lanes) this.hazards.push({ d: at, type, lane });
     return this;
   }
   /** Straight amber line at running height. */
@@ -85,12 +93,14 @@ export class LevelBuilder {
     this.curves.push({ d: from * this.k, len: (to - from) * this.k, amount });
     return this;
   }
+  /** From design distance `from` on, the scenery is this kind of stretch. */
+  section(from: number, kind: SectionKind) { this.sections.push({ from: from * this.k, kind }); return this; }
   hint(d: number, hint: HintKind) { this.hints.push({ d: d * this.k, hint }); return this; }
   /** High amber for glide sections. */
   sky(from: number, to: number, lane: Lane, y = 2.75, step = 3) { return this.line(from, to, lane, step, y); }
-  build(meta: Omit<LevelDef, 'hazards' | 'pickups' | 'hints' | 'curves' | 'speed' | 'length'>): LevelDef {
+  build(meta: Omit<LevelDef, 'hazards' | 'pickups' | 'hints' | 'curves' | 'sections' | 'speed' | 'length'>): LevelDef {
     const by = <T extends { d: number }>(a: T, b: T) => a.d - b.d;
-    return { ...meta, speed: this.speed, length: this.length, hazards: this.hazards.sort(by), pickups: this.pickups.sort(by), hints: this.hints.sort(by), curves: this.curves.sort(by) };
+    return { ...meta, speed: this.speed, length: this.length, hazards: this.hazards.sort(by), pickups: this.pickups.sort(by), hints: this.hints.sort(by), curves: this.curves.sort(by), sections: this.sections.sort((a, b) => a.from - b.from) };
   }
 }
 

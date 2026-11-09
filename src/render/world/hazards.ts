@@ -11,7 +11,7 @@ export type { HazardType };
 
 /** Smooth, position-based tonal drift (no per-face randomness, so no checkerboard "quilt"). */
 const drift = (c: THREE.Vector3) => 1 + 0.05 * Math.sin(c.x * 4.1 + c.y * 3.3 + c.z * 2.7) + 0.03 * Math.sin(c.x * 9.7 - c.z * 7.1);
-const rockTone = (n: THREE.Vector3, c: THREE.Vector3, base = GOBI.hazardRock, light = GOBI.hazardRockLight) => {
+const rockTone = (n: THREE.Vector3, c: THREE.Vector3, base: number = GOBI.hazardRock, light: number = GOBI.hazardRockLight) => {
   const up = n.y;
   const k = up > 0.45 ? mix(base, light, 0.9) : up < -0.3 ? shade(col(base), 0.8) : mix(base, light, 0.35);
   return shade(k, drift(c));
@@ -148,7 +148,64 @@ function spine(len: number): THREE.BufferGeometry {
   return g.build();
 }
 
+/** Builds a quad whose winding faces `outward`, whatever order the corners come in. */
+function face(g: GeomBuilder, a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, d: THREE.Vector3, outward: THREE.Vector3, color: THREE.Color) {
+  const n = new THREE.Vector3().crossVectors(new THREE.Vector3().subVectors(b, a), new THREE.Vector3().subVectors(c, a));
+  if (n.dot(outward) >= 0) g.quad(a, b, c, d, color);
+  else g.quad(d, c, b, a, color);
+}
+
+/**
+ * Flat sandstone slab across one whole lane (a low wall to jump): crisp pale top, banded front, dark strata
+ * line. Built to read nothing like a boulder (owner playtest: rock ledges looked like boulders and didn't
+ * look like they blocked the lane).
+ */
+function slab(): THREE.BufferGeometry {
+  const g = new GeomBuilder();
+  const rng = new Rng(41);
+  const W = 0.74, N = 5;
+  // Cross-section (z, y), front (+z, facing the runner) to back, over the top.
+  const prof: [number, number][] = [[0.38, 0], [0.38, 0.16], [0.375, 0.25], [0.355, 0.44], [0.29, 0.5], [-0.29, 0.52], [-0.35, 0.46], [-0.38, 0]];
+  const bandCol = (y: number, front: boolean) => {
+    if (y > 0.47) return shade(mix(GOBI.cliffPale, GOBI.sandLight, 0.45), 1.04);
+    if (!front) return shade(col(GOBI.cliffRed), 0.82);
+    if (y < 0.16) return shade(col(GOBI.cliffRed), 0.96);
+    if (y < 0.25) return col(GOBI.cliffShadow);
+    return col(GOBI.cliffLight);
+  };
+  const slices = Array.from({ length: N + 1 }, (_, i) => {
+    const x = -W + (2 * W * i) / N;
+    const lift = i === 0 || i === N ? -0.04 : (rng.next() - 0.5) * 0.04;
+    return prof.map(([z, y]) => new THREE.Vector3(x, y > 0.4 ? y + lift : y, z + (y > 0 ? (rng.next() - 0.5) * 0.02 : 0)));
+  });
+  for (let i = 0; i < N; i++) for (let j = 0; j < prof.length - 1; j++) {
+    const a = slices[i][j], b = slices[i + 1][j], c = slices[i + 1][j + 1], d = slices[i][j + 1];
+    const zMid = (prof[j][0] + prof[j + 1][0]) / 2, yMid = (prof[j][1] + prof[j + 1][1]) / 2;
+    const out = new THREE.Vector3(0, yMid > 0.47 ? 1 : 0, yMid > 0.47 ? 0 : Math.sign(zMid));
+    face(g, a, b, c, d, out, shade(bandCol(yMid, zMid > 0), 1 + (rng.next() - 0.5) * 0.05));
+  }
+  // End caps, banded like the front.
+  for (const [i, sx] of [[0, -1], [N, 1]] as const) {
+    const ring = slices[i];
+    const ctr = new THREE.Vector3(ring[0].x, 0.25, 0);
+    for (let j = 0; j < prof.length - 1; j++) {
+      const a = ring[j], b = ring[j + 1];
+      const n = new THREE.Vector3().crossVectors(new THREE.Vector3().subVectors(b, a), new THREE.Vector3().subVectors(ctr, a));
+      const c = bandCol((a.y + b.y) / 2, true);
+      if (n.x * sx >= 0) g.tri(a, b, ctr, c); else g.tri(b, a, ctr, c);
+    }
+  }
+  // Crumbs at its foot.
+  for (let k = 0; k < 6; k++) {
+    const r = rng.range(0.05, 0.11);
+    const p = new THREE.Vector3(rng.range(-0.8, 0.8), r * 0.4, rng.chance(0.5) ? rng.range(0.42, 0.6) : rng.range(-0.6, -0.42));
+    g.appendGeometry(jitterGeometry(new THREE.IcosahedronGeometry(1, 0), 0.25, () => rng.next()), new THREE.Matrix4().compose(p, new THREE.Quaternion(), new THREE.Vector3(r, r * 0.7, r)), (_i, c, n) => rockTone(n, c, GOBI.cliffRed, GOBI.cliffLight));
+  }
+  return g.build();
+}
+
 const GEOMS: Partial<Record<HazardType, THREE.BufferGeometry>> = {};
+const EMPTY = new THREE.BufferGeometry();
 const SPINES = new Map<number, THREE.BufferGeometry>();
 const BOULDERS = ['boulderA', 'boulderB', 'boulderC'] as const;
 export function hazardGeometry(type: HazardType, variant = 0, len = 0): THREE.BufferGeometry {
@@ -157,13 +214,11 @@ export function hazardGeometry(type: HazardType, variant = 0, len = 0): THREE.Bu
     if (!SPINES.has(key)) SPINES.set(key, spine(len));
     return SPINES.get(key)!;
   }
-  // Scanned rocks (Poly Haven, CC0) for boulders and ledges; arches and bones stay hand-built.
+  // Scanned rocks (Poly Haven, CC0) for boulders; slabs, arches and bones are hand-built.
   if (type === 'boulder') return scenery(BOULDERS[variant % BOULDERS.length]);
-  if (type === 'ledge') return scenery('ledge');
-  if (type === 'ledgeWide') return scenery('ledgeWide');
+  if (type === 'gully') return EMPTY; // cut into the terrain itself (see terrain.ts)
   if (!GEOMS[type]) {
-    GEOMS[type] =
-      type === 'arch' ? arch() : ribArch();
+    GEOMS[type] = type === 'ledge' ? slab() : type === 'arch' ? arch() : ribArch();
   }
   return GEOMS[type]!;
 }

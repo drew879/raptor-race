@@ -1,6 +1,7 @@
 import type { Session } from './session';
 import type { RunnerAction } from './runner';
 import { CONFIG } from './config';
+import { isWide } from './collision';
 import { Rng } from '../core/rng';
 import type { Lane } from './types';
 
@@ -15,7 +16,7 @@ export const PERFECT: BotProfile = { reaction: 0, jitter: 0, errorRate: 0, greed
 export const HUMANLIKE: BotProfile = { reaction: 0.3, jitter: 0.07, errorRate: 0.03, greedEggs: false, seed: 1 };
 
 type Need = 'free' | 'block' | 'jump' | 'slide';
-const NEED: Record<string, Need> = { boulder: 'block', ledge: 'jump', ledgeWide: 'jump', arch: 'slide', ribArch: 'slide', spine: 'block' };
+const NEED: Record<string, Need> = { boulder: 'block', ledge: 'jump', gully: 'jump', arch: 'slide', ribArch: 'slide', spine: 'block' };
 
 /** Plays a Session through its public input API, the same way a player would. */
 export class Bot {
@@ -46,7 +47,7 @@ export class Bot {
       const key = Math.round(h.d);
       const row = rows.get(key) ?? ({ [-1]: 'free', 0: 'free', 1: 'free' } as Record<Lane, Need>);
       const need = NEED[h.type];
-      const lanes: Lane[] = h.type === 'ledgeWide' || h.type === 'ribArch' ? [-1, 0, 1] : [h.lane];
+      const lanes: Lane[] = isWide(h.type) ? [-1, 0, 1] : [h.lane];
       for (const l of lanes) if (row[l] === 'free' || need === 'block') row[l] = need;
       rows.set(key, row);
     }

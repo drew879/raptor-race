@@ -6,8 +6,8 @@ import type { HazardType } from './types';
  */
 export const CRASH_COPY: Record<HazardType | 'storm', [string, string, string]> = {
   boulder: ['Ouch', 'Ran into a boulder', 'Boulders can\'t be jumped. Swipe left or right to go around them.'],
-  ledge: ['Ouch', 'Tripped on a ledge', 'Swipe up to jump low rock ledges.'],
-  ledgeWide: ['Ouch', 'Tripped on a ledge', 'Swipe up to jump low rock ledges.'],
+  ledge: ['Ouch', 'Tripped on a slab', 'Swipe up to jump the low sandstone slabs.'],
+  gully: ['Ouch', 'Fell into a gully', 'Swipe up to jump the dry gullies that cross the trail.'],
   arch: ['Ouch', 'Hit the arch', 'Swipe down to slide under arches.'],
   ribArch: ['Ouch', 'Hit the fallen bone', 'Swipe down to slide under giant bones.'],
   spine: ['Ouch', 'Ran into the rock fin', 'When the trail splits, pick the left or right side before the fin.'],

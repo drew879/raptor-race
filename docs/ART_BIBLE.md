@@ -31,9 +31,9 @@ Stylized low-poly 3D: flat-shaded facets with smooth vertex-color gradients, war
 
 ## 4. Shape language
 - Raptors: sleek, angular, forward-leaning wedges. Long horizontal stiff tail. Feather shards on arms, tail fan, neck ruff, crest.
-- Hazards: jagged rocks, blocky ledges, spiky dead branches.
+- Hazards: dark rounded boulders (go around), pale-topped flat sandstone slabs that span a lane (jump), banded gully cuts across the trail (jump), arches and rib bones overhead (slide), a tall red fin down the middle at forks (pick a side). Each reads by shape and value alone.
 - Rewards: round, faceted, rotating, soft.
-- Landscape: broad sweeping curves (dunes), layered horizontal strata (cliffs).
+- Landscape: broad sweeping curves (dunes), layered horizontal strata (cliffs). Each level is built from landmark stretches (canyon walls, hoodoos with dark caprocks, bone fields, herds) so no two minutes look alike. In portrait, only things within ~18° of straight ahead are seen: landmarks either rise high (canyon walls, hoodoos) or sit close to the trail (bones, the herd).
 
 ## 5. Level 1 palette: "Flaming Cliffs at golden hour"
 | Role | Hex |

@@ -87,6 +87,11 @@ describe('collision', () => {
   });
   it('a jump at moderate height clears a ledge', () => {
     expect(testHit({ ...base, y: 0.5, airborne: true }, 0, 0, HAZARD_BOXES.ledge)).toBe('none');
-    expect(testHit(base, 0, 0, HAZARD_BOXES.ledgeWide)).toBe('front');
+    expect(testHit(base, 0, 0, HAZARD_BOXES.ledge)).toBe('front');
+  });
+  it('running into a gully is a fall, sliding does not help, and a jump clears it', () => {
+    expect(testHit(base, 0, 0, HAZARD_BOXES.gully)).toBe('front');
+    expect(testHit({ ...base, sliding: true }, 0, 0, HAZARD_BOXES.gully)).toBe('front');
+    expect(testHit({ ...base, y: 0.4, airborne: true }, 0, 0, HAZARD_BOXES.gully)).toBe('none');
   });
 });

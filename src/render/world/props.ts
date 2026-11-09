@@ -166,7 +166,7 @@ export function addMesa(g: GeomBuilder, pos: THREE.Vector3, radius: number, heig
 
 /** Half-buried bleached ribcage, a quiet storytelling prop. */
 export function addRibcage(g: GeomBuilder, pos: THREE.Vector3, size: number, rotY: number, rng: Rng) {
-  const bone = col(GOBI.bone);
+  const bone = mix(GOBI.bone, GOBI.sandShadow, 0.18); // aged bone, a touch darker than the pale sand
   const fwd = new THREE.Vector3(Math.sin(rotY), 0, Math.cos(rotY));
   const side = new THREE.Vector3(fwd.z, 0, -fwd.x);
   const spineA = pos.clone().addScaledVector(fwd, -size * 0.9).add(new THREE.Vector3(0, size * 0.55, 0));
@@ -187,3 +187,78 @@ export function addRibcage(g: GeomBuilder, pos: THREE.Vector3, size: number, rot
 }
 
 export { ICO1 };
+
+/** Hoodoo: an eroded sandstone pillar, banded, pinched at the waist, under a darker, wider caprock. */
+export function addHoodoo(g: GeomBuilder, pos: THREE.Vector3, h: number, rng: Rng) {
+  const r0 = h * rng.range(0.13, 0.18);
+  // Close tones so the bands read as strata, not stripes.
+  const strata = [mix(GOBI.cliffLight, GOBI.cliffRed, 0.3), GOBI.cliffRed, mix(GOBI.cliffLight, GOBI.cliffPale, 0.4), mix(GOBI.cliffRed, GOBI.cliffLight, 0.25), mix(GOBI.cliffRed, 0xa8452f, 0.5)].map((c) => (typeof c === 'number' ? col(c) : c));
+  const M = 7;
+  const seg = 6;
+  const lean = new THREE.Vector3(rng.range(-0.06, 0.06), 1, rng.range(-0.06, 0.06)).normalize();
+  const rings: THREE.Vector3[][] = [];
+  for (let s = 0; s <= seg; s++) {
+    const t = s / seg;
+    const waist = 1 - 0.38 * Math.sin(Math.PI * Math.min(1, t * 1.15)); // pinched in the middle, flared base
+    const r = r0 * (t < 0.12 ? 1.35 - t * 2.5 : waist) * rng.range(0.92, 1.08);
+    const c = pos.clone().addScaledVector(lean, h * t * 0.88);
+    rings.push(Array.from({ length: M }, (_, k) => {
+      const a = (k / M) * Math.PI * 2 + s * 0.3;
+      return c.clone().add(new THREE.Vector3(Math.cos(a) * r * rng.range(0.9, 1.1), (t === 0 ? -0.6 : 0), Math.sin(a) * r * rng.range(0.9, 1.1)));
+    }));
+  }
+  const s0 = rng.int(0, strata.length - 1);
+  for (let s = 0; s < seg; s++) for (let k = 0; k < M; k++) {
+    const k1 = (k + 1) % M;
+    g.quad(rings[s][k], rings[s][k1], rings[s + 1][k1], rings[s + 1][k], shade(strata[(s + s0) % strata.length], rng.range(0.93, 1.05)));
+  }
+  // Caprock: a flat, darker slab overhanging the column.
+  const top = rings[seg];
+  const cTop = pos.clone().addScaledVector(lean, h * 0.88);
+  const capR = r0 * rng.range(1.25, 1.6), capH = h * rng.range(0.07, 0.11);
+  const capCol = mix(GOBI.hazardRock, GOBI.cliffShadow, 0.4);
+  const under = Array.from({ length: M }, (_, k) => { const a = (k / M) * Math.PI * 2; return cTop.clone().add(new THREE.Vector3(Math.cos(a) * capR, 0, Math.sin(a) * capR * rng.range(0.8, 1.0))); });
+  const over = under.map((p) => p.clone().add(new THREE.Vector3(rng.range(-0.05, 0.05), capH, rng.range(-0.05, 0.05))));
+  const peak = cTop.clone().add(new THREE.Vector3(0, capH * 1.25, 0));
+  for (let k = 0; k < M; k++) {
+    const k1 = (k + 1) % M;
+    g.quad(top[k], top[k1], under[k1], under[k], shade(capCol, 0.7)); // shadowed underside
+    g.quad(under[k], under[k1], over[k1], over[k], shade(capCol, rng.range(0.95, 1.05)));
+    g.tri(over[k], over[k1], peak, shade(mix(GOBI.hazardRockLight, GOBI.cliffPale, 0.3), rng.range(0.96, 1.04)));
+  }
+}
+
+/** A bleached ceratopsian skull lying in the sand: beaked snout, eye sockets and a broad frill. */
+export function addSkull(g: GeomBuilder, pos: THREE.Vector3, size: number, rotY: number, rng: Rng) {
+  const bone = col(GOBI.bone), boneS = shade(col(GOBI.bone), 0.78), hole = col(0x4a3a30);
+  const m = new THREE.Matrix4().compose(pos, new THREE.Quaternion().setFromEuler(new THREE.Euler(rng.range(-0.15, 0.15), rotY, rng.range(-0.2, 0.2))), new THREE.Vector3(size, size, size));
+  const P = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).applyMatrix4(m);
+  // Snout wedge.
+  const tip = P(0, 0.12, -0.75), l0 = P(-0.22, 0.05, -0.1), r0 = P(0.22, 0.05, -0.1), t0 = P(0, 0.42, -0.15), b0 = P(0, -0.05, -0.2);
+  g.tri(tip, t0, l0, bone); g.tri(tip, r0, t0, bone); g.tri(tip, l0, b0, boneS); g.tri(tip, b0, r0, boneS);
+  // Eye sockets.
+  for (const sx of [-1, 1]) g.tri(P(sx * 0.17, 0.22, -0.28), P(sx * 0.2, 0.3, -0.16), P(sx * 0.21, 0.16, -0.14), hole);
+  // Frill fan rising behind.
+  const F = 7;
+  for (let k = 0; k < F; k++) {
+    const a0 = Math.PI * (k / F), a1 = Math.PI * ((k + 1) / F);
+    const o0 = P(Math.cos(a0) * 0.55, 0.1 + Math.sin(a0) * 0.5, 0.25), o1 = P(Math.cos(a1) * 0.55, 0.1 + Math.sin(a1) * 0.5, 0.25);
+    g.tri(t0, o1, o0, k % 2 ? bone : shade(bone, 0.92));
+    g.tri(l0, o0, t0, boneS); g.tri(r0, t0, o1, boneS);
+  }
+  void rng;
+}
+
+/** A run of vertebrae half out of the sand, spines up. */
+export function addVertebrae(g: GeomBuilder, pos: THREE.Vector3, len: number, rotY: number, rng: Rng) {
+  const bone = col(GOBI.bone);
+  const dir = new THREE.Vector3(Math.sin(rotY), 0, Math.cos(rotY));
+  const n = Math.max(4, Math.round(len / 0.35));
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const s = 0.16 * (1 - 0.6 * t) * rng.range(0.9, 1.1);
+    const c = pos.clone().addScaledVector(dir, (t - 0.5) * len).add(new THREE.Vector3(0, s * 0.4 + Math.sin(t * 3) * 0.05, 0));
+    g.appendGeometry(ICO, xform(c, new THREE.Vector3(s, s * 0.9, s * 0.8), rotY), (_i, _c, nn) => shade(bone, 0.86 + Math.max(0, nn.y) * 0.18));
+    addTube(g, [c.clone().add(new THREE.Vector3(0, s * 0.5, 0)), c.clone().add(new THREE.Vector3(0, s * 2.4, 0)).addScaledVector(dir, -s * 0.6)], [s * 0.3, s * 0.08], 4, () => shade(bone, 0.95));
+  }
+}

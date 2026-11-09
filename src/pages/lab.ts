@@ -5,6 +5,7 @@ import { RaptorAnimator, defaultAnimInput } from '../render/raptor/anim';
 import { RAPTOR_GOBI_STREAK, GOBI } from '../render/palette';
 import { Protoceratops, type ProtoPose } from '../render/prey/protoceratops';
 import { CONFIG } from '../game/config';
+import { Herd } from '../render/prey/herd';
 
 // Asset lab: ?pose=run|idle|slide|air|land&t=0.3&view=side|back|front|three&speed=12
 const q = new URLSearchParams(location.search);
@@ -55,7 +56,14 @@ const tAdvance = Number(q.get('t') ?? 0.3);
 const steps = Math.round(tAdvance * 60);
 for (let i = 0; i < Math.max(steps, 1); i++) anim.update(1 / 60, inp);
 
-const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.05, 50);
+// ?subject=herd: the herd from a chase-style camera at the runner's position (runner at distance `d`).
+if (subject === 'herd') {
+  const herd = new Herd(0, 400);
+  herd.update(0, Number(q.get('d') ?? 0));
+  scene.add(herd.group);
+  mesh.visible = false;
+}
+const camera = new THREE.PerspectiveCamera(subject === 'herd' ? 70 : 30, innerWidth / innerHeight, 0.05, subject === 'herd' ? 400 : 50);
 const view = q.get('view') ?? 'three';
 const views: Record<string, [number[], number[]]> = {
   side: [[4.2, 0.6, -0.05], [0, 0.55, -0.05]],
@@ -67,6 +75,7 @@ const views: Record<string, [number[], number[]]> = {
   front3: [[1.9, 1.1, -3.3], [0, 0.6, -0.35]],
   pinview: [[CONFIG.endingCam.side, CONFIG.endingCam.height, -CONFIG.endingCam.ahead], [0, CONFIG.endingCam.lookHeight, CONFIG.endingCam.lookBack]],
 };
+if (subject === 'herd') { views.chase = [[0, 2.65, 3.7], [0, 0.15, -7]]; ground.scale.setScalar(60); ground.position.z = -100; }
 const [cp, ct] = views[view] ?? views.three;
 camera.position.set(cp[0], cp[1], cp[2]);
 camera.lookAt(ct[0], ct[1], ct[2]);

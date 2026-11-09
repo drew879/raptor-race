@@ -1,6 +1,6 @@
 import { Runner, type RunnerAction } from './runner';
 import { CONFIG, laneX } from './config';
-import { hazardBox, testHit } from './collision';
+import { hazardBox, isWide, testHit } from './collision';
 import { speedAt, type HintKind, type LevelDef } from './level';
 import type { HazardType, Lane, PickupKind } from './types';
 
@@ -150,7 +150,7 @@ export class Session {
     const L = this.level;
     while (this.hzCursor < L.hazards.length && L.hazards[this.hzCursor].d < ahead) {
       const h = L.hazards[this.hzCursor++];
-      const wide = h.type === 'ledgeWide' || h.type === 'ribArch';
+      const wide = isWide(h.type);
       this.hazards.push({ id: this.nextId++, type: h.type, lane: h.lane, d: h.d, len: h.len ?? 0, x: wide ? 0 : laneX(h.lane), hit: false, passed: false });
     }
     while (this.pkCursor < L.pickups.length && L.pickups[this.pkCursor].d < ahead) {
@@ -179,6 +179,7 @@ export class Session {
   private crash(cause: HazardType | 'storm') {
     this.state = 'caught';
     this.runner.stumble = 1;
+    if (cause === 'gully') { this.runner.y = -0.42; this.runner.vy = 0; } // down in the wash
     this.events.push({ t: 'crash', cause });
   }
 
@@ -348,6 +349,7 @@ export class Session {
     this.storm = 0;
     this.invuln = 2;
     this.runner.stumble = 0;
+    this.runner.y = Math.max(0, this.runner.y);
     for (const h of this.hazards) if (h.type !== 'spine' && h.d - this.runner.distance < 4) h.passed = true;
     // Crashed into a fork spine's nose: get back up beside it, on the side the prey took.
     const spine = this.spineAt(this.runner.distance, 2);

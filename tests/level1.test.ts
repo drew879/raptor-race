@@ -18,7 +18,7 @@ describe('level 1 data', () => {
     for (const p of LEVEL1.pickups) {
       if (p.kind !== 'amber') continue;
       for (const h of LEVEL1.hazards) {
-        const wide = h.type === 'ledgeWide' || h.type === 'ribArch';
+        const wide = h.type === 'gully' || h.type === 'ribArch';
         if (!wide && h.lane !== p.lane) continue;
         const box = hazardBox(h.type, h.len);
         if (Math.abs(h.d + (h.len ?? 0) / 2 - p.d) > box.hz + 0.5) continue;

@@ -170,7 +170,7 @@ const COURSE: Ev[] = [
   { d: 42, hz: 'boulder', lane: 0 },
   { d: 42, hz: 'boulder', lane: -1 },
   { d: 0, amber: trail(52, 57, 0) },
-  { d: 64, hz: 'ledgeWide', lane: 0 },
+  { d: 64, hz: 'gully', lane: 0 },
   { d: 0, amber: arc(60.5, 0) },
   { d: 82, hz: 'arch', lane: 0 },
   { d: 0, amber: trail(78.5, 85, 0, 1.6, 0.35) },

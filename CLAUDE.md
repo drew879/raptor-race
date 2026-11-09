@@ -26,6 +26,7 @@ Portrait-mode 3D runner for mobile, built with TypeScript + Three.js + Vite. Own
 - `node scripts/audio-check.mjs` renders every SFX offline and checks levels
 - `node scripts/smoke.mjs` drives the real page into crashes (including a fork's fin) and checks every crash reaches the crash screen
 - `node scripts/hunt-shots.mjs <dir>` captures the opening shot, pounce and freeze-frame plate
+- `node scripts/scenery-tour.mjs <dir> [marks]` warps the real page through each landmark stretch and captures it without banners
 - `node scripts/package-artifact.mjs <page> <name> "<Title>"` single-file build for publishing
 - `scripts/setup-blender.sh` installs headless Blender on demand (slow download; built models are committed)
 - `/opt/blender-venv/bin/python scripts/blender/raptor.py` rebuilds the raptor body into `src/assets/models/`

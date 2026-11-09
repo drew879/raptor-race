@@ -25,11 +25,11 @@ r.speed = 15;
 const D = r.distance;
 const place = (d: number, type: HazardType, lane: number) => {
   const m = createHazard(type);
-  m.position.set(type === 'ledgeWide' || type === 'ribArch' ? 0 : lane * 1.5, 0, -(D + d));
+  m.position.set(type === 'gully' || type === 'ribArch' ? 0 : lane * 1.5, 0, -(D + d));
   stage.world.add(m);
 };
 place(17, 'boulder', 0); place(17, 'boulder', -1);
-place(31, 'arch', 1); place(48, 'ledgeWide', 0); place(64, 'ribArch', 0);
+place(31, 'arch', 1); place(48, 'gully', 0); place(64, 'ribArch', 0);
 for (let d = 5; d <= 15; d += 2.6) items.add('amber', 1.5, 0.75, -(D + d));
 for (let d = 26; d <= 36; d += 1.8) items.add('amber', 1.5, 0.36, -(D + d));
 items.add('egg', -1.5, 0.9, -(D + 26));

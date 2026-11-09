@@ -37,6 +37,11 @@ await page.evaluate(() => window.__rr.click('btnCheckpoint'));
 s = await runUntil(() => false, 1);
 check(s.app === 'playing' && s.sstate === 'running', `checkpoint restart resumes the run (app=${s.app}, ${s.sstate})`);
 check(!(await page.evaluate(() => !!document.getElementById('hunt'))), 'distance meter is gone');
+// 4. Run into a gully without jumping: a fall, with its own crash text.
+const gully = await page.evaluate(() => window.__rr.firstOf('gully'));
+await page.evaluate((d) => window.__rr.warp(d - 10), gully);
+s = await runUntil((x) => x.app === 'caught', 6);
+check(s.app === 'caught' && (await page.evaluate(() => window.__rr.text('caughtTitle'))) === 'Fell into a gully', `gully crash reaches the crash screen (app=${s.app})`);
 check(errors.length === 0, errors.length ? `page errors:\n${errors.join('\n')}` : 'no page errors');
 await browser.close();
 process.exit(fail ? 1 : 0);

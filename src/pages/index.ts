@@ -8,6 +8,7 @@ import { CollectibleField, type Collectible } from '../render/world/collectibles
 import { createHazard } from '../render/world/hazards';
 import { PowerupView } from '../render/world/powerups';
 import { Protoceratops } from '../render/prey/protoceratops';
+import { Herd } from '../render/prey/herd';
 import { Particles, SAND, SPARK } from '../render/fx';
 import { RaptorView } from '../render/raptor/view';
 import { GOBI, RAPTOR_GOBI_STREAK, col, mix } from '../render/palette';
@@ -168,7 +169,7 @@ const haptic = (ms: number) => { try { navigator.vibrate?.(ms); } catch { /* uns
 // ---------------- Scene ----------------
 const container = $('stage');
 const stage = new Stage(container, { preserveDrawingBuffer: SHOT });
-const streamer = new ChunkStreamer(stage.world);
+const streamer = new ChunkStreamer(stage.world, true, { gullies: LEVEL.hazards.filter((h) => h.type === 'gully').map((h) => h.d), sections: LEVEL.sections });
 const items = new CollectibleField(400, FOG);
 const powerups = new PowerupView();
 const dust = new Particles(260, THREE.NormalBlending, FOG);
@@ -176,6 +177,10 @@ const sparks = new Particles(200, THREE.AdditiveBlending, FOG);
 const raptor = new RaptorView(RAPTOR_GOBI_STREAK);
 const prey = new Protoceratops();
 stage.world.add(items.group, powerups.group, dust.field.points, sparks.field.points, raptor.root, prey.root);
+// A distant herd walks the dunes through the level's 'herd' stretch.
+const herdAt = LEVEL.sections.findIndex((s) => s.kind === 'herd');
+const herd = herdAt >= 0 ? new Herd(LEVEL.sections[herdAt].from, LEVEL.sections[herdAt + 1]?.from ?? LEVEL.length) : null;
+if (herd) stage.world.add(herd.group);
 let timeScale = 1;
 let preyPrevX = 0;
 const fxRng = new Rng(7);
@@ -326,7 +331,7 @@ function toTitle() {
 // ---------------- Feedback ----------------
 const HINTS: Record<HintKind, [string, string, string, string]> = {
   lanes: ['⇆', 'Swipe left or right to change lanes', '8px', '0'],
-  jump: ['↑', 'Swipe up to jump the ledges', '0', '-6px'],
+  jump: ['↑', 'Swipe up to jump gullies and slabs', '0', '-6px'],
   slide: ['↓', 'Swipe down to slide under arches and bones', '0', '6px'],
   magnet: ['◈', 'Amber Sense pulls nearby amber to you', '0', '0'],
   updraft: ['≋', 'Grab the updraft to glide over the boulders. Steer left and right while you fly', '0', '-6px'],
@@ -537,7 +542,7 @@ function syncWorld(dt: number) {
   itemsArr.length = 0;
   for (const v of pickupViews.values()) itemsArr.push(v);
   items.items = itemsArr;
-  items.hideNear = camBlend < 0.9 ? stage.camera.position : null;
+  items.hideNear = stage.camera.position; // fade anything passing right by the lens (menus, glides)
   items.group.visible = !session.pinned && app !== 'finishing'; // nothing floats into the finale shot
   items.update(clock);
   powerups.sync(session.pickups, clock);
@@ -554,6 +559,7 @@ function syncWorld(dt: number) {
   if (r.glideLeft > 0 && fxRng.chance(0.5)) sparks.emit(r.x + (fxRng.next() - 0.5) * 1.6, r.y + 0.6, z + 0.5, 1, { spread: 0.3, up: 0.3, back: 6, size: 0.08, grow: 0, life: 0.5, alpha: 0.5, color: col(RAPTOR_GOBI_STREAK.accent), rand });
   dust.update(dt);
   sparks.update(dt);
+  herd?.update(dt, r.distance);
   streamer.update(r.distance);
 
   const pinned = session.pinned ? 1 : 0;
@@ -567,7 +573,7 @@ function syncWorld(dt: number) {
   const pz = app === 'intro' ? introPreyD() : session.preyD;
   let hop = 0;
   for (const h of session.hazards) {
-    if (h.type !== 'ledge' && h.type !== 'ledgeWide') continue;
+    if (h.type !== 'ledge' && h.type !== 'gully') continue;
     if (h.type === 'ledge' && Math.abs(h.x - session.preyX) > 1) continue;
     const dz = Math.abs(h.d - pz);
     if (dz < 2.6) hop = Math.max(hop, Math.pow(1 - dz / 2.6, 0.7));
@@ -790,11 +796,13 @@ function pregenerate(budgetMs: number) {
 // Compile every material once up front so the first boulder, arch, egg or power-up doesn't hitch.
 function warmShaders() {
   const g = new THREE.Group();
-  for (const t of ['boulder', 'ledge', 'ledgeWide', 'arch', 'ribArch'] as const) g.add(createHazard(t));
+  for (const t of ['boulder', 'ledge', 'gully', 'arch', 'ribArch'] as const) g.add(createHazard(t));
   for (const h of LEVEL.hazards) if (h.type === 'spine') g.add(createHazard('spine', 0, h.len)); // also builds each fin once, up front
   g.position.set(0, -50, 0);
   stage.world.add(g);
+  if (herd) herd.group.visible = true; // compile the instanced herd too (it's hidden until its stretch)
   stage.renderer.compile(stage.scene, stage.camera);
+  herd?.update(0, session.distance);
   draw();
   stage.world.remove(g);
 }
@@ -864,9 +872,11 @@ window.__rr = {
   /** Test hook: carry the run on from design-meter distance d (smoke tests reach a fork without playing to it). */
   warp: (d: number) => { session.resumeAt(d * (LEVEL.length / 1100)); resetWorld(); },
   text: (id: string) => $(id).textContent,
+  /** Design-meter distance of the first hazard of a type. */
+  firstOf: (type: string) => (LEVEL.hazards.find((h) => h.type === type)?.d ?? 0) / (LEVEL.length / 1100),
   /** Design-meter distance where the n-th fork's fin starts. */
   forkNose: (n: number) => (LEVEL.hazards.filter((h) => h.type === 'spine')[n]?.d ?? 0) / (LEVEL.length / 1100),
-  stats: () => ({ ...streamer.stats(), calls: stage.renderer.info.render.calls, tris: stage.renderer.info.render.triangles }),
+  stats: () => { const c = streamer.stats(); return { chunks: c.chunks, cached: c.cached, chunkTris: c.tris, calls: stage.renderer.info.render.calls, tris: stage.renderer.info.render.triangles }; },
 };
 if (!SHOT) requestAnimationFrame(frame);
 else draw();
