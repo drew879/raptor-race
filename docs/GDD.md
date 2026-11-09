@@ -10,6 +10,7 @@ A premium portrait-mode 3D endless-runner-style racer. You play a **feathered ra
 - **[Decided by owner]** Free for now: no ads or IAP while building; revisit before any store release. Amber economy is designed so IAP could slot in later.
 - **[Decided by owner]** Feathered raptors (scientifically grounded, distinct from film raptors).
 - **[Decided by owner]** Art pipeline: headless Blender (bpy) for the hero raptors and key art (app icon, store images); environment props and hazards stay code-generated.
+  - **Outcome:** the Blender raptor body lost two blind A/B reviews to the code-built one, so gameplay raptors stay code-built and Blender is used for key art.
 - **[Decided by owner]** Check-ins: a playable link plus a one-page report at each milestone (M2, M3).
 - Orientation: portrait only. Target devices: iPhone 12 class and mid-range Android and up.
 

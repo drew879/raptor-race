@@ -161,6 +161,7 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     claw: col(pl.claw),
     skin: col(pl.skin),
     baseLight: mix(pl.base, pl.light, 0.25),
+    belly: mix(pl.under, 0xffffff, 0.3),
     baseDark: mix(pl.base, pl.dark, 0.45),
     underWarm: mix(pl.under, pl.base, 0.2),
   };
@@ -207,7 +208,7 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
       if (lowerFlank) return i === 4 ? C.rim : C.baseDark; // red rim behind the eye, darker rear jaw
       return C.under;
     }
-    if (s < -0.6) return r.tag === 'tail' ? C.underWarm : C.under;
+    if (s < -0.6) return r.tag === 'tail' ? C.underWarm : C.belly;
     if (r.tag === 'tail' && i >= 17) {
       // Bold bands only at the tail tip: reads from the chase camera.
       const band = i % 2 === 1;
@@ -217,8 +218,8 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     if (spine) return C.baseDark;
     if (back) return C.base;
     if (upperFlank) return r.tag === 'neck' ? C.baseLight : C.light; // cream streak running nose to tail
-    if (lowerFlank) return C.baseLight;
-    return lateral ? C.baseLight : C.underWarm;
+    if (lowerFlank) return r.tag === 'tail' ? C.underWarm : C.under; // hard countershading break at the midline
+    return lateral ? C.baseLight : C.belly;
   };
 
   for (let i = 0; code && i < rings.length - 1; i++) {
@@ -227,8 +228,13 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
       const c = bodyColor(i, j);
       // Serrated streaks: on the cream flank line, alternate a light and a darker triangle per ring.
       const serrate = (j === 0 || j === 4) && c === C.light;
-      const c2 = serrate ? (i % 2 ? C.baseLight : C.light) : c;
-      const c1 = serrate ? (i % 2 ? C.light : C.baseLight) : c;
+      let c2 = serrate ? (i % 2 ? C.baseLight : C.light) : c;
+      let c1 = serrate ? (i % 2 ? C.light : C.baseLight) : c;
+      const tag = BODY[i].tag;
+      if ((j === 1 || j === 3) && (tag === 'body' || tag === 'neck') && i >= 8 && i <= 14 && i % 2 === 0) {
+        c1 = C.light; // one triangle of the quad: a tapered streak along the body axis
+        c2 = C.base;
+      }
       g.quad(rings[i][j], rings[i][j1], rings[i + 1][j1], rings[i + 1][j], c1, c2, [skins[i], skins[i], skins[i + 1], skins[i + 1]]);
     }
   }
@@ -298,19 +304,17 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
   }
   // Tail fan: pairs of shards spreading outward, longest near the tip.
   const fan: Array<[number, number, BoneName, number]> = [
-    [0.5, 0.672, 'tail2', 0.14],
-    [0.62, 0.67, 'tail2', 0.17],
-    [0.74, 0.668, 'tail3', 0.2],
-    [0.86, 0.666, 'tail3', 0.22],
-    [0.97, 0.663, 'tail4', 0.24],
-    [1.06, 0.661, 'tail4', 0.24],
+    [0.6, 0.67, 'tail2', 0.2],
+    [0.76, 0.668, 'tail3', 0.25],
+    [0.9, 0.665, 'tail3', 0.27],
+    [1.02, 0.662, 'tail4', 0.24],
   ];
   fan.forEach(([z, y, bone, len], k) => {
     for (const sx of [-1, 1]) {
-      const spread = 0.5 + k * 0.06;
-      const dir = new THREE.Vector3(sx * Math.sin(spread), 0.25, Math.cos(spread));
-      const base = new THREE.Vector3(sx * 0.015, y + 0.005, z);
-      feather(g, base, dir, upV, len, 0.085, k % 2 ? C.base : C.dark, k >= 3 ? C.accent : C.light, skinOf(B[bone]));
+      const spread = 0.48 + k * 0.06;
+      const dir = new THREE.Vector3(sx * Math.sin(spread), 0.22, Math.cos(spread));
+      const base = new THREE.Vector3(sx * 0.012, y + 0.006, z);
+      feather(g, base, dir, upV, len, 0.13, k % 2 ? C.base : C.baseDark, k >= 2 ? C.accent : C.light, skinOf(B[bone]));
     }
   });
   feather(g, TAIL_TIP.clone().add(new THREE.Vector3(0, 0, -0.04)), new THREE.Vector3(0, 0.06, 1), upV, 0.2, 0.11, C.dark, C.accent, skinOf(B.tail4));
@@ -322,7 +326,7 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     const bT = B[`thigh${side}`], bS = B[`shin${side}`], bM = B[`meta${side}`], bToe = B[`toe${side}`];
     const hipTop = H.clone().add(new THREE.Vector3(sx * 0.015, 0.05, 0.02));
     // Thigh: thick feathered drumstick.
-    if (code) limbTube(g, [hipTop, H.clone().lerp(K, 0.55).add(new THREE.Vector3(sx * 0.03, 0, -0.015)), K.clone().add(new THREE.Vector3(sx * 0.008, 0.01, 0))], [0.125, 0.092, 0.05], [bT, bT, bT], 7, (_s, j, up) =>
+    if (code) limbTube(g, [hipTop, H.clone().lerp(K, 0.55).add(new THREE.Vector3(sx * 0.03, 0, -0.015)), K.clone().add(new THREE.Vector3(sx * 0.008, 0.01, 0))], [0.15, 0.115, 0.056], [bT, bT, bT], 7, (_s, j, up) =>
       up > 0.4 ? C.base : j % 3 === 0 ? C.baseLight : C.base, false);
     // Thigh "trousers": downward shards.
     for (let k = 0; k < 5; k++) {
@@ -344,10 +348,10 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     // Digit II with the raised sickle claw.
     const d0 = F.clone().add(new THREE.Vector3(-sx * 0.014, 0.0, -0.005));
     const d1 = d0.clone().add(new THREE.Vector3(-sx * 0.006, 0.02, -0.035));
-    const c1 = d1.clone().add(new THREE.Vector3(0, 0.035, -0.02));
-    const c2 = c1.clone().add(new THREE.Vector3(0, 0.012, -0.04));
-    const c3 = c2.clone().add(new THREE.Vector3(0, -0.025, -0.03));
-    limbTube(g, [d0, d1, c1, c2, c3], [0.013, 0.011, 0.01, 0.006, 0.0], [bToe, bToe, bToe, bToe, bToe], 5, (seg) => (seg === 0 ? C.skin : C.claw), false);
+    const c1 = d1.clone().add(new THREE.Vector3(0, 0.05, -0.028));
+    const c2 = c1.clone().add(new THREE.Vector3(0, 0.018, -0.06));
+    const c3 = c2.clone().add(new THREE.Vector3(0, -0.035, -0.045));
+    limbTube(g, [d0, d1, c1, c2, c3], [0.015, 0.013, 0.012, 0.008, 0.0], [bToe, bToe, bToe, bToe, bToe], 5, (seg) => (seg === 0 ? C.skin : C.claw), false);
   }
 
   // ---------- Arms with folded wing feathers ----------

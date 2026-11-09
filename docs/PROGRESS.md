@@ -9,7 +9,7 @@ Newest first. Every session updates this before pushing.
 - [x] scripts/blender/raptor.py: skin-modifier body, subdivision, decimation to 3,600 tris, spine-relative plumage, baked AO, auto-weighted rig matching BONE_DEFS, .rrm export (68 KB)
 - [x] Game uses the Blender body with code-built eyes and feathers; procedural animation unchanged
 - [x] Blind A/B review round 1: code-built raptor won (~70%): Blender body lost toes and sickle claw to decimation, rounded saddlebag hips, nose ball, poor chase-camera read; Blender plumage streaks were better. Game default reverted to the code body.
-- [ ] Round 2: port streaks and head/body fixes to the code raptor; fix Blender feet, nose, angularity, tail join; rerun blind A/B
+- [x] Round 2 (Blender relabeled A): code-built raptor won again (~65%); Blender mesh also showed decimation holes. Decision: code-built raptor for gameplay; Blender for app icon and store key art (M3). Applied the winner's top fixes: tapered cream back streaks for the chase camera, pale belly to the flank midline, leaf-shaped tail fan, heavier thighs, larger sickle claw.
 
 ### M1 Playable Level 1
 - [x] Swipe + keyboard input (fires on threshold, not release), runner with buffering, coyote time, fast-fall, glide, bounce

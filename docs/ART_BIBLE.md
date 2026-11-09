@@ -66,6 +66,9 @@ Dark streaked back over a pale belly for contrast on sand, a small blue cheek pa
 
 Anatomy notes: long low skull with a slightly upturned snout; S-curved neck; arms folded like wings with long primary feathers; enlarged sickle claw on the second toe held raised (dromaeosaur trackways are two-toed for this reason); stiff tail roughly half the body length ending in a feather fan. Game proportions: head ~15% larger, eye ~30% larger than life.
 
+### Production note: raptor pipeline
+The hero raptor is built in code (lofted low-poly body, skinned, procedural animation). A Blender-built body (`scripts/blender/raptor.py`) lost two blind A/B reviews to it (decimation lost toes and opened holes; rounded forms fought the angular shape language). Blender is reserved for key art (app icon, store images). Chase-camera readability rule: tapered cream streaks along the back and a pale belly to the flank midline.
+
 ## 7. Lighting
 - Key: warm directional `#FFD9A8`, intensity 2.9, ~31 degrees elevation, **behind and to the right of the chase camera** (~120 degrees from the run direction) so camera-facing surfaces are lit and shadows rake forward-left across the lanes. Hero and menu cameras may use a front-right sun.
 - Fill: hemisphere sky `#D6CCE0` (warm lavender keeps shadows warm, never olive) / ground bounce `#C58A55`, intensity 2.6.
