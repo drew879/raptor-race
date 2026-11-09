@@ -25,7 +25,8 @@ Newest first. Every session updates this before pushing.
 - [ ] Inclusion rewards (journal pages and a plumage proposed; awaiting owner)
 - [x] Forks: a sandstone fin down the middle lane splits the trail into two routes (one rough and rich, one easy); swipes into the fin are refused with a soft bump; the prey takes the easy side; Level 1 has two (design 704-750 and 922-968)
 - [x] Automatic bends: a lateral view-space bend (sim stays straight), far scenery swings round, the camera banks; nine bends in Level 1
-- [ ] Pacing pass on long straightaways; adaptive synthesized music
+- [x] Pacing pass: every decision-free stretch over ~2.5 s filled (was up to 6.3 s; now only the opener, which carries the "Hunt!" banner and lanes hint, runs 3.9 s). Fills favour dodges over jumps to keep it fairly easy: human-like bot 90% within one revive, never loses the prey
+- [ ] Adaptive synthesized music
 - [ ] Variety: landmarks and set pieces (canyon walls, hoodoos, bone fields, herds), terrain sections
 
 ## Previous milestone: M0 + M1 gate (see docs/GATE-M0-M1.md)
