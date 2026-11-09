@@ -37,20 +37,25 @@ describe('level 1 playthrough', () => {
     const res = playLevel(new Session(LEVEL1), PERFECT);
     console.log('perfect run', res);
     expect(res.finished).toBe(true);
+    expect(res.pounced).toBe(true);
+    expect(res.lost).toBe(0);
     expect(res.caught).toBe(0);
     expect(res.stumbles).toBe(0);
     expect(res.eggs).toBe(3);
   });
   it('is fairly easy: a human-like player usually finishes without being caught twice', () => {
     const N = 120;
-    let clean = 0, withRevive = 0, total = 0;
+    let clean = 0, withRevive = 0, total = 0, neverLost = 0;
     for (let i = 0; i < N; i++) {
       const res = playLevel(new Session(LEVEL1), { ...HUMANLIKE, seed: 1000 + i });
       total += res.score;
       if (res.caught === 0) clean++;
       if (res.caught <= 1) withRevive++;
+      if (res.lost === 0) neverLost++;
+      expect(res.finished).toBe(true);
     }
-    console.log(`human-like: clean ${((clean / N) * 100).toFixed(0)}%, within one revive ${((withRevive / N) * 100).toFixed(0)}%, avg score ${Math.round(total / N)}`);
+    console.log(`human-like: clean ${((clean / N) * 100).toFixed(0)}%, within one revive ${((withRevive / N) * 100).toFixed(0)}%, never lost the prey ${((neverLost / N) * 100).toFixed(0)}%, avg score ${Math.round(total / N)}`);
+    expect(neverLost / N).toBeGreaterThanOrEqual(0.8);
     expect(withRevive / N).toBeGreaterThanOrEqual(0.85);
   });
 });

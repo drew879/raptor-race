@@ -8,9 +8,18 @@ export interface HazardEvent { d: number; type: HazardType; lane: Lane }
 export interface PickupEvent { d: number; kind: PickupKind; lane: Lane; y: number }
 export interface HintEvent { d: number; hint: HintKind }
 
+export interface PreyDef {
+  species: 'protoceratops';
+  /** Gap at the start, in meters ahead of the raptor. */
+  startGap: number;
+  /** Where the prey tires and the pounce window opens (meters before the end). */
+  finale: number;
+}
+
 export interface LevelDef {
   id: string;
   name: string;
+  prey: PreyDef;
   length: number;
   speed: { start: number; end: number };
   checkpoints: number[];

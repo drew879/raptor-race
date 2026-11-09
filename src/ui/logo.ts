@@ -50,6 +50,13 @@ export const amberIconSVG = `
   <path d="M36 32 L20 50 L20 34 Z" fill="#E0800F"/>
 </svg>`;
 
+/** HUD/results icon for the rare collectible: amber with a trapped insect (empty slot when not found). */
+export const inclusionIconSVG = (filled: boolean) => `
+<svg class="rr-egg-icon" viewBox="0 0 32 40" aria-hidden="true">
+  <path d="M16 2 L27 14 L29 26 L16 38 L3 26 L5 14 Z" fill="${filled ? '#E0800F' : '#EAD9B8'}" stroke="#3A2A1E" stroke-width="3" stroke-linejoin="round" ${filled ? '' : 'stroke-opacity="0.5"'}/>
+  ${filled ? '<path d="M16 2 L27 14 L16 17 Z" fill="#FFE08A"/><path d="M16 2 L5 14 L16 17 Z" fill="#FFF3C4" opacity=".8"/><ellipse cx="16" cy="24" rx="2.2" ry="4" fill="#3A2A1E"/><path d="M14 22 L9 19 M18 22 L23 19 M14 26 L9 29 M18 26 L23 29" stroke="#3A2A1E" stroke-width="1.6" stroke-linecap="round"/>' : ''}
+</svg>`;
+
 export const eggIconSVG = (filled: boolean) => `
 <svg class="rr-egg-icon" viewBox="0 0 32 40" aria-hidden="true">
   <path d="M16 2 C 25 2, 30 16, 30 25 C 30 33, 24 38, 16 38 C 8 38, 2 33, 2 25 C 2 16, 7 2, 16 2 Z"

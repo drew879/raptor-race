@@ -18,9 +18,13 @@ export type GameEvent =
   | { t: 'checkpoint'; index: number }
   | { t: 'hint'; hint: HintKind }
   | { t: 'finish' }
+  | { t: 'preyGap'; gap: number }
+  | { t: 'pounceReady' }
+  | { t: 'pounce' }
+  | { t: 'preyLost'; reason: 'distance' | 'missed' }
   | { t: 'move'; e: 'lane' | 'jump' | 'land' | 'slide' | 'fastfall' | 'glide'; dir?: number };
 
-export type SessionState = 'ready' | 'running' | 'caught' | 'finished';
+export type SessionState = 'ready' | 'running' | 'caught' | 'lost' | 'pouncing' | 'finished';
 
 export const STORM_WINDOW = 8; // seconds: a second stumble inside this window means caught
 export const MAGNET_SECONDS = 8;
@@ -41,6 +45,13 @@ export class Session {
   reviveUsed = false;
   checkpoint = -1;
   time = 0;
+  /** The hunt: prey position along the course, its lane x, and the pounce window. */
+  preyD = 0;
+  preyX = 0;
+  pounceTimer = 0;
+  pounceReady = false;
+  private preyLaneTarget = 0;
+  private pounceT = 0;
   hazards: LiveHazard[] = [];
   pickups: LivePickup[] = [];
   events: GameEvent[] = [];
@@ -56,6 +67,7 @@ export class Session {
     level.pickups.forEach((p, i) => { if (p.kind === 'egg') this.eggOrder.push(i); });
     this.runner.listener = (e, dir) => this.events.push({ t: 'move', e, dir });
     this.runner.speed = level.speed.start;
+    this.preyD = level.prey.startGap;
   }
 
   start() {
@@ -63,13 +75,41 @@ export class Session {
   }
 
   input(a: RunnerAction) {
-    if (this.state === 'running') this.runner.request(a);
+    if (this.state !== 'running') return;
+    if (a === 'jump' && this.pounceReady) { this.startPounce(); return; }
+    this.runner.request(a);
+  }
+
+  get gap() { return this.preyD - this.runner.distance; }
+  get inFinale() { return this.runner.distance >= this.level.length - this.level.prey.finale; }
+
+  private startPounce() {
+    this.state = 'pouncing';
+    this.pounceReady = false;
+    this.pounceT = 0;
+    this.score += 1000;
+    this.events.push({ t: 'pounce' });
+  }
+
+  /** Prey steering: pick a lane that is clear of boulders a short way ahead of it. */
+  private steerPrey() {
+    const ahead = this.hazards.filter((h) => h.d > this.preyD + 2 && h.d < this.preyD + 14);
+    const blocked = (lane: number) => ahead.some((h) => h.type === 'boulder' && h.lane === lane);
+    if (blocked(this.preyLaneTarget)) {
+      const options = [-1, 0, 1].filter((l) => !blocked(l));
+      if (options.length) this.preyLaneTarget = options.sort((a, b) => Math.abs(a - this.preyLaneTarget) - Math.abs(b - this.preyLaneTarget))[0];
+    }
   }
 
   get distance() { return this.runner.distance; }
   get progress() { return Math.min(1, this.runner.distance / this.level.length); }
   get stars(): [boolean, boolean, boolean] {
     return [this.state === 'finished', this.eggs.every(Boolean), this.score >= this.level.parScore];
+  }
+
+  /** After losing the prey: resume from the last checkpoint with the prey back in sight. */
+  retryHunt() {
+    this.restartFromCheckpoint();
   }
 
   private stream() {
@@ -97,10 +137,8 @@ export class Session {
     this.runner.stumble = 1;
     this.combo = 1;
     this.chain = 0;
-    if (this.storm > 0) {
-      this.crash('storm');
-      return;
-    }
+    // Hunting: a stumble lets the prey pull away instead of ending the run.
+    this.preyD += CONFIG.hunt.stumbleGap;
     this.storm = 1;
     this.invuln = 0.8;
     this.events.push({ t: 'stumble' });
@@ -114,6 +152,26 @@ export class Session {
 
   step(dt: number) {
     this.time += dt;
+    if (this.state === 'pouncing') {
+      // The leap: close the last meters in a short arc, then the hunt is won.
+      this.pounceT += dt;
+      const r = this.runner;
+      const target = this.preyD - 0.7;
+      r.distance += (target - r.distance) * Math.min(1, dt * 9);
+      r.speed = 0;
+      r.x += (this.preyX - r.x) * Math.min(1, dt * 9);
+      const k = Math.min(1, this.pounceT / 0.6);
+      const prevY = r.y;
+      r.y = Math.sin(Math.PI * k) * 0.95;
+      r.vy = (r.y - prevY) / Math.max(dt, 1e-4);
+      r.grounded = false;
+      r.airWeight = 1;
+      if (this.pounceT >= 0.7) {
+        this.state = 'finished';
+        this.events.push({ t: 'finish' });
+      }
+      return;
+    }
     if (this.state !== 'running') {
       if (this.state === 'finished') {
         // Coast into the nest.
@@ -133,6 +191,39 @@ export class Session {
     this.magnetLeft = Math.max(0, this.magnetLeft - dt);
     this.stream();
 
+    // Prey: runs at the raptor's speed; clean running slowly closes the gap, stumbles widen it.
+    const H = CONFIG.hunt;
+    this.preyD += r.speed * dt;
+    if (this.inFinale) {
+      // The prey tires: the gap closes fast and the pounce window opens.
+      this.preyD -= H.finaleCloseSpeed * dt;
+      this.preyD = Math.max(this.preyD, r.distance + 3);
+      if (!this.pounceReady && this.gap <= H.pounceRange) {
+        this.pounceReady = true;
+        this.pounceTimer = H.pounceWindow;
+        this.events.push({ t: 'pounceReady' });
+      }
+      if (this.pounceReady) {
+        this.pounceTimer -= dt;
+        if (this.pounceTimer <= 0) {
+          this.pounceReady = false;
+          this.state = 'lost';
+          this.events.push({ t: 'preyLost', reason: 'missed' });
+          return;
+        }
+      }
+    } else {
+      this.preyD -= H.closePerSecond * dt;
+      this.preyD = Math.max(this.preyD, r.distance + H.minGap);
+      if (this.gap >= H.lostGap) {
+        this.state = 'lost';
+        this.events.push({ t: 'preyLost', reason: 'distance' });
+        return;
+      }
+    }
+    this.steerPrey();
+    this.preyX += (laneX(this.preyLaneTarget as Lane) - this.preyX) * Math.min(1, dt * 5);
+
     // Hazards.
     for (const h of this.hazards) {
       if (h.hit || h.passed) continue;
@@ -143,6 +234,7 @@ export class Session {
         const box = HAZARD_BOXES[h.type];
         if (h.type !== 'boulder' && Math.abs(r.x - h.x) < box.hx + 0.26) {
           this.score += 50;
+          this.preyD -= CONFIG.hunt.closePerClear;
           this.events.push({ t: 'clear', bonus: 50 });
         }
         continue;
@@ -173,6 +265,7 @@ export class Session {
         case 'amber':
           this.amber++;
           this.chain++;
+          this.preyD -= CONFIG.hunt.closePerAmber;
           this.score += 10 * this.combo;
           this.events.push({ t: 'amber', x: p.x, y: p.y, d: p.d, chain: this.chain });
           if (this.chain % 25 === 0 && this.combo < 5) {
@@ -207,9 +300,11 @@ export class Session {
       this.snap = { score: this.score, amber: this.amber, combo: this.combo };
       this.events.push({ t: 'checkpoint', index: this.checkpoint });
     }
-    if (r.distance >= this.level.length) {
-      this.state = 'finished';
-      this.events.push({ t: 'finish' });
+    if (r.distance >= this.level.length && this.state === 'running') {
+      // Ran out of course without pouncing: the prey escapes into the storm.
+      this.pounceReady = false;
+      this.state = 'lost';
+      this.events.push({ t: 'preyLost', reason: 'missed' });
     }
   }
 
@@ -243,6 +338,10 @@ export class Session {
     this.hintCursor = this.level.hints.findIndex((h) => h.d > cpD);
     if (this.hintCursor < 0) this.hintCursor = this.level.hints.length;
     this.state = 'running';
+    this.pounceReady = false;
+    this.preyD = this.runner.distance + this.level.prey.startGap;
+    this.preyX = 0;
+    this.preyLaneTarget = 0;
     this.events.push({ t: 'move', e: 'land' });
   }
 

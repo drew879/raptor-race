@@ -6,7 +6,8 @@ import { LookPipeline } from '../render/post/looks';
 import { ChunkStreamer } from '../render/world/terrain';
 import { CollectibleField, type Collectible } from '../render/world/collectibles';
 import { createHazard } from '../render/world/hazards';
-import { PowerupView, buildNest } from '../render/world/powerups';
+import { PowerupView } from '../render/world/powerups';
+import { Protoceratops } from '../render/prey/protoceratops';
 import { Particles, SAND, SPARK } from '../render/fx';
 import { RaptorView } from '../render/raptor/view';
 import { GOBI, RAPTOR_GOBI_STREAK, col, mix } from '../render/palette';
@@ -19,11 +20,11 @@ import { loadSave, writeSave } from '../game/save';
 import { Bot, PERFECT } from '../game/bot';
 import { Rng } from '../core/rng';
 import { clamp, damp, lerp } from '../core/math';
-import { amberIconSVG, eggIconSVG, logoSVG } from '../ui/logo';
+import { amberIconSVG, inclusionIconSVG as eggIconSVG, logoSVG } from '../ui/logo';
 import type { RunnerAction } from '../game/runner';
 import type { HintKind } from '../game/level';
 
-type AppState = 'title' | 'prerun' | 'playing' | 'paused' | 'caught' | 'finishing' | 'results';
+type AppState = 'title' | 'prerun' | 'playing' | 'paused' | 'caught' | 'lost' | 'finishing' | 'results';
 const params = new URLSearchParams(location.search);
 const SHOT = params.has('shot');
 let DEBUG = params.has('debug');
@@ -53,11 +54,14 @@ root.innerHTML = `
         <button class="tag pause" id="btnPause" aria-label="Pause"><i></i><i></i></button>
       </div>
       <div class="tag combo" id="comboTag">×<span id="combo">1</span></div>
+      <div class="tag prey" id="preyTag">Prey <span id="preyGap">24</span> m</div>
       <div class="eggs" id="eggs"></div>
       <div class="tag power" id="power" hidden></div>
     </div>
   </div>
 </div>
+<div class="pounce" id="pounce" hidden>Swipe up to pounce!</div>
+<div class="plate" id="plate" hidden><div class="plate-card"><div class="eyebrow">Field Journal · Plate I</div><h2>Fighting Dinosaurs</h2><p>Velociraptor and Protoceratops, locked together in the red sand of the Gobi. In 1971 a fossil of exactly this moment was found in these same rocks: ~75 million years ago, preserved by a collapsing dune.</p></div></div>
 <div class="hint" id="hint" hidden><span class="glyph" id="hintGlyph"></span><span id="hintText"></span></div>
 <div class="floats" id="floats"></div>
 
@@ -79,7 +83,7 @@ root.innerHTML = `
     <div class="eyebrow">Field Journal · Level 1</div>
     <div class="species">Velociraptor</div>
     <div class="latin">Velociraptor mongoliensis · Gobi Desert · ~75 million years ago</div>
-    <p class="fact">The first Velociraptor fossil was found here, at the Flaming Cliffs, in 1923. Quill knobs on its forearm bones show it carried wing feathers.</p>
+    <p class="fact">The first Velociraptor fossil was found here, at the Flaming Cliffs, in 1923. Quill knobs on its forearm bones show it carried wing feathers. Today it's hunting: a Protoceratops is somewhere ahead in the dunes.</p>
     <ul id="objectives"></ul>
     <div class="buttons"><button class="btn-amber" id="btnGo">Run</button><button class="btn-paper" id="btnBack">Back</button></div>
   </div>
@@ -112,10 +116,22 @@ root.innerHTML = `
   </div>
 </section>
 
+<section class="screen modal" id="scrLost" hidden>
+  <div class="card">
+    <div class="eyebrow">The hunt</div>
+    <h2 id="lostTitle">It got away</h2>
+    <p class="fact" id="lostFact">The Protoceratops slipped into the storm. Run clean to close the gap; every stumble lets it pull ahead.</p>
+    <div class="buttons">
+      <button class="btn-amber" id="btnLostRetry">Back to checkpoint</button>
+      <button class="btn-paper" id="btnQuit3">Quit to title</button>
+    </div>
+  </div>
+</section>
+
 <section class="screen modal results" id="scrResults" hidden>
   <div class="card">
     <div class="eyebrow">Flaming Cliffs · Complete</div>
-    <h2>Home safe!</h2>
+    <h2>Hunt complete!</h2>
     <div class="big-score" id="rScore">0</div>
     <div class="stats"><div class="tag" style="font-size:18px">${amberIconSVG.replace('class="rr-amber-icon"', 'class="rr-amber-icon" style="width:15px;height:20px"')} <span id="rAmber">0</span></div><div class="eggrow" id="rEggs"></div><span class="newbest" id="rBest" hidden>New best</span></div>
     <ul id="rStars"></ul>
@@ -152,9 +168,10 @@ const powerups = new PowerupView();
 const dust = new Particles(260, THREE.NormalBlending, FOG);
 const sparks = new Particles(200, THREE.AdditiveBlending, FOG);
 const raptor = new RaptorView(RAPTOR_GOBI_STREAK);
-const nest = buildNest();
-nest.position.set(0, 0, -(LEVEL.length + 9.6));
-stage.world.add(items.group, powerups.group, dust.field.points, sparks.field.points, raptor.root, nest);
+const prey = new Protoceratops();
+stage.world.add(items.group, powerups.group, dust.field.points, sparks.field.points, raptor.root, prey.root);
+let timeScale = 1;
+let preyPrevX = 0;
 const fxRng = new Rng(7);
 const rand = () => fxRng.next();
 // The owner-chosen hybrid look: field-journal ink and wash on a bold graphic value plan (one post pass).
@@ -204,15 +221,16 @@ function setApp(s: AppState) {
   show('scrPrerun', s === 'prerun');
   show('scrPause', s === 'paused');
   show('scrCaught', s === 'caught');
+  show('scrLost', s === 'lost');
   show('scrResults', s === 'results');
-  show('hud', s === 'playing' || s === 'paused' || s === 'caught' || s === 'finishing');
+  show('hud', s === 'playing' || s === 'paused' || s === 'caught' || s === 'lost');
   input.enabled = s === 'playing';
   if (s !== 'playing') $('hint').hidden = true;
 }
 
 function renderObjectives() {
   const st = save.stars[LEVEL.id] ?? [false, false, false];
-  const labels = ['Reach the nest before the sandstorm', 'Find all 3 eggs', `Score ${LEVEL.parScore.toLocaleString('en-US')}`];
+  const labels = ['Catch the Protoceratops', 'Find all 3 amber inclusions', `Score ${LEVEL.parScore.toLocaleString('en-US')}`];
   $('objectives').innerHTML = labels.map((l, i) => `<li>${star(st[i])} ${l}</li>`).join('');
   const best = save.best[LEVEL.id];
   $('best').hidden = !best;
@@ -247,6 +265,8 @@ $('btnRevive').addEventListener('click', () => { if (session.revive()) { setApp(
 $('btnCheckpoint').addEventListener('click', () => { session.restartFromCheckpoint(); resetWorld(); setApp('playing'); });
 $('btnAgain').addEventListener('click', () => { newSession(); startRun(); });
 $('btnTitle').addEventListener('click', toTitle);
+$('btnLostRetry').addEventListener('click', () => { session.retryHunt(); resetWorld(); setApp('playing'); });
+$('btnQuit3').addEventListener('click', toTitle);
 document.addEventListener('visibilitychange', () => { if (document.hidden && app === 'playing') setApp('paused'); });
 
 function startRun() {
@@ -286,10 +306,17 @@ function showHint(h: HintKind) {
   el.style.animation = '';
   hintTimer = 3.2;
 }
+let bannerSlots = 0;
 function floatText(text: string, kind: 'big' | 'small' | 'banner', topPct: number) {
   const el = document.createElement('div');
   el.className = `float ${kind}`;
   el.textContent = text;
+  // Banners stack instead of overlapping when several fire together.
+  if (kind === 'banner') {
+    topPct += bannerSlots * 7;
+    bannerSlots++;
+    setTimeout(() => { bannerSlots = Math.max(0, bannerSlots - 1); }, 1800);
+  }
   el.style.top = `${topPct}%`;
   $('floats').appendChild(el);
   setTimeout(() => el.remove(), kind === 'banner' ? 1900 : 1100);
@@ -322,7 +349,7 @@ function handle(e: GameEvent) {
       audio.play('egg');
       haptic(20);
       renderEggs();
-      floatText('Egg found!', 'banner', 30);
+      floatText('Amber inclusion found!', 'banner', 30);
       sparks.emit(e.x, e.y, -e.d, 22, { spread: 1, up: 1.2, back: -r.speed * 0.85, size: 0.16, grow: -0.5, life: 0.5, alpha: 0.9, color: SPARK, rand });
       break;
     case 'power':
@@ -368,10 +395,34 @@ function handle(e: GameEvent) {
     case 'hint':
       showHint(e.hint);
       break;
+    case 'pounceReady':
+      $('pounce').hidden = false;
+      timeScale = 0.6; // a beat of slow motion to land the moment
+      haptic(20);
+      audio.play('powerup');
+      break;
+    case 'pounce':
+      $('pounce').hidden = true;
+      timeScale = 0.35;
+      shake = Math.max(shake, 0.3);
+      audio.play('jump');
+      setApp('finishing');
+      break;
+    case 'preyLost':
+      $('pounce').hidden = true;
+      timeScale = 1;
+      $('lostTitle').textContent = 'It got away';
+      $('lostFact').textContent = e.reason === 'missed'
+        ? 'You were close! When "Swipe up to pounce" appears, swipe up right away.'
+        : 'The Protoceratops slipped out of sight. Run clean to close the gap; every stumble lets it pull ahead.';
+      setTimeout(() => setApp('lost'), 500);
+      break;
     case 'finish':
       audio.play('finish');
-      setApp('finishing');
-      setTimeout(showResults, 1700);
+      timeScale = 1;
+      // Freeze-frame as a Field Journal plate, then the results.
+      setTimeout(() => { $('plate').hidden = false; container.classList.add('freeze'); }, 250);
+      setTimeout(() => { $('plate').hidden = true; container.classList.remove('freeze'); showResults(); }, 3200);
       break;
   }
 }
@@ -388,7 +439,7 @@ const CRASH_COPY: Record<string, [string, string, string]> = {
   ledgeWide: ['Ouch', 'Tripped on a ledge', 'Swipe up to jump low rock ledges.'],
   arch: ['Ouch', 'Hit the arch', 'Swipe down to slide under arches.'],
   ribArch: ['Ouch', 'Hit the fallen bone', 'Swipe down to slide under giant bones.'],
-  storm: ['Two stumbles in a row', 'The sandstorm caught you', 'After a stumble, run clean for a few seconds and the storm falls back.'],
+  storm: ['Lost', 'The storm closed in', 'Run clean to keep the prey in sight.'],
 };
 
 function showResults() {
@@ -405,7 +456,7 @@ function showResults() {
   $('rAmber').textContent = String(session.amber);
   $('rEggs').innerHTML = session.eggs.map((e) => eggIconSVG(e)).join('');
   $('rBest').hidden = !isBest;
-  const labels = ['Reached the nest', `Eggs found: ${session.eggs.filter(Boolean).length} of 3`, `Score ${LEVEL.parScore.toLocaleString('en-US')}`];
+  const labels = ['Caught the Protoceratops', `Amber inclusions: ${session.eggs.filter(Boolean).length} of 3`, `Score ${LEVEL.parScore.toLocaleString('en-US')}`];
   $('rStars').innerHTML = labels.map((l, i) => `<li>${star(st[i], st[i], 300 + i * 220)} ${l}</li>`).join('');
   $('rPerf').textContent = hitches.length ? `Smoothness: ${hitches.length} hitch${hitches.length > 1 ? 'es' : ''}, worst ${Math.max(...hitches)} ms` : 'Smoothness: no hitches';
   setApp('results');
@@ -470,8 +521,24 @@ function syncWorld(dt: number) {
   sparks.update(dt);
   streamer.update(r.distance);
 
-  const idle = app === 'title' || app === 'prerun' ? 1 : app === 'finishing' || app === 'results' ? clamp(1 - r.speed / 6, 0, 1) : 0;
+  const idle = app === 'title' || app === 'prerun' ? 1 : app === 'results' ? 1 : 0;
   raptor.sync(r, dt, idle);
+
+  // Prey: runs ahead in its lane, hops ledges; hidden on the menus.
+  const pz = session.preyD;
+  let hop = 0;
+  for (const h of session.hazards) {
+    if (h.type !== 'ledge' && h.type !== 'ledgeWide') continue;
+    if (h.type === 'ledge' && Math.abs(h.x - session.preyX) > 1) continue;
+    const dz = Math.abs(h.d - pz);
+    if (dz < 2.6) hop = Math.max(hop, Math.pow(1 - dz / 2.6, 0.7));
+  }
+  const pvx = (session.preyX - preyPrevX) / Math.max(dt, 1e-4);
+  preyPrevX = session.preyX;
+  const preyRunning = app === 'playing' || app === 'paused' || app === 'caught';
+  prey.root.visible = app !== 'title' && app !== 'prerun';
+  prey.root.position.set(session.preyX, 0, -pz);
+  prey.update(dt, preyRunning ? r.speed : app === 'finishing' ? 2 : 0, clamp(pvx / 8, -1, 1), hop);
 
   // Storm: stumble pressure plus the story beat building toward the end.
   const ambient = clamp((r.distance - LEVEL.stormRises) / (LEVEL.length - LEVEL.stormRises), 0, 1) * 0.32;
@@ -492,15 +559,21 @@ function updateCamera(dt: number) {
   const r = session.runner;
   const z = -r.distance;
   const target = app === 'playing' || app === 'paused' || app === 'caught' ? 1 : 0;
-  camBlend = damp(camBlend, target, target ? 3.2 : 2, dt);
+  camBlend = app === 'finishing' ? 0 : damp(camBlend, target, target ? 3.2 : 2, dt);
   // Menu / finish camera: slow orbit around the raptor.
   titleOrbit += dt * 0.12;
   const ending = app === 'finishing' || app === 'results';
-  const a = (ending ? 0.35 : 0.75) + Math.sin(titleOrbit) * (ending ? 0.2 : 0.35);
-  const dist = ending ? 3.6 : 3.5;
-  // Aim at the body's visual center (the head reaches ~1 m forward of the hips).
-  menuCam.pos.set(r.x + Math.sin(a) * dist, 0.8 + r.y, z - 0.35 - Math.cos(a) * dist);
-  menuCam.look.set(r.x - 0.1, 0.62 + r.y, z - 0.35);
+  if (ending) {
+    // The pounce: a low side-on shot framing raptor and prey.
+    const mid = -(r.distance + session.preyD) / 2;
+    menuCam.pos.set(r.x + 3.4, 0.9, mid + 0.6);
+    menuCam.look.set(r.x, 0.55, mid - 0.2);
+  } else {
+    const a = 0.75 + Math.sin(titleOrbit) * 0.35;
+    // Aim at the body's visual center (the head reaches ~1 m forward of the hips).
+    menuCam.pos.set(r.x + Math.sin(a) * 3.5, 0.8 + r.y, z - 0.35 - Math.cos(a) * 3.5);
+    menuCam.look.set(r.x - 0.1, 0.62 + r.y, z - 0.35);
+  }
   stage.chase(r.x, r.y, z, dt);
   if (camBlend < 0.999) {
     const k = camBlend * camBlend * (3 - 2 * camBlend);
@@ -527,6 +600,9 @@ function hud() {
   const pct = session.progress * 100;
   $('pdone').style.width = `calc(${pct.toFixed(2)}% - ${(pct / 10).toFixed(2)}px)`;
   $('pme').style.left = `calc(${pct.toFixed(2)}% - ${(pct / 10).toFixed(2)}px)`;
+  const gap = Math.max(0, Math.round(session.gap));
+  $('preyGap').textContent = String(gap);
+  $('preyTag').className = `tag prey ${gap <= 14 ? 'close' : gap >= 32 ? 'far' : ''}`;
   const pw = $('power');
   const r = session.runner;
   if (session.magnetLeft > 0 || r.glideLeft > 0) {
@@ -541,7 +617,7 @@ function step(dt: number) {
   clock += dt;
   if (app === 'playing' || app === 'finishing' || app === 'results') {
     if (app === 'playing') bot?.step(dt);
-    session.step(dt);
+    session.step(dt * timeScale);
     for (const e of session.drainEvents()) handle(e);
   } else if (app === 'caught') {
     session.step(dt);

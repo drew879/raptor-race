@@ -64,12 +64,18 @@ export class Bot {
     return v;
   }
 
+  private lastD = 0;
+
   step(dt: number) {
     const s = this.s, r = s.runner;
+    // A checkpoint restart rewinds the run: forget rows acted on in the previous attempt.
+    if (s.distance < this.lastD - 1) { this.committed.clear(); this.queue.length = 0; }
+    this.lastD = s.distance;
     // Deliver due inputs.
     this.queue.sort((a, b) => a.at - b.at);
     while (this.queue.length && this.queue[0].at <= s.time) s.input(this.queue.shift()!.a);
     if (s.state !== 'running') return;
+    if (s.pounceReady && !this.queue.some((q) => q.a === 'jump')) { this.send('jump'); return; }
     this.laneCooldown = Math.max(0, this.laneCooldown - dt);
 
     const v = r.speed;
@@ -136,7 +142,7 @@ export class Bot {
 export function playLevel(s: Session, profile: BotProfile, maxSeconds = 400) {
   const bot = new Bot(s, profile);
   const dt = 1 / 60;
-  let caught = 0, stumbles = 0;
+  let caught = 0, stumbles = 0, lost = 0, pounced = false;
   s.start();
   for (let t = 0; t < maxSeconds && s.state !== 'finished'; t += dt) {
     bot.step(dt);
@@ -144,10 +150,13 @@ export function playLevel(s: Session, profile: BotProfile, maxSeconds = 400) {
     for (const e of s.drainEvents()) {
       if (e.t === 'stumble') stumbles++;
       if (e.t === 'crash') caught++;
+      if (e.t === 'preyLost') lost++;
+      if (e.t === 'pounce') pounced = true;
     }
     if (s.state === 'caught') {
       if (!s.revive()) s.restartFromCheckpoint();
     }
+    if (s.state === 'lost') s.retryHunt();
   }
-  return { finished: s.state === 'finished', caught, stumbles, score: Math.round(s.score), amber: s.amber, eggs: s.eggs.filter(Boolean).length, time: s.time };
+  return { finished: s.state === 'finished', pounced, lost, caught, stumbles, score: Math.round(s.score), amber: s.amber, eggs: s.eggs.filter(Boolean).length, time: s.time };
 }

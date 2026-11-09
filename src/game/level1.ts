@@ -97,6 +97,7 @@ B.line(1074, 1094, 0);
 export const LEVEL1: LevelDef = B.build({
   id: 'flaming-cliffs',
   name: 'Flaming Cliffs',
+  prey: { species: 'protoceratops', startGap: 24, finale: 90 },
   checkpoints: [425 * K, 772 * K],
   stormRises: 772 * K,
   parScore: 14000,

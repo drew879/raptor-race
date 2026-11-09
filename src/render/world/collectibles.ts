@@ -24,6 +24,26 @@ export function amberGeometry(): THREE.BufferGeometry {
   return g.orientOutward(new THREE.Vector3(0, 0.03, 0)).build();
 }
 
+/** Rare collectible: a large, deep amber with an insect trapped inside (dark silhouette on the facets). */
+export function inclusionGeometry(): THREE.BufferGeometry {
+  const g = new GeomBuilder();
+  const base = amberGeometry();
+  g.appendGeometry(base, new THREE.Matrix4().makeScale(1.25, 1.25, 1.25), (_i, c) =>
+    c.y > 0.12 ? mix(GOBI.amberCore, GOBI.amberLight, 0.5) : c.y > -0.02 ? mix(GOBI.amberDeep, GOBI.amberCore, 0.45) : col(GOBI.amberDeep));
+  base.dispose();
+  // The insect: a small dark body with legs, sitting just under the front and back facets.
+  const ink = col(0x2a1a10);
+  for (const zs of [1, -1]) {
+    const z = 0.155 * zs;
+    const P = (x: number, y: number) => new THREE.Vector3(x, y, z);
+    const tri = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3) => (zs > 0 ? g.tri(a, b, c, ink) : g.tri(a, c, b, ink));
+    tri(P(0, 0.07), P(-0.025, -0.03), P(0.025, -0.03)); // body
+    tri(P(-0.025, -0.03), P(0, -0.09), P(0.025, -0.03)); // abdomen
+    for (const sx of [-1, 1]) for (const y of [0.03, -0.01]) tri(P(sx * 0.015, y), P(sx * 0.07, y + 0.03), P(sx * 0.015, y - 0.012)); // legs
+  }
+  return g.build();
+}
+
 export function eggGeometry(): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const rng = new Rng(4);
@@ -143,8 +163,8 @@ export class CollectibleField {
   private eggHalo = mix(GOBI.amberCore, GOBI.amberLight, 0.35);
   constructor(capacity = 300, fog = { near: 30, far: 150 }) {
     this.amberMesh = new THREE.InstancedMesh(amberGeometry(), MATS.glow, capacity);
-    const eggGeo = eggGeometry();
-    this.eggMesh = new THREE.InstancedMesh(eggGeo, MATS.egg, 8);
+    const eggGeo = inclusionGeometry();
+    this.eggMesh = new THREE.InstancedMesh(eggGeo, MATS.glow, 8);
     this.eggMesh.castShadow = true;
     // Ink outline shells (inverted hulls) echo the UI's ink-outlined icons and lift pickups off pale sand.
     this.amberInk = new THREE.InstancedMesh(this.amberMesh.geometry, MATS.outline, capacity);
@@ -181,7 +201,7 @@ export class CollectibleField {
       } else {
         this.e.set(0.15, time * 1.3, 0.1);
         this.q.setFromEuler(this.e);
-        this.s.setScalar(1.65);
+        this.s.setScalar(1.5);
         this.p.set(it.x, it.y + bob, it.z);
         this.m.compose(this.p, this.q, this.s);
         this.eggMesh.setMatrixAt(ne, this.m);
