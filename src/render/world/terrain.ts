@@ -6,7 +6,7 @@ import { Noise2D } from '../../core/noise';
 import { Rng, hash2 } from '../../core/rng';
 import { smoothstep } from '../../core/math';
 import { CONFIG } from '../../game/config';
-import { addBush, addDeadTree, addMesa, addRibcage, addRock } from './props';
+import { addBush, addMesa, addRibcage, addRock, addScanBush, addScanCliff, addScanRock, addScanTree } from './props';
 
 const noise = new Noise2D(1923);
 const TRACK = CONFIG.world.trackHalfWidth;
@@ -114,29 +114,30 @@ export function buildChunk(index: number, opts: { mesas?: boolean } = {}): Chunk
     const nb = rng.int(5, 9);
     for (let i = 0; i < nb; i++) {
       const x = sgn * rng.range(3.6, 26), z = z0 - rng.range(0, L);
-      addBush(g, new THREE.Vector3(x, groundHeight(x, z) - 0.05, z), rng.range(0.45, 1.1), rng);
+      addScanBush(g, new THREE.Vector3(x, groundHeight(x, z) - 0.05, z), rng.range(0.5, 1.0), rng);
     }
     const nr = rng.int(3, 6);
     for (let i = 0; i < nr; i++) {
       const x = sgn * rng.range(3.4, 30), z = z0 - rng.range(0, L);
-      addRock(g, new THREE.Vector3(x, groundHeight(x, z) - 0.1, z), rng.range(0.2, 0.9), rng);
+      addScanRock(g, new THREE.Vector3(x, groundHeight(x, z) - 0.08, z), rng.range(0.3, 1.0), rng);
     }
     if (rng.chance(0.35)) {
       const x = sgn * rng.range(6, 18), z = z0 - rng.range(0, L);
-      addDeadTree(g, new THREE.Vector3(x, groundHeight(x, z), z), rng.range(2.2, 3.6), rng);
+      addScanTree(g, new THREE.Vector3(x, groundHeight(x, z), z), rng.range(2.6, 4.2), rng);
     }
     if (rng.chance(0.18)) {
       const x = sgn * rng.range(5, 12), z = z0 - rng.range(5, L - 5);
       addRibcage(g, new THREE.Vector3(x, groundHeight(x, z) - 0.25, z), rng.range(1.0, 1.6), rng.range(0, 6.28), rng);
     }
     if (opts.mesas !== false) {
-      const nm = rng.chance(0.75) ? rng.int(1, 2) : 0;
+      const nm = rng.chance(0.6) ? 1 : 0;
       for (let i = 0; i < nm; i++) {
         const x = sgn * rng.range(34, 95), z = z0 - rng.range(0, L);
         const r = rng.range(7, 16);
         let base = Infinity;
         for (let a = 0; a < 6.28; a += 0.8) base = Math.min(base, groundHeight(x + Math.cos(a) * r * 1.4, z + Math.sin(a) * r * 1.4));
-        addMesa(g, new THREE.Vector3(x, base - 1.5, z), r, rng.range(14, 36), rng);
+        if (rng.chance(0.7)) addScanCliff(g, new THREE.Vector3(x, base - 1.5, z), rng.range(16, 34), rng, sgn > 0 ? Math.PI / 2 : -Math.PI / 2);
+        else addMesa(g, new THREE.Vector3(x, base - 1.5, z), r, rng.range(14, 36), rng);
       }
     }
   }

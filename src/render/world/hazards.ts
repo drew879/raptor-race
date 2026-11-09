@@ -4,6 +4,7 @@ import { GOBI, col, mix, shade } from '../palette';
 import { MATS } from '../materials';
 import { Rng } from '../../core/rng';
 import { addTube } from './props';
+import { scenery } from './scenery';
 
 import type { HazardType } from '../../game/types';
 export type { HazardType };
@@ -16,7 +17,8 @@ const rockTone = (n: THREE.Vector3, c: THREE.Vector3, base = GOBI.hazardRock, li
   return shade(k, drift(c));
 };
 
-function boulder(): THREE.BufferGeometry {
+/** Hand-built fallbacks (kept for reference and the asset lab). */
+export function boulder(): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const rng = new Rng(11);
   const main = jitterGeometry(new THREE.IcosahedronGeometry(1, 1), 0.28, () => rng.next());
@@ -29,7 +31,7 @@ function boulder(): THREE.BufferGeometry {
 }
 
 /** Low rock shelf to jump over. Width covers one lane (1.4) or all three (4.6). */
-function ledge(width: number): THREE.BufferGeometry {
+export function ledge(width: number): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const rng = new Rng(Math.round(width * 100));
   const box = new THREE.BoxGeometry(width, 0.6, 0.8, Math.max(2, Math.round(width * 2.5)), 2, 2);
@@ -100,16 +102,22 @@ function ribArch(): THREE.BufferGeometry {
 }
 
 const GEOMS: Partial<Record<HazardType, THREE.BufferGeometry>> = {};
-export function hazardGeometry(type: HazardType): THREE.BufferGeometry {
+const BOULDERS = ['boulderA', 'boulderB', 'boulderC'] as const;
+export function hazardGeometry(type: HazardType, variant = 0): THREE.BufferGeometry {
+  // Scanned rocks (Poly Haven, CC0) for boulders and ledges; arches and bones stay hand-built.
+  if (type === 'boulder') return scenery(BOULDERS[variant % BOULDERS.length]);
+  if (type === 'ledge') return scenery('ledge');
+  if (type === 'ledgeWide') return scenery('ledgeWide');
   if (!GEOMS[type]) {
     GEOMS[type] =
-      type === 'boulder' ? boulder() : type === 'ledge' ? ledge(1.4) : type === 'ledgeWide' ? ledge(4.6) : type === 'arch' ? arch() : ribArch();
+      type === 'arch' ? arch() : ribArch();
   }
   return GEOMS[type]!;
 }
 
-export function createHazard(type: HazardType): THREE.Mesh {
-  const m = new THREE.Mesh(hazardGeometry(type), MATS.hazard);
+export function createHazard(type: HazardType, variant = 0): THREE.Mesh {
+  const m = new THREE.Mesh(hazardGeometry(type, variant), MATS.hazard);
+  if (type === 'boulder') m.rotation.y = (variant * 2.39996) % (Math.PI * 2); // golden-angle spin for variety
   m.castShadow = true;
   m.receiveShadow = true;
   m.name = type;

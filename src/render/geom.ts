@@ -61,6 +61,18 @@ export class GeomBuilder {
     return this;
   }
 
+  /** Append a non-indexed geometry that already has per-vertex colors, transformed by m and optionally tinted. */
+  appendColored(g: THREE.BufferGeometry, m: THREE.Matrix4, tint = 1) {
+    const p = g.getAttribute('position'), c = g.getAttribute('color');
+    const v = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) {
+      v.fromBufferAttribute(p, i).applyMatrix4(m);
+      this.pos.push(v.x, v.y, v.z);
+      this.colors.push(c.getX(i) * tint, c.getY(i) * tint, c.getZ(i) * tint);
+    }
+    return this;
+  }
+
   /** Append another non-indexed geometry (positions + optional colors) transformed by a matrix. */
   appendGeometry(g: THREE.BufferGeometry, m: THREE.Matrix4, colorFn: (faceIndex: number, centroid: THREE.Vector3, normal: THREE.Vector3) => THREE.Color) {
     const src = g.index ? g.toNonIndexed() : g;

@@ -431,7 +431,7 @@ function syncWorld(dt: number) {
   for (const h of session.hazards) {
     live.add(h.id);
     if (!hazardMeshes.has(h.id)) {
-      const m = createHazard(h.type);
+      const m = createHazard(h.type, h.id);
       m.position.set(h.x, 0, -h.d);
       stage.world.add(m);
       hazardMeshes.set(h.id, m);

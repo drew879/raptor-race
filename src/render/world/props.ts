@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GeomBuilder, jitterGeometry } from '../geom';
 import { GOBI, col, mix, shade } from '../palette';
 import { Rng } from '../../core/rng';
+import { scenery, type SceneryName } from './scenery';
 
 const tmpM = new THREE.Matrix4();
 const tmpQ = new THREE.Quaternion();
@@ -19,11 +20,29 @@ function xform(pos: THREE.Vector3, scale: THREE.Vector3, rotY: number, tiltX = 0
 const faceTone = (base: THREE.Color, n: THREE.Vector3, rng: Rng, vary = 0.06) =>
   shade(base, 1 + (rng.next() - 0.5) * vary * 2 + Math.max(0, n.y) * 0.06);
 
+/** Scanned rock cluster (Poly Haven, CC0) scaled to `size` meters tall. */
+export function addScanRock(g: GeomBuilder, pos: THREE.Vector3, size: number, rng: Rng) {
+  const name: SceneryName = rng.chance(0.5) ? 'stones' : 'rockB';
+  const geo = scenery(name);
+  const h = geo.boundingBox!.max.y || 1;
+  const k = size / h;
+  const xz = k * rng.range(0.25, 0.6); // the scans are wide clusters; keep them compact
+  g.appendColored(geo, xform(pos, new THREE.Vector3(xz, k, xz), rng.range(0, 6.28)), rng.range(0.95, 1.05));
+}
+
 export function addRock(g: GeomBuilder, pos: THREE.Vector3, size: number, rng: Rng, base = mix(GOBI.sandShadow, GOBI.cliffRed, 0.35)) {
   const geo = jitterGeometry(ICO.clone(), 0.35, () => rng.next());
   const s = new THREE.Vector3(size * rng.range(0.8, 1.3), size * rng.range(0.5, 0.8), size * rng.range(0.8, 1.2));
   g.appendGeometry(geo, xform(pos, s, rng.range(0, 6.28), rng.range(-0.2, 0.2), rng.range(-0.2, 0.2)), (_i, _c, n) => faceTone(base, n, rng));
   geo.dispose();
+}
+
+/** Scanned dry bush (Poly Haven, CC0). */
+export function addScanBush(g: GeomBuilder, pos: THREE.Vector3, size: number, rng: Rng) {
+  const geo = scenery('bush');
+  const h = geo.boundingBox!.max.y || 1;
+  const k = size / h;
+  g.appendColored(geo, xform(pos, new THREE.Vector3(k * 0.45, k, k * 0.6), rng.range(0, 6.28)), rng.range(0.92, 1.06));
 }
 
 export function addBush(g: GeomBuilder, pos: THREE.Vector3, size: number, rng: Rng) {
@@ -62,6 +81,13 @@ export function addTube(g: GeomBuilder, pts: THREE.Vector3[], radii: number[], n
   }
 }
 
+/** Scanned dead quiver tree (Poly Haven, CC0). */
+export function addScanTree(g: GeomBuilder, pos: THREE.Vector3, h: number, rng: Rng) {
+  const geo = scenery('deadTree');
+  const k = h / (geo.boundingBox!.max.y || 1);
+  g.appendColored(geo, xform(pos.clone().add(new THREE.Vector3(0, -0.1, 0)), new THREE.Vector3(k, k, k), rng.range(0, 6.28), rng.range(-0.08, 0.08), rng.range(-0.08, 0.08)));
+}
+
 export function addDeadTree(g: GeomBuilder, pos: THREE.Vector3, h: number, rng: Rng) {
   const wood = mix(0x8b7765, GOBI.sandShadow, 0.2);
   const lean = new THREE.Vector3(rng.range(-0.15, 0.15), 1, rng.range(-0.15, 0.15)).normalize();
@@ -77,6 +103,15 @@ export function addDeadTree(g: GeomBuilder, pos: THREE.Vector3, h: number, rng: 
     const mid = from.clone().addScaledVector(dir, len * 0.5).add(new THREE.Vector3(0, rng.range(-0.1, 0.15), 0));
     addTube(g, [from, mid, from.clone().addScaledVector(dir, len)], [0.05 * h / 3, 0.03 * h / 3, 0.008], 4, () => wood);
   }
+}
+
+/** Scanned cliff (Poly Haven, CC0) recolored to Flaming Cliffs strata, scaled to `height`. */
+export function addScanCliff(g: GeomBuilder, pos: THREE.Vector3, height: number, rng: Rng, faceToward: number) {
+  const name: SceneryName = rng.pick(['cliffA', 'cliffB', 'cliffC'] as const);
+  const geo = scenery(name);
+  const k = height / (geo.boundingBox!.max.y || 1);
+  // Face the scanned (detailed) side toward the track.
+  g.appendColored(geo, xform(pos, new THREE.Vector3(k, k, k), faceToward + rng.range(-0.5, 0.5)), rng.range(0.95, 1.05));
 }
 
 /** Layered sandstone butte, the Flaming Cliffs signature. */
