@@ -50,6 +50,17 @@ export class GeomBuilder {
     return this;
   }
 
+  /** Append pre-built skinned triangles (positions, linear colors, skin attributes), e.g. a Blender body. */
+  appendRaw(positions: ArrayLike<number>, colors: ArrayLike<number>, skinIndex?: ArrayLike<number>, skinWeight?: ArrayLike<number>) {
+    for (let i = 0; i < positions.length; i++) this.pos.push(positions[i]);
+    for (let i = 0; i < colors.length; i++) this.colors.push(colors[i]);
+    if (this.skinned && skinIndex && skinWeight) {
+      for (let i = 0; i < skinIndex.length; i++) this.skinIdx.push(skinIndex[i]);
+      for (let i = 0; i < skinWeight.length; i++) this.skinW.push(skinWeight[i]);
+    }
+    return this;
+  }
+
   /** Append another non-indexed geometry (positions + optional colors) transformed by a matrix. */
   appendGeometry(g: THREE.BufferGeometry, m: THREE.Matrix4, colorFn: (faceIndex: number, centroid: THREE.Vector3, normal: THREE.Vector3) => THREE.Color) {
     const src = g.index ? g.toNonIndexed() : g;

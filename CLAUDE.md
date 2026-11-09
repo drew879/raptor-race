@@ -15,6 +15,11 @@ Portrait-mode 3D runner for mobile, built with TypeScript + Three.js + Vite. Own
 - `npm test` unit tests
 - `npm run shots` phone-emulated screenshots to `artifacts/shots/`
 - `npm run typecheck`
+- `node scripts/play-shots.mjs <dir>` bot plays Level 1 in the real page and captures phone screenshots
+- `node scripts/audio-check.mjs` renders every SFX offline and checks levels
+- `node scripts/package-artifact.mjs <page> <name> "<Title>"` single-file build for publishing
+- `scripts/setup-blender.sh` installs headless Blender on demand (slow download; built models are committed)
+- `/opt/blender-venv/bin/python scripts/blender/raptor.py` rebuilds the raptor body into `src/assets/models/`
 
 ## Conventions
 - All gameplay tunables in `src/game/config.ts`. No magic numbers in systems.

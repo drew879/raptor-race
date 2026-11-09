@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GeomBuilder } from '../geom';
 import { MATS } from '../materials';
 import { col, mix, shade, type RaptorPlumage } from '../palette';
+import type { RrmBody } from './rrm';
 
 /** Bone table. Rest positions in model space (meters). Raptor faces -Z, +X is its right side. */
 export const BONE_DEFS = [
@@ -139,8 +140,14 @@ export interface RaptorBuild {
   bones: THREE.Bone[];
 }
 
-export function buildRaptor(pl: RaptorPlumage): RaptorBuild {
+/**
+ * Builds the skinned raptor. With `body` (the Blender-built mesh), the body, legs and arms come from Blender
+ * and code adds the eyes and all feathers; without it, everything is generated in code (fallback).
+ */
+export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): RaptorBuild {
   const g = new GeomBuilder(true);
+  const code = !opts.body;
+  if (opts.body) g.appendRaw(opts.body.positions, opts.body.colors, opts.body.skinIndex, opts.body.skinWeight);
   const N = 10;
   const C = {
     base: col(pl.base),
@@ -214,7 +221,7 @@ export function buildRaptor(pl: RaptorPlumage): RaptorBuild {
     return lateral ? C.baseLight : C.underWarm;
   };
 
-  for (let i = 0; i < rings.length - 1; i++) {
+  for (let i = 0; code && i < rings.length - 1; i++) {
     for (let j = 0; j < N; j++) {
       const j1 = (j + 1) % N;
       const c = bodyColor(i, j);
@@ -223,10 +230,10 @@ export function buildRaptor(pl: RaptorPlumage): RaptorBuild {
   }
   // End caps.
   const sHead = skinOf(B.head);
-  for (let j = 0; j < N; j++) g.tri(rings[0][(j + 1) % N], rings[0][j], SNOUT_TIP, C.dark, [sHead, sHead, sHead]);
+  for (let j = 0; code && j < N; j++) g.tri(rings[0][(j + 1) % N], rings[0][j], SNOUT_TIP, C.dark, [sHead, sHead, sHead]);
   const last = rings.length - 1;
   const sT4 = skinOf(B.tail4);
-  for (let j = 0; j < N; j++) g.tri(rings[last][j], rings[last][(j + 1) % N], TAIL_TIP, C.dark, [sT4, sT4, sT4]);
+  for (let j = 0; code && j < N; j++) g.tri(rings[last][j], rings[last][(j + 1) % N], TAIL_TIP, C.dark, [sT4, sT4, sT4]);
 
   // ---------- Eyes: round iris, pupil, catchlight, brow ridge ----------
   for (const sx of [-1, 1]) {
@@ -311,7 +318,7 @@ export function buildRaptor(pl: RaptorPlumage): RaptorBuild {
     const bT = B[`thigh${side}`], bS = B[`shin${side}`], bM = B[`meta${side}`], bToe = B[`toe${side}`];
     const hipTop = H.clone().add(new THREE.Vector3(sx * 0.015, 0.05, 0.02));
     // Thigh: thick feathered drumstick.
-    limbTube(g, [hipTop, H.clone().lerp(K, 0.55).add(new THREE.Vector3(sx * 0.03, 0, -0.015)), K.clone().add(new THREE.Vector3(sx * 0.008, 0.01, 0))], [0.11, 0.105, 0.075], [bT, bT, bT], 7, (_s, j, up) =>
+    if (code) limbTube(g, [hipTop, H.clone().lerp(K, 0.55).add(new THREE.Vector3(sx * 0.03, 0, -0.015)), K.clone().add(new THREE.Vector3(sx * 0.008, 0.01, 0))], [0.11, 0.105, 0.075], [bT, bT, bT], 7, (_s, j, up) =>
       up > 0.4 ? C.base : j % 3 === 0 ? C.baseLight : C.base, false);
     // Thigh "trousers": downward shards.
     for (let k = 0; k < 5; k++) {
@@ -321,14 +328,14 @@ export function buildRaptor(pl: RaptorPlumage): RaptorBuild {
       feather(g, base, dir, new THREE.Vector3(-Math.sin(th), 0, Math.cos(th)), 0.11, 0.07, C.base, C.baseDark, skinOf(bT));
     }
     // Shin (knee to ankle), metatarsus (ankle to ball).
-    limbTube(g, [K, K.clone().lerp(A, 0.5), A], [0.045, 0.033, 0.023], [bS, bS, bS], 6, (_s, _j, up) => (up > 0 ? C.base : C.baseDark), false);
-    limbTube(g, [A, A.clone().lerp(F, 0.5), F], [0.022, 0.019, 0.017], [bM, bM, bM], 6, () => C.skin, false);
+    if (code) limbTube(g, [K, K.clone().lerp(A, 0.5), A], [0.045, 0.033, 0.023], [bS, bS, bS], 6, (_s, _j, up) => (up > 0 ? C.base : C.baseDark), false);
+    if (code) limbTube(g, [A, A.clone().lerp(F, 0.5), F], [0.022, 0.019, 0.017], [bM, bM, bM], 6, () => C.skin, false);
     // Toes III and IV forward, with dark claw tips.
     for (const off of [-0.012, 0.016]) {
       const t0 = F.clone().add(new THREE.Vector3(sx * off, -0.005, 0));
       const t1 = t0.clone().add(new THREE.Vector3(sx * off * 0.6, -0.015, -0.07));
       const t2 = t1.clone().add(new THREE.Vector3(0, -0.01, -0.035));
-      limbTube(g, [t0, t1, t2], [0.014, 0.01, 0.0], [bToe, bToe, bToe], 5, (seg) => (seg === 0 ? C.skin : C.claw), false);
+      if (code) limbTube(g, [t0, t1, t2], [0.014, 0.01, 0.0], [bToe, bToe, bToe], 5, (seg) => (seg === 0 ? C.skin : C.claw), false);
     }
     // Digit II with the raised sickle claw.
     const d0 = F.clone().add(new THREE.Vector3(-sx * 0.014, 0.0, -0.005));
@@ -336,7 +343,7 @@ export function buildRaptor(pl: RaptorPlumage): RaptorBuild {
     const c1 = d1.clone().add(new THREE.Vector3(0, 0.035, -0.02));
     const c2 = c1.clone().add(new THREE.Vector3(0, 0.012, -0.04));
     const c3 = c2.clone().add(new THREE.Vector3(0, -0.025, -0.03));
-    limbTube(g, [d0, d1, c1, c2, c3], [0.013, 0.011, 0.01, 0.006, 0.0], [bToe, bToe, bToe, bToe, bToe], 5, (seg) => (seg === 0 ? C.skin : C.claw), false);
+    if (code) limbTube(g, [d0, d1, c1, c2, c3], [0.013, 0.011, 0.01, 0.006, 0.0], [bToe, bToe, bToe, bToe, bToe], 5, (seg) => (seg === 0 ? C.skin : C.claw), false);
   }
 
   // ---------- Arms with folded wing feathers ----------
@@ -345,9 +352,9 @@ export function buildRaptor(pl: RaptorPlumage): RaptorBuild {
     const S = restPos(`upperArm${side}`), E = restPos(`foreArm${side}`), W = restPos(`hand${side}`);
     const bU = B[`upperArm${side}`], bF = B[`foreArm${side}`], bH = B[`hand${side}`];
     const tipH = W.clone().add(new THREE.Vector3(sx * 0.005, -0.03, -0.06));
-    limbTube(g, [S, E], [0.03, 0.024], [bU, bU], 6, (_s, j) => (j % 2 ? C.base : C.baseDark), false);
-    limbTube(g, [E, W], [0.024, 0.017], [bF, bF], 6, () => C.base, false);
-    limbTube(g, [W, tipH], [0.016, 0.0], [bH, bH], 5, () => C.claw, false);
+    if (code) limbTube(g, [S, E], [0.03, 0.024], [bU, bU], 6, (_s, j) => (j % 2 ? C.base : C.baseDark), false);
+    if (code) limbTube(g, [E, W], [0.024, 0.017], [bF, bF], 6, () => C.base, false);
+    if (code) limbTube(g, [W, tipH], [0.016, 0.0], [bH, bH], 5, () => C.claw, false);
     // Wing feathers lying along the flank, pointing back. Plane normal faces outward.
     const nrm = new THREE.Vector3(sx, 0.15, 0).normalize();
     const nF = 7;
