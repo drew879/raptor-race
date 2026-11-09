@@ -15,7 +15,7 @@ import { GOBI, RAPTOR_GOBI_STREAK, col, mix } from '../render/palette';
 import { Session, type GameEvent } from '../game/session';
 import { CONFIG } from '../game/config';
 import { LEVEL1 } from '../game/level1';
-import { curvatureAt } from '../game/level';
+import { curvatureAt, timeAt } from '../game/level';
 import { crashCopy } from '../game/copy';
 import { worldUniforms } from '../render/materials';
 import { Input } from '../core/input';
@@ -385,7 +385,7 @@ function handle(e: GameEvent) {
       else if (e.e === 'glide') audio.play('powerup');
       break;
     case 'amber':
-      audio.play('amber');
+      audio.amber(timeAt(LEVEL, r.distance), timeScale);
       bump('amberTag');
       sparks.emit(e.x, e.y, -e.d, 7, { spread: 0.7, up: 0.9, back: -r.speed * 0.85, size: 0.13, grow: -0.6, life: 0.28, alpha: 0.85, color: SPARK, rand });
       break;
@@ -783,7 +783,8 @@ function updateMusic(dt: number) {
   musicI = damp(musicI, target, 0.8, dt);
   m.intensity = musicI;
   m.storm = clamp(session.storm * 0.85 + clamp((r.distance - LEVEL.stormRises) / (LEVEL.length - LEVEL.stormRises), 0, 1) * 0.4, 0, 1);
-  m.update();
+  // The song position is the running time to the raptor's distance: the music stays locked to the amber.
+  m.update(timeAt(LEVEL, r.distance), app === 'playing' || app === 'finishing' ? timeScale : 0);
 }
 
 // Terrain for the whole level is built while the player is on the menus (never mid-run).

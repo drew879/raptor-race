@@ -5,7 +5,7 @@
 import { Music } from './music';
 
 /** Music bus level relative to SFX: keeps music peaks about 8 dB under SFX peaks (AUDIO_BIBLE mix targets). */
-export const MUSIC_LEVEL = 0.3;
+export const MUSIC_LEVEL = 0.26;
 
 export type SfxName = 'amber' | 'lane' | 'jump' | 'land' | 'slide' | 'stumble' | 'egg' | 'powerup' | 'checkpoint' | 'finish';
 
@@ -180,6 +180,12 @@ export class AudioEngine {
     this.musicBus.gain.value = this.musicOn ? MUSIC_LEVEL : 0;
     this.musicBus.connect(this.master);
     this.music = new Music(this.ctx, this.musicBus);
+  }
+  /** Amber pickup: with the music playing, a chord tone snapped onto the beat; otherwise the plain chime. */
+  amber(song: number, rate: number) {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    if (this.musicOn && this.music?.isPlaying) this.music.chime(song, rate);
+    else this.sfx?.play('amber');
   }
   setMusic(on: boolean) {
     this.musicOn = on;

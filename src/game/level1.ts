@@ -63,9 +63,9 @@ B.line(486, 490, -1);
 B.hz(495, 'ledge', -1).arcOver(495, -1);
 B.hz(508, 'arch', -1).low(504, 512, -1);
 B.hz(521, 'ledge', -1).arcOver(521, -1);
-B.line(487, 501, 1, 4.6);
+B.line(487, 501, 1, 1); // sparse: quarter notes
 B.hz(511, 'ledge', 1);
-B.line(516, 528, 1, 5);
+B.line(516, 528, 1, 1);
 B.line(536, 552, -1);
 B.hz(547, 'boulder', 1, 0);
 B.hz(564, 'ribArch', 0).low(560, 568, -1);
@@ -77,8 +77,8 @@ B.line(592, 604, 0);
 B.hint(606, 'updraft');
 B.power(616, 'updraft', [-1, 0, 1]);
 for (let d = 640; d <= 680; d += 10) B.hz(d, 'boulder', -1, 0, 1);
-B.sky(628, 692, 0, 2.75, 3.2);
-B.sky(644, 676, 1, 2.75, 4);
+B.sky(628, 692, 0, 2.75, 0.5);
+B.sky(644, 676, 1, 2.75, 1);
 B.egg(666, -1, 2.75);
 // After the glide: a clear landing (nothing for ~2.5 s), then a gentle run-in to the checkpoint.
 B.line(712, 730, 0);
@@ -102,9 +102,9 @@ B.fork(922, 968);
 B.hz(932, 'arch', 1).low(928, 936, 1);
 B.hz(945, 'ledge', 1).arcOver(945, 1);
 B.hz(958, 'arch', 1).low(954, 962, 1);
-B.line(926, 940, -1, 4.6);
+B.line(926, 940, -1, 1);
 B.hz(950, 'ledge', -1);
-B.line(956, 966, -1, 5);
+B.line(956, 966, -1, 1);
 B.hz(980, 'ribArch', 0).low(976, 984, 0);
 B.hz(994, 'boulder', -1, 1);
 B.line(988, 1002, 0);
@@ -143,5 +143,5 @@ export const LEVEL1: LevelDef = B.build({
   prey: { species: 'protoceratops', startGap: 24, finale: 90 },
   checkpoints: [425 * K, 772 * K],
   stormRises: 772 * K,
-  parScore: 14000,
+  parScore: 13000, // amber on the beat grid is a little sparser late in the level (faster running), so par moved with it
 });

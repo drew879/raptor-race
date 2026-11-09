@@ -3,7 +3,7 @@ import { LEVEL1 } from '../src/game/level1';
 import { Session } from '../src/game/session';
 import { HAZARD_BOXES, hazardBox } from '../src/game/collision';
 import { CRASH_COPY } from '../src/game/copy';
-import { speedAt } from '../src/game/level';
+import { BEAT, distanceAtTime, speedAt, timeAt } from '../src/game/level';
 import { GLIDE_SECONDS } from '../src/game/session';
 import { Bot } from '../src/game/bot';
 import { HUMANLIKE, PERFECT, playLevel } from '../src/game/bot';
@@ -100,6 +100,17 @@ describe('setbacks and fork placement (owner playtest 4)', () => {
       for (const sp of spines) if (sp.d > p.d) expect(sp.d - landing, `fork at ${sp.d}`).toBeGreaterThan(3 * speedAt(LEVEL1, landing));
     }
     for (const cp of LEVEL1.checkpoints) for (const sp of spines) expect(cp < sp.d - 5 || cp > sp.d + sp.len! + 5).toBe(true);
+  });
+});
+
+describe('music sync', () => {
+  it('time and distance convert both ways', () => {
+    for (const d of [0, 100, 800, 1649]) expect(distanceAtTime(LEVEL1, timeAt(LEVEL1, d))).toBeCloseTo(d, 6);
+  });
+  it('every amber sits on the beat grid (lines on eighths, slides and jump arcs on sixteenths)', () => {
+    const amber = LEVEL1.pickups.filter((p) => p.kind === 'amber');
+    const onGrid = amber.filter((p) => { const k = timeAt(LEVEL1, p.d) / (BEAT / 4); return Math.abs(k - Math.round(k)) < 1e-4; });
+    expect(onGrid.length).toBe(amber.length);
   });
 });
 

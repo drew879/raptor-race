@@ -23,7 +23,8 @@ Portrait-mode 3D runner for mobile, built with TypeScript + Three.js + Vite. Own
 - `npm run shots` phone-emulated screenshots to `artifacts/shots/`
 - `npm run typecheck`
 - `node scripts/play-shots.mjs <dir>` bot plays Level 1 in the real page and captures phone screenshots
-- `node scripts/audio-check.mjs` renders every SFX offline and checks levels
+- `node scripts/audio-check.mjs` renders every SFX and the music offline and checks levels
+- `node scripts/music-preview.mjs <out.wav>` renders a listenable music preview (low, then full intensity, with amber chains)
 - `node scripts/smoke.mjs` drives the real page into crashes (including a fork's fin) and checks every crash reaches the crash screen
 - `node scripts/hunt-shots.mjs <dir>` captures the opening shot, pounce and freeze-frame plate
 - `node scripts/scenery-tour.mjs <dir> [marks]` warps the real page through each landmark stretch and captures it without banners

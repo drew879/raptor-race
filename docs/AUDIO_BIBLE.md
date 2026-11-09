@@ -26,13 +26,14 @@
 | Finish | Short warm fanfare (marimba-like plucks + low drum) | 1.5 s |
 
 ## Music
-Adaptive loop at 104 BPM with a light shuffle (src/audio/music.ts): low frame drum (doum), hand drum (tak) and ghost notes, shaker, a low wind bed, and plucked Karplus-Strong motifs in **C# minor pentatonic** (the same notes as the amber chimes, so pickups always sit in key). Four-bar phrases; the motif changes each phrase and lifts a step in its second half.
+Music v2 (owner playtest 4: v1 was "single notes, no discernible melody or rhythm"; amber chimes already felt musical, so sync them). `src/audio/music.ts`:
 
-- Intensity 0..1 comes from the hunt: 0.2 at the start, rising with progress, +0.3 as the gap closes, +0.1 while gliding, 1.0 in the finale.
-- Layers: doum always; bass pluck > 0.15; shaker > 0.22; tak > 0.3; motif > 0.38; extra doum hits > 0.55; ghost taks > 0.65; bass octave > 0.7; motif doubled an octave up > 0.8.
-- Storm swells and brightens the wind bed. Egg pickups duck it 3 dB. Pause muffles it (low-pass, -9 dB). Crash, lost and menus fade it out; the pounce plays a sting (big drum and a held chord) before the finish fanfare.
-- Silent during the opening shot; it starts on "Hunt!".
-- Level: music bus 0.3, measured peak about -16.5 dBFS at full intensity (SFX peak -10 to -22). `scripts/audio-check.mjs` renders it offline and fails if it goes over -15 dBFS.
+- **Tempo and clock:** 120 BPM in every level. The song position is the running time to the raptor's distance (`level.timeAt`), so the music is locked to the course: restarts and checkpoints pick it up in the right place, pause holds it, and the finale's slow motion slows it.
+- **Amber on the beat:** levels place amber in time, not meters: lines on eighth notes (4 pieces a second at any speed), slide lines and jump arcs on sixteenths. Each chime snaps onto the next sixteenth and plays a tone of the current chord, climbing with the chain, so collecting a line plays a run over the harmony. With music off, amber plays the plain chime.
+- **The theme:** eight bars in C# minor, chords i-VI-III-VII | i-VI-VII-i (C#m, A, E, B), a 3+3+2 lilt shared by melody, bass and drums. Kalimba carries the melody from bar 1 with frame drum, hand-drum backbeat, shaker eighths and a warm bass.
+- **Layers by intensity** (0.2 at the start, rising with progress and as the gap closes, 1.0 in the finale): marimba doubles the melody an octave down and the shaker goes to sixteenths > 0.4; hand-drum ghost notes > 0.45; extra frame-drum hits > 0.55; bass octave pops > 0.7; a quiet marimba arpeggio > 0.75.
+- Storm swells the wind bed; inclusions duck it 3 dB; pause muffles it; crash, lost and menus fade it; the pounce plays a sting (big drum, the home chord on marimba).
+- **Level:** music bus 0.26, measured peak about -16 dBFS (SFX peaks -10 to -22). `scripts/audio-check.mjs` fails over -15 dBFS. `scripts/music-preview.mjs` renders a listenable preview.
 - Separate Music on/off in the pause menu, saved.
 
 ## Critic rubric (Audio)

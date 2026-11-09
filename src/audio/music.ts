@@ -1,37 +1,59 @@
 /**
- * Adaptive hunt music, synthesized (docs/AUDIO_BIBLE.md): hand drums, shaker, a low wind bed and plucked
- * Karplus-Strong motifs in C# minor pentatonic (the same notes as the amber chimes, so pickups always fit).
- * Layers come in as intensity rises; the storm swells the wind. Scheduled ahead on the audio clock.
+ * Adaptive hunt music v2 (docs/AUDIO_BIBLE.md): a composed eight-bar theme in C# minor at 120 BPM, on kalimba
+ * and marimba over hand drums, shaker and a warm bass, with a wind bed under it. A melody and a groove play
+ * from the first bar; layers join as the hunt intensifies.
+ *
+ * The music takes its clock from the run itself (the song position is the running time to the raptor's
+ * distance, see level.timeAt), so it stays locked to the amber, which levels place on the same beat grid.
+ * Amber chimes snap onto the next sixteenth and play a tone of the current chord: collecting a line plays
+ * part of the tune.
  *
  * Works with an AudioContext or an OfflineAudioContext (scripts/audio-check.mjs renders it to check levels).
  */
-const BPM = 104;
-const STEP = 60 / BPM / 4; // a sixteenth
-const SCALE = [61, 64, 66, 68, 71, 73, 76, 78]; // C#4 E4 F#4 G#4 B4 C#5 E5 F#5
+import { BEAT } from '../game/level';
+
+const S16 = BEAT / 4; // a sixteenth
+const BAR = 16; // sixteenths per bar
+const LOOP = 8 * BAR;
 const midiHz = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 
-/** Two-bar motifs: [step 0..31, scale index, accent]. Chosen per phrase, so the hunt never loops identically. */
-const MOTIFS: [number, number, number][][] = [
-  [[0, 0, 1], [3, 2, 0], [6, 3, 0], [10, 2, 0], [16, 4, 1], [19, 3, 0], [22, 2, 0], [26, 1, 0]],
-  [[0, 3, 1], [2, 2, 0], [4, 0, 0], [8, 2, 1], [14, 3, 0], [16, 5, 1], [20, 4, 0], [24, 3, 0], [28, 2, 0]],
-  [[0, 0, 1], [4, 0, 0], [6, 1, 0], [8, 2, 1], [12, 4, 0], [18, 3, 0], [20, 2, 0], [24, 0, 1]],
-  [[0, 5, 1], [3, 4, 0], [6, 3, 0], [8, 4, 0], [11, 3, 0], [14, 2, 0], [16, 3, 1], [22, 1, 0], [24, 0, 0]],
+type Chord = { root: number; tones: number[] };
+// i - VI - III - VII | i - VI - VII - i, roots in the bass register, tones as pitch classes (C# = 1).
+const CHORDS: Chord[] = [
+  { root: 37, tones: [1, 4, 8] }, // C#m
+  { root: 33, tones: [9, 1, 4] }, // A
+  { root: 40, tones: [4, 8, 11] }, // E
+  { root: 35, tones: [11, 3, 6] }, // B
+  { root: 37, tones: [1, 4, 8] },
+  { root: 33, tones: [9, 1, 4] },
+  { root: 35, tones: [11, 3, 6] },
+  { root: 37, tones: [1, 4, 8] },
 ];
-const BASS = [37, 37, 44, 42]; // C#2, C#2, G#2, F#2: one root per bar of a four-bar phrase
+
+/** The theme: per bar, [sixteenth, MIDI note, length in sixteenths]. A 3+3+2 lilt, call and answer. */
+const THEME: [number, number, number][][] = [
+  [[0, 80, 3], [3, 83, 3], [6, 85, 4], [10, 83, 2], [12, 80, 2], [14, 76, 2]],
+  [[0, 85, 6], [6, 83, 2], [8, 81, 2], [10, 80, 2], [12, 76, 4]],
+  [[0, 80, 3], [3, 83, 3], [6, 88, 4], [10, 83, 2], [12, 80, 2], [14, 83, 2]],
+  [[0, 78, 6], [6, 75, 2], [8, 78, 2], [10, 80, 2], [12, 78, 4]],
+  [[0, 80, 3], [3, 83, 3], [6, 85, 4], [10, 83, 2], [12, 80, 2], [14, 76, 2]],
+  [[0, 88, 4], [4, 85, 2], [6, 83, 2], [8, 85, 4], [12, 81, 2], [14, 80, 2]],
+  [[0, 78, 3], [3, 80, 3], [6, 83, 4], [10, 78, 2], [12, 76, 2], [14, 78, 2]],
+  [[0, 73, 8], [8, 80, 4], [12, 73, 4]],
+];
 
 export class Music {
   readonly out: GainNode;
   private ctx: BaseAudioContext;
   private noise: AudioBuffer;
-  private plucks = new Map<number, AudioBuffer>();
   private wind: { src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode } | null = null;
   private duck: GainNode;
   private tone: BiquadFilterNode;
   private seed = 9;
-  private step = 0;
-  private nextT = 0;
+  private lastStep = -Infinity;
   private playing = false;
-  private motif = 0;
+  private chain = 0;
+  private lastChimeSong = -10;
   /** 0..1: how many layers play. Set every frame from the hunt. */
   intensity = 0;
   /** 0..1: storm level swells the wind bed. */
@@ -51,67 +73,60 @@ export class Music {
     const d = this.noise.getChannelData(0);
     let s = 4242;
     for (let i = 0; i < len; i++) { s = (s * 1664525 + 1013904223) >>> 0; d[i] = s / 2147483648 - 1; }
-    for (const m of [...SCALE, ...SCALE.map((x) => x + 12), ...BASS]) this.plucks.set(m, this.renderPluck(midiHz(m), m < 50 ? 2.2 : 1.5, m < 50 ? 0.9985 : 0.996));
   }
 
+  get isPlaying() { return this.playing; }
   private rnd() { this.seed = (this.seed * 16807) % 2147483647; return this.seed / 2147483647; }
 
-  /** Karplus-Strong plucked string rendered once into a buffer (a feedback DelayNode can't go above ~340 Hz). */
-  private renderPluck(freq: number, dur: number, loss: number) {
-    const sr = this.ctx.sampleRate;
-    const N = Math.max(2, Math.round(sr / freq));
-    const len = Math.round(sr * dur);
-    const buf = this.ctx.createBuffer(1, len, sr);
-    const d = buf.getChannelData(0);
-    const ring = new Float32Array(N);
-    let s = Math.round(freq * 1000) || 1, prev = 0;
-    for (let i = 0; i < N; i++) { s = (s * 16807) % 2147483647; const w = s / 1073741823.5 - 1; prev = prev * 0.45 + w * 0.55; ring[i] = prev; } // softened excitation: warm, not twangy
-    let idx = 0;
-    for (let i = 0; i < len; i++) {
-      const a = ring[idx], b = ring[(idx + 1) % N];
-      d[i] = a;
-      ring[idx] = loss * 0.5 * (a + b);
-      idx = (idx + 1) % N;
-    }
-    const fade = Math.round(sr * 0.08);
-    for (let i = 0; i < fade; i++) d[len - 1 - i] *= i / fade;
-    return buf;
-  }
-
-  private pluck(t: number, midi: number, gain: number, pan = 0) {
-    const buf = this.plucks.get(midi);
-    if (!buf) return;
-    const src = this.ctx.createBufferSource();
-    src.buffer = buf;
-    const g = this.ctx.createGain();
-    g.gain.value = gain;
-    let node: AudioNode = g;
-    if (pan && typeof (this.ctx as AudioContext).createStereoPanner === 'function') {
-      const p = this.ctx.createStereoPanner();
-      p.pan.value = pan;
-      g.connect(p);
-      node = p;
-    }
-    src.connect(g);
-    node.connect(this.duck);
-    src.start(t);
-  }
-
-  private drum(t: number, f0: number, f1: number, dur: number, gain: number, click: number, clickF: number) {
-    const o = this.ctx.createOscillator();
-    o.type = 'sine';
-    o.frequency.setValueAtTime(f0, t);
-    o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  // ---------------- Instruments ----------------
+  private env(t: number, peak: number, attack: number, decay: number) {
     const g = this.ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(gain, t + 0.004);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(this.duck);
+    g.gain.linearRampToValueAtTime(peak, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
+    return g;
+  }
+  private osc(t: number, type: OscillatorType, f: number, peak: number, attack: number, decay: number, dest: AudioNode, glideTo?: number) {
+    const o = this.ctx.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(f, t);
+    if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t + attack + decay);
+    const g = this.env(t, peak, attack, decay);
+    o.connect(g).connect(dest);
     o.start(t);
-    o.stop(t + dur + 0.02);
+    o.stop(t + attack + decay + 0.03);
+  }
+  private panTo(pan: number) {
+    if (!pan || typeof (this.ctx as AudioContext).createStereoPanner !== 'function') return this.duck;
+    const p = this.ctx.createStereoPanner();
+    p.pan.value = pan;
+    p.connect(this.duck);
+    return p;
+  }
+  /** Kalimba: a sine tine with a quick inharmonic overtone and a soft thumb click. */
+  private kalimba(t: number, midi: number, gain: number, pan = 0) {
+    const f = midiHz(midi), dest = this.panTo(pan);
+    this.osc(t, 'sine', f, gain, 0.003, 0.9 - (midi - 70) * 0.012, dest);
+    this.osc(t, 'sine', f * 5.95, gain * 0.22, 0.001, 0.07, dest);
+    this.hiss(t, 0.012, gain * 0.25, 'bandpass', 3800, 1.5, pan);
+  }
+  /** Marimba: a wooden bar, fundamental plus the 4th and ~10th partials dying fast. */
+  private marimba(t: number, midi: number, gain: number, pan = 0) {
+    const f = midiHz(midi), dest = this.panTo(pan);
+    this.osc(t, 'sine', f, gain, 0.002, 0.55, dest);
+    this.osc(t, 'sine', f * 4, gain * 0.3, 0.001, 0.08, dest);
+    this.osc(t, 'sine', f * 9.8, gain * 0.1, 0.001, 0.025, dest);
+  }
+  /** Warm round bass: triangle and sine, a little pitch drop at the start. */
+  private bass(t: number, midi: number, gain: number, len: number) {
+    const f = midiHz(midi);
+    this.osc(t, 'triangle', f * 1.01, gain * 0.6, 0.006, Math.min(0.5, len), this.duck, f);
+    this.osc(t, 'sine', f, gain, 0.006, Math.min(0.6, len + 0.1), this.duck);
+  }
+  private drum(t: number, f0: number, f1: number, dur: number, gain: number, click: number, clickF: number) {
+    this.osc(t, 'sine', f0, gain, 0.003, dur, this.duck, f1);
     if (click > 0) this.hiss(t, 0.03, click, 'bandpass', clickF, 1.2);
   }
-
   private hiss(t: number, dur: number, gain: number, type: BiquadFilterType, f: number, q: number, pan = 0) {
     const src = this.ctx.createBufferSource();
     src.buffer = this.noise;
@@ -119,25 +134,16 @@ export class Music {
     flt.type = type;
     flt.frequency.value = f;
     flt.Q.value = q;
-    const g = this.ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(gain, t + 0.003);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(flt).connect(g);
-    if (pan && typeof (this.ctx as AudioContext).createStereoPanner === 'function') {
-      const p = this.ctx.createStereoPanner();
-      p.pan.value = pan;
-      g.connect(p).connect(this.duck);
-    } else g.connect(this.duck);
+    const g = this.env(t, gain, 0.003, dur);
+    src.connect(flt).connect(g).connect(this.panTo(pan));
     src.start(t, this.rnd() * 1.5);
-    src.stop(t + dur + 0.02);
+    src.stop(t + dur + 0.03);
   }
 
-  get isPlaying() { return this.playing; }
-
-  /** Start the loop (fades in). `at` defaults to now. */
+  // ---------------- Transport ----------------
+  /** Start (fades in). The first update after this picks up at the current song position. */
   start(at?: number) {
-    const t = at ?? this.ctx.currentTime + 0.05;
+    const t = at ?? this.ctx.currentTime + 0.02;
     if (!this.wind) {
       const src = this.ctx.createBufferSource();
       src.buffer = this.noise;
@@ -147,16 +153,17 @@ export class Music {
       filter.frequency.value = 420;
       filter.Q.value = 0.4;
       const gain = this.ctx.createGain();
-      gain.gain.value = 0.03;
+      gain.gain.value = 0.02;
       src.connect(filter).connect(gain).connect(this.duck);
       src.start(t);
       this.wind = { src, filter, gain };
     }
     this.out.gain.cancelScheduledValues(t);
     this.out.gain.setValueAtTime(Math.max(0.0001, this.out.gain.value), t);
-    this.out.gain.linearRampToValueAtTime(1, t + 0.6);
-    this.tone.frequency.setTargetAtTime(16000, t, 0.1);
-    if (!this.playing) { this.playing = true; this.step = 0; this.nextT = t; }
+    this.out.gain.linearRampToValueAtTime(1, t + 0.25);
+    this.tone.frequency.setTargetAtTime(16000, t, 0.05);
+    this.playing = true;
+    this.lastStep = -Infinity;
   }
 
   /** Fade out over `fade` seconds and stop scheduling. */
@@ -168,14 +175,14 @@ export class Music {
     this.playing = false;
   }
 
-  /** Muffled and quiet while paused. */
+  /** Muffled while paused (the song position holds, so nothing new is scheduled). */
   setPaused(p: boolean) {
     const t = this.ctx.currentTime;
     this.tone.frequency.setTargetAtTime(p ? 600 : 16000, t, 0.08);
     this.duck.gain.setTargetAtTime(p ? 0.35 : 1, t, 0.08);
   }
 
-  /** Dip 3 dB for a moment (egg pickup). */
+  /** Dip 3 dB for a moment (inclusion pickup). */
   duckFor(seconds = 0.6) {
     const t = this.ctx.currentTime;
     this.duck.gain.cancelScheduledValues(t);
@@ -183,57 +190,82 @@ export class Music {
     this.duck.gain.setTargetAtTime(1, t + seconds, 0.15);
   }
 
-  /** The pounce: a big drum and a held chord, then silence for the finish fanfare. */
+  /** The pounce: a big drum and the home chord ringing out, then silence for the finish fanfare. */
   sting() {
     const t = this.ctx.currentTime + 0.02;
-    this.drum(t, 120, 42, 0.9, 0.5, 0.12, 900);
-    [0, 2, 4].forEach((i, k) => this.pluck(t + k * 0.05, SCALE[i], 0.22, (k - 1) * 0.3));
-    this.pluck(t, BASS[0], 0.35);
+    this.drum(t, 120, 42, 0.9, 0.45, 0.12, 900);
+    [73, 76, 80, 85].forEach((m, k) => this.marimba(t + k * 0.04, m, 0.16, (k - 1.5) * 0.25));
+    this.bass(t, 37, 0.3, 1.2);
     this.playing = false;
-    this.out.gain.setTargetAtTime(0.0001, t + 1.2, 0.4);
+    this.out.gain.setTargetAtTime(0.0001, t + 1.4, 0.4);
   }
 
-  /** Schedule notes up to `horizon` seconds ahead. Call every frame. */
-  update(horizon = 0.15) {
-    const now = this.ctx.currentTime;
+  /**
+   * Schedule everything due between the song position `song` (seconds of running) and `horizon` audio seconds
+   * ahead. `rate` is how fast the song advances per audio second (the game's time scale; 0 holds it).
+   */
+  update(song: number, rate = 1, horizon = 0.12, now = this.ctx.currentTime) {
     if (this.wind) {
-      const w = 0.025 + this.storm * 0.09 + 0.012 * Math.sin(now * 0.37);
+      const w = 0.02 + this.storm * 0.09 + 0.01 * Math.sin(now * 0.37);
       this.wind.gain.gain.setTargetAtTime(this.playing ? w : 0.0001, now, 0.3);
       this.wind.filter.frequency.setTargetAtTime(380 + this.storm * 900 + 120 * Math.sin(now * 0.23), now, 0.3);
     }
-    if (!this.playing) return;
-    if (this.nextT < now - 0.2) this.nextT = now + 0.02; // fell behind (tab hidden): skip ahead, don't burst
-    while (this.nextT < now + horizon) {
-      this.schedule(this.step, this.nextT);
-      this.step = (this.step + 1) % 64; // four-bar phrase
-      this.nextT += STEP;
+    if (!this.playing || rate <= 0) return;
+    const cur = song / S16;
+    // First update, a restart or a checkpoint (song jumped back), or a long stall: pick up from here.
+    if (!(this.lastStep >= cur - 8) || this.lastStep > cur + 4) this.lastStep = Math.ceil(cur) - 1;
+    const until = cur + (horizon * rate) / S16;
+    while (this.lastStep + 1 <= until) {
+      const k = ++this.lastStep;
+      this.schedule(k, Math.max(now, now + ((k - cur) * S16) / rate));
     }
   }
 
-  private schedule(step: number, t: number) {
+  /** An amber pickup: a bell tone from the current chord, snapped onto the next sixteenth. */
+  chime(song: number, rate = 1, now = this.ctx.currentTime) {
+    // Pickups trigger a few centimeters before the amber's grid point; aim for the nearest sixteenth just ahead.
+    let k = Math.round((song + 0.02) / S16);
+    if (k * S16 < song - 0.03) k++;
+    const t = Math.max(now, now + ((k * S16 - song) / Math.max(rate, 0.2)));
+    if (song - this.lastChimeSong > 0.6) this.chain = 0;
+    this.lastChimeSong = song;
+    const chord = CHORDS[Math.floor((((k % LOOP) + LOOP) % LOOP) / BAR)];
+    // Chord tones from E5 upward, climbing one tone per piece in a chain.
+    const ladder: number[] = [];
+    for (let m = 76; m <= 100 && ladder.length < 8; m++) if (chord.tones.includes(m % 12)) ladder.push(m);
+    const midi = ladder[Math.min(this.chain, ladder.length - 1)];
+    this.chain++;
+    const f = midiHz(midi);
+    this.osc(t, 'sine', f, 0.13, 0.002, 0.11, this.duck);
+    this.osc(t, 'sine', f * 2.76, 0.025, 0.001, 0.05, this.duck);
+  }
+
+  private schedule(k: number, t: number) {
     const I = this.intensity;
-    const s16 = step % 16, bar = Math.floor(step / 16), s32 = step % 32;
-    const swing = s16 % 2 === 1 ? STEP * 0.12 : 0; // a little shuffle
-    t += swing;
-    if (step === 0) this.motif = Math.floor(this.rnd() * MOTIFS.length);
-    // Low frame drum (doum): the pulse, always on.
-    if (s16 === 0 || s16 === 10 || (I > 0.55 && (s16 === 6 || s16 === 13))) this.drum(t, 92, 48, 0.32, s16 === 0 ? 0.26 : 0.19, 0.03, 400);
-    // Bass pluck: phrase roots.
-    if (I > 0.15 && s16 === 0) this.pluck(t, BASS[bar], 0.3);
-    if (I > 0.7 && s16 === 8) this.pluck(t, BASS[bar] + 12, 0.16);
-    // Hand drum (tak) on the backbeat, ghost notes as it builds.
-    if (I > 0.3 && (s16 === 4 || s16 === 12)) this.drum(t, 340, 260, 0.07, 0.12, 0.09, 2600);
-    if (I > 0.65 && (s16 === 3 || s16 === 9 || s16 === 15)) this.drum(t, 360, 280, 0.05, 0.05, 0.04, 3000);
-    // Shaker sixteenths, accented off-beats.
-    if (I > 0.22) this.hiss(t, s16 % 4 === 2 ? 0.06 : 0.035, (s16 % 4 === 2 ? 0.05 : 0.022) * Math.min(1, (I - 0.22) * 4), 'highpass', 6500, 0.7, 0.25);
-    // Plucked motif, doubled an octave up at full intensity.
-    if (I > 0.38) {
-      for (const [st, idx, acc] of MOTIFS[this.motif]) {
-        if (st !== s32) continue;
-        const m = SCALE[(idx + (bar >= 2 ? 1 : 0)) % SCALE.length]; // second half of the phrase lifts a step
-        this.pluck(t, m, acc ? 0.2 : 0.14, -0.15);
-        if (I > 0.8) this.pluck(t + 0.01, m + 12, 0.07, 0.3);
-      }
+    const step = ((k % LOOP) + LOOP) % LOOP;
+    const bar = Math.floor(step / BAR), s16 = step % BAR;
+    const chord = CHORDS[bar];
+    // Drums: a 3+3+2 frame-drum pulse, hand-drum backbeat, shaker eighths (sixteenths as it builds).
+    if (s16 === 0 || s16 === 6 || s16 === 8 || (I > 0.55 && (s16 === 11 || s16 === 14))) this.drum(t, 95, 50, 0.3, s16 === 0 ? 0.19 : 0.14, 0.03, 420);
+    if (s16 === 4 || s16 === 12) this.drum(t, 330, 250, 0.08, 0.1, 0.08, 2600);
+    if (I > 0.45 && (s16 === 2 || s16 === 7 || s16 === 10 || s16 === 15)) this.drum(t, 360, 280, 0.05, 0.04, 0.035, 3000);
+    if (s16 % 2 === 0 || I > 0.4) this.hiss(t, s16 % 4 === 2 ? 0.06 : 0.035, s16 % 4 === 2 ? 0.045 : 0.02, 'highpass', 6500, 0.7, 0.25);
+    // Bass: root, root, fifth on the same lilt as the drums.
+    if (s16 === 0) this.bass(t, chord.root, 0.18, 6 * S16);
+    if (s16 === 6) this.bass(t, chord.root, 0.15, 2 * S16);
+    if (s16 === 10) this.bass(t, chord.root + 7, 0.15, 3 * S16);
+    if (I > 0.7 && s16 === 14) this.bass(t, chord.root + 12, 0.14, 2 * S16);
+    // The theme on kalimba, doubled an octave down on marimba as the hunt heats up.
+    for (const [st, m] of THEME[bar]) {
+      if (st !== s16) continue;
+      this.kalimba(t, m, 0.15, -0.12);
+      if (I > 0.45) this.marimba(t + 0.005, m - 12, 0.1, 0.18);
+    }
+    // Close to the prey: a quiet sixteenth arpeggio of the chord on marimba.
+    if (I > 0.75) {
+      const tones: number[] = [];
+      for (let m = 64; m <= 80; m++) if (chord.tones.includes(m % 12)) tones.push(m);
+      this.marimba(t, tones[s16 % tones.length], 0.05, s16 % 2 ? 0.35 : -0.35);
     }
   }
 }

@@ -33,7 +33,7 @@ async function measureMusic(intensity: number, storm: number) {
   m.intensity = intensity;
   m.storm = storm;
   m.start(0);
-  m.update(9.5);
+  for (let s = 0; s < 9.6; s += 0.1) m.update(s, 1, 0.1, s);
   const buf = await ctx.startRendering();
   let peak = 0, sum = 0;
   for (let c = 0; c < 2; c++) {
@@ -44,3 +44,26 @@ async function measureMusic(intensity: number, storm: number) {
   return { name: `music@${intensity}`, peakDb: +(20 * Math.log10(peak + 1e-9)).toFixed(1), rmsDb: +(20 * Math.log10(rms + 1e-9)).toFixed(1), durMs: 10000 };
 }
 (window as unknown as { __audio: Promise<unknown> }).__audio = Promise.all([...NAMES.map(measure), measureMusic(0.25, 0), measureMusic(1, 0.6)]);
+
+/** Renders a music preview (scripts/music-preview.mjs): low intensity, then full, with on-beat amber chains. */
+(window as unknown as { __renderPreview: () => Promise<number[][]> }).__renderPreview = async () => {
+  const sr = 44100, secs = 34;
+  const ctx = new OfflineAudioContext(2, sr * secs, sr);
+  const bus = ctx.createGain();
+  bus.gain.value = MUSIC_LEVEL;
+  bus.connect(ctx.destination);
+  const m = new Music(ctx, bus);
+  m.start(0);
+  for (let s = 0; s < secs - 1; s += 0.05) {
+    m.intensity = s < 16 ? 0.25 : 0.9;
+    m.update(s, 1, 0.05, s);
+    // A line of amber, one piece every eighth note, in each half.
+    const eighth = 0.25;
+    for (const [a, b] of [[4, 6.5], [20, 23]]) {
+      const n = Math.round(s / eighth);
+      if (s >= a && s <= b && Math.abs(s - n * eighth) < 0.026) m.chime(s - 0.03, 1, s - 0.03);
+    }
+  }
+  const buf = await ctx.startRendering();
+  return [Array.from(buf.getChannelData(0)), Array.from(buf.getChannelData(1))];
+};
