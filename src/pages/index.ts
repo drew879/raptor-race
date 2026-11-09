@@ -19,12 +19,12 @@ import { AudioEngine } from '../audio/sfx';
 import { loadSave, writeSave } from '../game/save';
 import { Bot, PERFECT } from '../game/bot';
 import { Rng } from '../core/rng';
-import { clamp, damp, lerp } from '../core/math';
+import { clamp, damp, lerp, smoothstep } from '../core/math';
 import { amberIconSVG, inclusionIconSVG as eggIconSVG, logoSVG, protoSVG, raptorHeadSVG } from '../ui/logo';
 import type { RunnerAction } from '../game/runner';
 import type { HintKind } from '../game/level';
 
-type AppState = 'title' | 'prerun' | 'playing' | 'paused' | 'caught' | 'lost' | 'finishing' | 'results';
+type AppState = 'title' | 'prerun' | 'intro' | 'playing' | 'paused' | 'caught' | 'lost' | 'finishing' | 'results';
 const params = new URLSearchParams(location.search);
 const SHOT = params.has('shot');
 let DEBUG = params.has('debug');
@@ -65,6 +65,8 @@ root.innerHTML = `
 <div class="pounce" id="pounce" hidden>Swipe up to pounce!</div>
 <div class="spot" id="spot" hidden></div>
 <div class="callout" id="callout" hidden><div class="eyebrow">Rare find</div><h3>Blue amber, with an insect inside</h3><p>Trapped 75 million years ago. Find all 3 in this level for a star.</p><div class="tap">Tap to continue</div></div>
+<div class="quarry" id="quarry" hidden><div class="eyebrow">Field Journal · Today's quarry</div><h2>Protoceratops</h2><div class="latin">Protoceratops andrewsi · a parrot-beaked plant eater the size of a sheep</div></div>
+<div class="skip" id="skip" hidden>Tap to skip</div>
 <div class="plate" id="plate" hidden><div class="plate-card"><div class="eyebrow">Field Journal · Plate I</div><h2>Fighting Dinosaurs</h2><p>Velociraptor and Protoceratops, locked together in the red sand of the Gobi. In 1971 a fossil of exactly this moment was found in these same rocks: ~75 million years ago, preserved by a collapsing dune.</p></div></div>
 <div class="hint" id="hint" hidden><span class="glyph" id="hintGlyph"></span><span id="hintText"></span></div>
 <div class="floats" id="floats"></div>
@@ -227,6 +229,8 @@ function setApp(s: AppState) {
   show('scrCaught', s === 'caught');
   show('scrLost', s === 'lost');
   show('scrResults', s === 'results');
+  show('quarry', s === 'intro');
+  show('skip', s === 'intro');
   show('hud', s === 'playing' || s === 'paused' || s === 'caught' || s === 'lost');
   input.enabled = s === 'playing';
   if (s !== 'playing') $('hint').hidden = true;
@@ -278,11 +282,32 @@ function startRun() {
   inclusionIntro = 'pending';
   while (!pregenerate(1000)) { /* finish any terrain not built yet */ }
   hitches.length = 0;
-  session.start();
   save.runs++;
   writeSave(save);
-  setApp('playing');
+  // The opening shot: the prey up close, it bolts, then the raptor is released.
+  if (params.has('nointro')) beginChase();
+  else { introT = 0; setApp('intro'); }
 }
+function beginChase() {
+  session.start();
+  setApp('playing');
+  camBlend = 1;
+  floatText('Hunt!', 'big', 30);
+}
+let introT = 0;
+const INTRO = CONFIG.intro;
+const introEnd = INTRO.graze + INTRO.alert + INTRO.swing;
+/** The prey's distance along the course during the intro: grazing short of its start gap, then bolting up to it. */
+function introPreyD() {
+  const tb = Math.max(0, introT - INTRO.graze - INTRO.alert);
+  const a = (2 * INTRO.preyLead) / (INTRO.swing * INTRO.swing);
+  return LEVEL.prey.startGap - INTRO.preyLead + Math.min(INTRO.preyLead, 0.5 * a * tb * tb);
+}
+function introPreySpeed() {
+  const tb = Math.max(0, introT - INTRO.graze - INTRO.alert);
+  return tb > 0 ? ((2 * INTRO.preyLead) / (INTRO.swing * INTRO.swing)) * tb : 0;
+}
+root.addEventListener('pointerdown', () => { if (app === 'intro' && introT > 0.3) introT = introEnd; });
 function toTitle() {
   newSession();
   camBlend = 0;
@@ -427,8 +452,8 @@ function handle(e: GameEvent) {
       audio.play('finish');
       timeScale = 1;
       // Freeze-frame as a Field Journal plate, then the results.
-      setTimeout(() => { $('plate').hidden = false; container.classList.add('freeze'); }, 250);
-      setTimeout(() => { $('plate').hidden = true; container.classList.remove('freeze'); showResults(); }, 3200);
+      setTimeout(() => { $('plate').hidden = false; container.classList.add('freeze'); frozen = true; }, 1100);
+      setTimeout(() => { $('plate').hidden = true; container.classList.remove('freeze'); frozen = false; showResults(); }, 4600);
       break;
   }
 }
@@ -510,6 +535,7 @@ function syncWorld(dt: number) {
   for (const v of pickupViews.values()) itemsArr.push(v);
   items.items = itemsArr;
   items.hideNear = camBlend < 0.9 ? stage.camera.position : null;
+  items.group.visible = !session.pinned && app !== 'finishing'; // nothing floats into the finale shot
   items.update(clock);
   powerups.sync(session.pickups, clock);
 
@@ -527,11 +553,13 @@ function syncWorld(dt: number) {
   sparks.update(dt);
   streamer.update(r.distance);
 
-  const idle = app === 'title' || app === 'prerun' || app === 'results' || app === 'caught' || app === 'lost' ? 1 : 0;
-  raptor.sync(r, dt, idle);
+  const pinned = session.pinned ? 1 : 0;
+  const idle = !pinned && (app === 'title' || app === 'prerun' || app === 'intro' || app === 'results' || app === 'caught' || app === 'lost') ? 1 : 0;
+  pinW = damp(pinW, pinned, 14, dt);
+  raptor.sync(r, dt, idle, pinW);
 
   // Prey: runs ahead in its lane, hops ledges; hidden on the menus.
-  const pz = session.preyD;
+  const pz = app === 'intro' ? introPreyD() : session.preyD;
   let hop = 0;
   for (const h of session.hazards) {
     if (h.type !== 'ledge' && h.type !== 'ledgeWide') continue;
@@ -544,7 +572,17 @@ function syncWorld(dt: number) {
   const preyRunning = app === 'playing' || app === 'paused' || app === 'caught';
   prey.root.visible = app !== 'title' && app !== 'prerun';
   prey.root.position.set(session.preyX, 0, -pz);
-  prey.update(dt, preyRunning ? r.speed : app === 'finishing' ? 2 : 0, clamp(pvx / 8, -1, 1), hop);
+  let preySpeed = preyRunning ? r.speed : 0;
+  if (session.pinned) prey.pose = 'pinned';
+  else if (app === 'intro') {
+    const ti = introT - INTRO.graze;
+    prey.pose = ti < 0 ? 'graze' : ti < INTRO.alert ? 'alert' : 'run';
+    preySpeed = introPreySpeed();
+  } else {
+    prey.pose = 'run';
+    if (app === 'finishing') preySpeed = 4;
+  }
+  prey.update(app === 'paused' ? 0 : dt, preySpeed, clamp(pvx / 8, -1, 1), hop);
 
   // Storm: stumble pressure plus the story beat building toward the end.
   const ambient = clamp((r.distance - LEVEL.stormRises) / (LEVEL.length - LEVEL.stormRises), 0, 1) * 0.32;
@@ -556,6 +594,8 @@ function syncWorld(dt: number) {
   fog.near = lerp(FOG.near, 22, ambient * 2.2);
 }
 let footAcc = 0;
+let pinW = 0;
+let frozen = false; // the Field Journal freeze-frame holds every animation still
 let clock = 0;
 const liveSet = new Set<number>();
 const seenSet = new Set<number>();
@@ -564,16 +604,18 @@ const itemsArr: Collectible[] = [];
 function updateCamera(dt: number) {
   const r = session.runner;
   const z = -r.distance;
+  if (app === 'intro') { introCamera(dt); return; }
   const target = app === 'playing' || app === 'paused' || app === 'caught' ? 1 : 0;
   camBlend = app === 'finishing' ? 0 : damp(camBlend, target, target ? 3.2 : 2, dt);
   // Menu / finish camera: slow orbit around the raptor.
   titleOrbit += dt * 0.12;
   const ending = app === 'finishing' || app === 'results';
   if (ending) {
-    // The pounce: a low side-on shot framing raptor and prey.
-    const mid = -(r.distance + session.preyD) / 2;
-    menuCam.pos.set(r.x + 3.4, 0.9, mid + 0.6);
-    menuCam.look.set(r.x, 0.55, mid - 0.2);
+    // The pounce: a low three-quarter shot from ahead and to the side, framing both animals' faces.
+    const pz = -session.preyD;
+    const E = CONFIG.endingCam;
+    menuCam.pos.set(session.preyX + E.side, E.height, pz - E.ahead);
+    menuCam.look.set(session.preyX, E.lookHeight, pz + E.lookBack);
   } else {
     const a = 0.75 + Math.sin(titleOrbit) * 0.35;
     // Aim at the body's visual center (the head reaches ~1 m forward of the hips).
@@ -596,7 +638,32 @@ function updateCamera(dt: number) {
   const fov = stage.baseFov + Math.max(0, r.speed - LEVEL.speed.start) * CONFIG.camera.speedFovKick * camBlend + r.glideWeight * 6;
   $('speed').style.opacity = (camBlend * clamp((r.speed - 13) / 8, 0, 1) * (app === 'playing' ? 0.55 : 0)).toFixed(3);
   if (Math.abs(stage.camera.fov - fov) > 0.01) { stage.camera.fov = fov; stage.camera.updateProjectionMatrix(); }
-  stage.follow(r.x, z);
+  stage.follow(r.x, ending ? -session.preyD + 8 : z);
+}
+
+/** Opening shot: close on the grazing prey, it looks up and bolts, the camera swings back behind the raptor. */
+const introPos = new THREE.Vector3(), introLook = new THREE.Vector3(), chaseLookV = new THREE.Vector3();
+function introCamera(dt: number) {
+  const r = session.runner;
+  const z = -r.distance;
+  const I = INTRO;
+  const pz = -introPreyD();
+  const px = session.preyX;
+  // A low three-quarter close-up of the prey's head; it drifts slowly in while the prey grazes.
+  const push = Math.min(1, introT / (I.graze + I.alert));
+  const dist = lerp(I.camDist, I.camDist * 0.85, push);
+  const headZ = -(LEVEL.prey.startGap - I.preyLead) - 0.4;
+  introPos.set(px + Math.sin(I.camAz) * dist, I.camHeight, headZ - Math.cos(I.camAz) * dist);
+  introLook.set(px, 0.55, pz - 0.25);
+  stage.chase(r.x, r.y, z, dt, true);
+  const k = smoothstep(0, 1, (introT - I.graze - I.alert) / I.swing);
+  chaseLookV.set(stage.camera.position.x * 0.85, CONFIG.camera.lookHeight + r.y * 0.5, z - CONFIG.camera.lookAhead);
+  stage.camera.position.lerpVectors(introPos, stage.camera.position, k);
+  stage.camera.position.y += Math.sin(Math.PI * k) * I.crane; // crane up as the prey bolts past
+  stage.camera.lookAt(introLook.lerp(chaseLookV, k));
+  if (Math.abs(stage.camera.fov - stage.baseFov) > 0.01) { stage.camera.fov = stage.baseFov; stage.camera.updateProjectionMatrix(); }
+  stage.follow(px, lerp(pz + 6, z, k));
+  camBlend = 1;
 }
 
 function hud() {
@@ -623,6 +690,10 @@ function hud() {
 const STEP = 1 / 60;
 function step(dt: number) {
   clock += dt;
+  if (app === 'intro') {
+    introT += dt;
+    if (introT >= introEnd) beginChase();
+  }
   if (app === 'playing' || app === 'finishing' || app === 'results') {
     if (app === 'playing') { bot?.step(dt * timeScale); checkInclusionIntro(); }
     session.step(dt * timeScale);
@@ -632,7 +703,7 @@ function step(dt: number) {
     session.drainEvents();
   }
   if (hintTimer > 0) { hintTimer -= dt; if (hintTimer <= 0) $('hint').hidden = true; }
-  syncWorld(app === 'paused' ? 0 : dt);
+  syncWorld(app === 'paused' || frozen ? 0 : dt);
   updateCamera(dt);
 }
 
@@ -737,7 +808,7 @@ window.__rr = {
   autoplay() { bot = new Bot(session, PERFECT); },
   advance(seconds: number, render = false) { const n = Math.round(seconds / STEP); for (let i = 0; i < n; i++) step(STEP); hud(); if (render) draw(); },
   draw() { draw(); },
-  state: () => ({ app, length: LEVEL.length, distance: session.distance, score: Math.round(session.score), amber: session.amber, eggs: session.eggs, sstate: session.state }),
+  state: () => ({ app, length: LEVEL.length, distance: session.distance, score: Math.round(session.score), amber: session.amber, eggs: session.eggs, sstate: session.state, pounceReady: session.pounceReady, pinned: session.pinned }),
   input: (a: RunnerAction) => session.input(a),
   click: (id: string) => $(id).click(),
   stats: () => ({ ...streamer.stats(), calls: stage.renderer.info.render.calls, tris: stage.renderer.info.render.triangles }),

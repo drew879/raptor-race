@@ -50,6 +50,8 @@ export class Session {
   preyX = 0;
   pounceTimer = 0;
   pounceReady = false;
+  /** True once the raptor has landed on the prey's back (the end of a successful hunt). */
+  pinned = false;
   private preyLaneTarget = 0;
   private pounceT = 0;
   hazards: LiveHazard[] = [];
@@ -153,33 +155,33 @@ export class Session {
   step(dt: number) {
     this.time += dt;
     if (this.state === 'pouncing') {
-      // The leap: close the last meters in a short arc, then the hunt is won.
+      // The leap: an arc that lands the raptor on the prey's back, then the hunt is won.
+      const H = CONFIG.hunt;
       this.pounceT += dt;
       const r = this.runner;
-      const target = this.preyD - 0.7;
+      const target = this.preyD - H.pinOffset;
       r.distance += (target - r.distance) * Math.min(1, dt * 9);
       r.speed = 0;
       r.x += (this.preyX - r.x) * Math.min(1, dt * 9);
-      const k = Math.min(1, this.pounceT / 0.6);
+      const k = Math.min(1, this.pounceT / H.pounceTime);
       const prevY = r.y;
-      r.y = Math.sin(Math.PI * k) * 0.95;
+      r.y = H.pinHeight * k + Math.sin(Math.PI * k) * H.pounceArc;
       r.vy = (r.y - prevY) / Math.max(dt, 1e-4);
       r.grounded = false;
-      r.airWeight = 1;
-      if (this.pounceT >= 0.7) {
+      r.airWeight = 1 - k * k;
+      if (k >= 1) {
+        r.distance = target;
+        r.x = this.preyX;
+        r.y = H.pinHeight;
+        r.vy = 0;
+        r.airWeight = 0;
+        this.pinned = true;
         this.state = 'finished';
         this.events.push({ t: 'finish' });
       }
       return;
     }
-    if (this.state !== 'running') {
-      if (this.state === 'finished') {
-        // Coast into the nest.
-        this.runner.speed = Math.max(0, this.runner.speed - 22 * dt); // stop within ~10 m
-        this.runner.update(dt);
-      }
-      return;
-    }
+    if (this.state !== 'running') return;
     const r = this.runner;
     r.speed = speedAt(this.level, r.distance);
     const prevX = r.x;

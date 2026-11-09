@@ -16,7 +16,7 @@ export class RaptorView {
     this.root.add(mesh);
     this.anim = new RaptorAnimator(bones);
   }
-  sync(r: Runner, dt: number, idle = 0) {
+  sync(r: Runner, dt: number, idle = 0, pin = 0) {
     this.root.position.set(r.x, r.y, -r.distance);
     this.root.rotation.y = -r.lean * 0.12;
     const i = this.input;
@@ -29,6 +29,7 @@ export class RaptorView {
     i.stumble = r.stumble;
     i.idle = idle;
     i.glide = r.glideWeight;
+    i.pin = pin;
     this.anim.update(dt, i);
   }
 }

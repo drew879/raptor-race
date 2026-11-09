@@ -29,6 +29,8 @@ Owner playtest on iPhone: fun 1-2/5, graphics 1-2/5 ("boxy, low-res, not close t
 Hunt design (approved):
 - The prey runs ahead and stays visible. Clean running, combos and boosts close the gap; stumbles let it pull away. If it gets out of sight, the hunt fails (retry from checkpoint).
 - Final stretch: when within range, "Swipe up to pounce" with a brief slow-motion moment, then a tasteful freeze-frame (Field Journal style) before results.
+- Opening shot (~3.5 s, tap to skip): a close three-quarter view of the prey grazing with a Field Journal quarry card; it looks up, bolts, and the camera cranes back behind the raptor as the run begins ("Hunt!").
+- The pounce lands the raptor on the prey's back and holds it there in the raptor-prey-restraint pose (feet gripping, wings beating for balance, head down). No bites, no blood. The prey braces with its head thrown up. The freeze-frame holds that moment.
 - Eggs no longer fit (no nest). Replacement rare collectible: **amber with an insect inclusion** (3 per level), which feeds the Field Journal and strengthens the amber motif.
 
 ## 3. Controls

@@ -16,8 +16,16 @@ export const CONFIG = {
     pounceRange: 9, // the prompt appears inside this gap
     pounceWindow: 2.6, // seconds to swipe up before the prey recovers
     finaleCloseSpeed: 7, // m/s the gap shrinks once the prey tires
+    pounceTime: 0.6, // seconds of the leap
+    pounceArc: 0.9, // extra height at the top of the leap (m)
+    pinHeight: 0.78, // the raptor's feet on the prey's back (m)
+    pinOffset: -0.05, // where it lands along the prey: 0 = the prey's hips, + = further back (m)
   },
   world: { chunkLength: 40, chunksAhead: 6, chunksBehind: 1, trackHalfWidth: 2.6 },
+  /** Opening shot (seconds, meters): the prey grazes, looks up, bolts; the camera swings back behind the raptor. */
+  intro: { graze: 1.6, alert: 0.55, swing: 1.35, preyLead: 7, camAz: 0.6, camDist: 2.9, camHeight: 0.8, crane: 2.2 },
+  /** The pinned finale, framed from ahead and to the side of the prey (prey-relative; +z is behind it). */
+  endingCam: { side: 1.8, height: 1.2, ahead: 3.0, lookHeight: 0.95, lookBack: 0.25 },
   camera: { height: 2.65, back: 3.7, lookAhead: 7.0, lookHeight: 0.15, laneFollow: 0.75, fov: 64, speedFovKick: 1.1 },
 } as const;
 

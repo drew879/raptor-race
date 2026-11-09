@@ -13,9 +13,11 @@ export interface RaptorAnimInput {
   land: number;
   idle: number;
   glide: number;
+  /** On the prey's back at the end of the hunt: crouched, gripping, wings beating for balance. */
+  pin: number;
 }
 
-export const defaultAnimInput = (): RaptorAnimInput => ({ speed: 12, air: 0, vy: 0, slide: 0, lean: 0, stumble: 0, land: 0, idle: 0, glide: 0 });
+export const defaultAnimInput = (): RaptorAnimInput => ({ speed: 12, air: 0, vy: 0, slide: 0, lean: 0, stumble: 0, land: 0, idle: 0, glide: 0, pin: 0 });
 
 const KEYS = [
   'pY', 'pZ', 'pPitch', 'pYaw', 'pRoll', 'chX', 'chY', 'chZ', 'n1X', 'n1Y', 'n2X', 'n2Y', 'hX', 'hY', 'hZ',
@@ -47,7 +49,7 @@ export class RaptorAnimator {
   private hipLocal = { L: restPos('thighL').sub(restPos('pelvis')), R: restPos('thighR').sub(restPos('pelvis')) };
   private len = { thigh: 0, shin: 0, meta: 0 };
   private euler = new THREE.Euler();
-  private poses = { run: zeroPose(), idle: zeroPose(), slide: zeroPose(), air: zeroPose(), glide: zeroPose(), out: zeroPose() };
+  private poses = { run: zeroPose(), idle: zeroPose(), slide: zeroPose(), air: zeroPose(), glide: zeroPose(), pin: zeroPose(), out: zeroPose() };
 
   constructor(bones: THREE.Bone[]) {
     this.bones = bones;
@@ -210,6 +212,32 @@ export class RaptorAnimator {
       gl.fRY = 0.34; gl.fRZ = 0.1; gl.fRM = -1.55; gl.fRT = 0.3;
     }
 
+    // ---------- Pin: the raptor-prey-restraint pose. Feet grip the back, body low and forward,
+    // wings beating for balance, tail up as a counterweight. No gore: it holds, it doesn't bite. ----------
+    const pn = this.poses.pin;
+    if (inp.pin > 0) {
+      Object.assign(pn, zeroPose());
+      const beat = Math.sin(t * 13);
+      const sway = Math.sin(t * 5.3);
+      pn.pY = -0.44 + 0.02 * Math.sin(t * 26);
+      pn.pZ = 0.04;
+      pn.pPitch = -0.3 + 0.05 * beat;
+      pn.pRoll = 0.08 * sway;
+      pn.chX = -0.12; pn.chZ = -0.05 * sway;
+      pn.n1X = -0.22; pn.n2X = 0.0; pn.n1Y = 0.12 * Math.sin(t * 3.1);
+      pn.headPitch = -0.55 + 0.08 * Math.sin(t * 7);
+      pn.hY = 0.25 * Math.sin(t * 2.3);
+      pn.t1X = 0.02; pn.t2X = -0.06; pn.t3X = -0.04; pn.t4X = -0.02;
+      pn.t1Y = 0.14 * sway; pn.t2Y = 0.16 * Math.sin(t * 5.3 - 0.5); pn.t3Y = 0.18 * Math.sin(t * 5.3 - 1); pn.t4Y = 0.2 * Math.sin(t * 5.3 - 1.5);
+      const spread = 1.05 + 0.45 * beat;
+      pn.uaLZ = -spread; pn.uaRZ = spread; pn.uaLX = pn.uaRX = 0.35 + 0.15 * beat;
+      pn.faLY = 0.8; pn.faRY = -0.8; pn.faLZ = -0.15; pn.faRZ = 0.15;
+      pn.hdLY = 0.3; pn.hdRY = -0.3;
+      // One foot forward on the shoulders, one back on the hips; claws hooked down.
+      pn.fLY = 0.04; pn.fLZ = -0.22; pn.fLM = 0.7; pn.fLT = 0.9;
+      pn.fRY = 0.0; pn.fRZ = 0.2; pn.fRM = 0.1; pn.fRT = 0.9;
+    }
+
     // ---------- Blend ----------
     const out = this.poses.out;
     Object.assign(out, run);
@@ -217,6 +245,7 @@ export class RaptorAnimator {
     blendInto(out, sl, inp.slide);
     blendInto(out, air, inp.air);
     blendInto(out, gl, inp.glide);
+    blendInto(out, pn, inp.pin);
 
     // Additive layers.
     const L = inp.lean;

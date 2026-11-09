@@ -16,8 +16,16 @@ Newest first. Every session updates this before pushing.
 - [x] Hunt: prey runs ahead and steers around boulders, gap closes with clean play and widens 8 m per stumble, lost at 46 m, finale pounce window with slow motion, side-on pounce camera, Field Journal freeze-frame plate, "It got away" screen
 - [x] Amber inclusions (amber with a trapped insect) replace eggs
 - [x] Tests: perfect bot pounces with 3 inclusions; human-like 96% within one revive, never loses the prey
+- [x] Playtest 3 readability: hunt meter with raptor and Protoceratops icons; blue amber inclusions with a trapped insect and a first-encounter pause callout; raptor stops running on menus and after a crash
+- [x] Protoceratops rebuilt: deep boxy head with hooked beak, cheek flares, big eyes and a broad frill (a cone, so it reads from the front, side and behind); deep body with high hips; crested tail; short bent legs. Poses: run, graze, alert, pinned
+- [x] Opening shot: close on the grazing Protoceratops (quarry card), it looks up and bolts, the camera cranes back behind the raptor, "Hunt!" (tap to skip; `?nointro` skips it)
+- [x] Finale: the pounce lands the raptor on the prey's back and holds it there (raptor-prey-restraint pose: crouched, feet gripping, wings beating, head down; no gore), framed from ahead in three-quarter view, then a true freeze-frame plate
+- [x] scripts/hunt-shots.mjs captures the intro, pounce and plate; lab.html shows `subject=proto|pin`
+- [ ] Jump obstacles that fit the Gobi (gullies and sandstone slabs proposed; awaiting owner)
+- [ ] Inclusion rewards (journal pages and a plumage proposed; awaiting owner)
+- [ ] Forks and automatic curves (approved)
+- [ ] Pacing pass on long straightaways; adaptive synthesized music
 - [ ] Variety: landmarks and set pieces (canyon walls, hoodoos, bone fields, herds), terrain sections
-- [ ] Raptor and Protoceratops model polish for the ink look; music
 
 ## Previous milestone: M0 + M1 gate (see docs/GATE-M0-M1.md)
 
