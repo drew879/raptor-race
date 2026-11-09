@@ -14,6 +14,18 @@ A premium portrait-mode 3D endless-runner-style racer. You play a **feathered ra
 - **[Decided by owner]** Check-ins: a playable link plus a one-page report at each milestone (M2, M3).
 - Orientation: portrait only. Target devices: iPhone 12 class and mid-range Android and up.
 
+## 2b. Direction change after first playtest (owner, M1 review)
+Owner playtest on iPhone: fun 1-2/5, graphics 1-2/5 ("boxy, low-res, not close to AAA"), too slow, repetitive, no artistic identity, too close to Temple Run. Deaths felt fair; controls mostly good. Decisions:
+- **[Decided by owner]** Core fantasy flips to **hunt and pounce**: you are the hunter. The level ends with a successful pounce on the prey (Level 1: a Protoceratops, a nod to the real "Fighting Dinosaurs" fossil from the same Gobi formation) instead of arriving at a nest.
+- **[Decided by owner]** Art: research **freely available assets** (license must allow commercial use) to replace code-generated models where they raise quality.
+- **[Decided by owner]** Before choosing an art direction, owner sees **examples of each** candidate direction (field journal ink and watercolor, paleo-art mural, amber-lit cinematic, bold graphic).
+- **[Owner priority]** Speed and pacing first: faster start, stronger sense of speed, more variety.
+
+Proposed hunt design (to confirm with owner):
+- The prey runs ahead and stays visible. Clean running, combos and boosts close the gap; stumbles let it pull away. If it gets out of sight, the hunt fails (retry from checkpoint).
+- Final stretch: when within range, "Swipe up to pounce" with a brief slow-motion moment, then a tasteful freeze-frame (Field Journal style) before results.
+- Eggs no longer fit (no nest). Replacement rare collectible: **amber with an insect inclusion** (3 per level), which feeds the Field Journal and strengthens the amber motif.
+
 ## 3. Controls
 | Input | Action |
 |---|---|
