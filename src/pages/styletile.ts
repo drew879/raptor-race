@@ -130,7 +130,7 @@ stage.world.add(items.group);
 const dust = new Particles(260, THREE.NormalBlending, FOG);
 const sparks = new Particles(160, THREE.AdditiveBlending, FOG);
 stage.world.add(dust.field.points, sparks.field.points);
-const raptor = new RaptorView(RAPTOR_GOBI_STREAK);
+const raptor = new RaptorView(RAPTOR_GOBI_STREAK, { blenderBody: params.has('blender') });
 stage.world.add(raptor.root);
 const runner = new Runner();
 runner.speed = 11;
@@ -293,11 +293,11 @@ function step(dt: number) {
   if (mode === 'run') stage.chase(runner.x, runner.y, rz, dt);
   else if (mode === 'hero') {
     const cam = stage.camera;
-    tmp.set(runner.x + 1.9, 0.6, rz - 2.2);
+    tmp.set(runner.x + 2.3, 0.65, rz - 2.6);
     cam.position.x = damp(cam.position.x, tmp.x, 6, dt);
     cam.position.y = damp(cam.position.y, tmp.y + runner.y * 0.5, 6, dt);
-    cam.position.z = rz - 2.2;
-    cam.lookAt(runner.x - 0.35, 0.7 + runner.y * 0.7, rz - 0.35);
+    cam.position.z = rz - 2.6;
+    cam.lookAt(runner.x - 0.2, 0.68 + runner.y * 0.7, rz - 0.1);
     stage.follow(runner.x, rz);
   } else {
     heroOrbit += dt * 0.12;

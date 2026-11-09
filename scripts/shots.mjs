@@ -26,7 +26,7 @@ const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--ena
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: dpr, isMobile: true, hasTouch: true });
 page.on('pageerror', (e) => console.log('page error:', e.message));
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log(`console ${m.type()}:`, m.text()); });
-await page.goto(`${base}/styletile.html?shot=1`);
+await page.goto(`${base}/styletile.html?shot=1${process.env.RR_QUERY ?? ''}`);
 await page.waitForFunction(() => window.__rr?.ready === true, null, { timeout: 60000 });
 await page.evaluate(() => document.fonts.ready);
 for (const [name, mode, secs] of PLAN) {

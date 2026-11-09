@@ -22,7 +22,7 @@ from mathutils import Vector
 ap = argparse.ArgumentParser()
 ap.add_argument("--out", default="src/assets/models/velociraptor.rrm")
 ap.add_argument("--preview", default="")
-ap.add_argument("--target-tris", type=int, default=3600)
+ap.add_argument("--target-tris", type=int, default=2600)
 args = ap.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:])
 
 
@@ -66,7 +66,7 @@ def node(name, xyz, rs, rv, parent=None):
 
 
 # Spine from snout to tail tip.
-node("snout", (0, 0.952, -1.07), 0.022, 0.02)
+node("snout", (0, 0.958, -1.06), 0.014, 0.013)
 node("s1", (0, 0.958, -0.98), 0.036, 0.034, "snout")
 node("s2", (0, 0.962, -0.89), 0.048, 0.046, "s1")
 node("s3", (0, 0.968, -0.80), 0.06, 0.058, "s2")
@@ -79,8 +79,9 @@ node("c1", (0, 0.73, -0.39), 0.118, 0.128, "n4")
 node("c2", (0, 0.7, -0.28), 0.158, 0.16, "c1")
 node("c3", (0, 0.68, -0.16), 0.168, 0.165, "c2")
 node("p1", (0, 0.68, -0.04), 0.155, 0.15, "c3")
-node("p2", (0, 0.682, 0.07), 0.13, 0.135, "p1")
-node("t1", (0, 0.68, 0.19), 0.106, 0.112, "p2")
+node("p2", (0, 0.682, 0.07), 0.128, 0.135, "p1")
+node("t0", (0, 0.681, 0.13), 0.117, 0.124, "p2")
+node("t1", (0, 0.68, 0.19), 0.106, 0.112, "t0")
 node("t2", (0, 0.68, 0.33), 0.084, 0.085, "t1")
 node("t3", (0, 0.677, 0.49), 0.064, 0.06, "t2")
 node("t4", (0, 0.672, 0.66), 0.047, 0.04, "t3")
@@ -89,16 +90,12 @@ node("t6", (0, 0.663, 0.98), 0.023, 0.02, "t5")
 node("tip", (0, 0.66, 1.08), 0.01, 0.01, "t6")
 # Legs (digitigrade): hip -> knee -> ankle -> ball -> toes, plus raised digit II.
 for sx, s in ((-1, "L"), (1, "R")):
-    node(f"hip{s}", (sx * 0.1, 0.62, -0.01), 0.1, 0.11, "p1")
-    node(f"thigh{s}", (sx * 0.115, 0.52, -0.045), 0.088, 0.088, f"hip{s}")
+    node(f"hip{s}", (sx * 0.085, 0.62, -0.01), 0.08, 0.1, "p1")
+    node(f"thigh{s}", (sx * 0.1, 0.52, -0.045), 0.074, 0.08, f"hip{s}")
     node(f"knee{s}", (sx * 0.11, 0.42, -0.08), 0.05, 0.05, f"thigh{s}")
     node(f"shin{s}", (sx * 0.11, 0.295, -0.01), 0.034, 0.034, f"knee{s}")
     node(f"ankle{s}", (sx * 0.11, 0.17, 0.06), 0.024, 0.024, f"shin{s}")
     node(f"ball{s}", (sx * 0.11, 0.035, 0.0), 0.019, 0.019, f"ankle{s}")
-    node(f"toe3{s}", (sx * 0.1, 0.012, -0.095), 0.012, 0.01, f"ball{s}")
-    node(f"toe4{s}", (sx * 0.135, 0.012, -0.085), 0.011, 0.009, f"ball{s}")
-    node(f"d2a{s}", (sx * 0.094, 0.06, -0.035), 0.012, 0.012, f"ball{s}")
-    node(f"d2b{s}", (sx * 0.094, 0.1, -0.065), 0.008, 0.008, f"d2a{s}")
     # Arms folded like wings: shoulder -> elbow -> wrist -> fingertip.
     node(f"sho{s}", (sx * 0.13, 0.68, -0.33), 0.034, 0.036, "c2")
     node(f"elb{s}", (sx * 0.2, 0.6, -0.24), 0.026, 0.026, f"sho{s}")
@@ -120,7 +117,7 @@ for i, n in enumerate(N):
     sv[i].radius = (n[2], n[3])
     sv[i].use_root = n[0] == "p1"
 sub = obj.modifiers.new("Sub", "SUBSURF")
-sub.levels = 2
+sub.levels = 1
 bpy.ops.object.modifier_apply(modifier="Skin")
 bpy.ops.object.modifier_apply(modifier="Sub")
 
@@ -183,14 +180,16 @@ def face_color(cen, nrm):
     # Head.
     if z < -0.66:
         side = abs(nrm.x)
-        if z < -1.03:
-            return C["dark"]
+        if z < -1.055:
+            return C["baseDark"]
         if up > 0.55:
             return C["base"]
         if side > 0.5 and up > -0.1 and -0.83 < z < -0.74:
             return C["patch"]
-        if -0.45 < up < -0.1 and z < -0.86:
-            return C["claw"]  # mouth line
+        if -0.3 < up < -0.12 and -0.95 < z < -0.84:
+            return C["claw"]  # short lip line on the rear jaw
+        if -0.45 < up <= -0.12 and z < -0.84:
+            return C["skin"]
         if up <= -0.45:
             return C["under"]
         return C["baseLight"]
@@ -203,6 +202,8 @@ def face_color(cen, nrm):
     # Body, neck and tail base, by height relative to the spine.
     if h > 0.82:
         return C["baseDark"]  # spine stripe
+    if 0.45 < h <= 0.66 and -0.42 < z < 0.5:
+        return C["light"]  # cream back streaks, readable from the chase camera
     if h > 0.2:
         return C["base"]
     if h > -0.08:

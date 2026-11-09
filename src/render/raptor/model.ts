@@ -40,18 +40,18 @@ type Ring = { y: number; z: number; rx: number; ry: number; a: BoneName; b?: Bon
 
 /** Body loft from snout to tail. Tip points are added at each end. */
 const BODY: Ring[] = [
-  { y: 0.952, z: -1.04, rx: 0.026, ry: 0.022, a: 'head', tag: 'snout' },
-  { y: 0.955, z: -0.97, rx: 0.038, ry: 0.034, a: 'head', tag: 'snout' },
-  { y: 0.962, z: -0.89, rx: 0.05, ry: 0.044, a: 'head', tag: 'snout' },
-  { y: 0.972, z: -0.81, rx: 0.062, ry: 0.054, a: 'head', tag: 'head' },
-  { y: 0.975, z: -0.73, rx: 0.068, ry: 0.06, a: 'head', tag: 'head' },
+  { y: 0.958, z: -1.03, rx: 0.028, ry: 0.024, a: 'head', tag: 'snout' },
+  { y: 0.957, z: -0.96, rx: 0.042, ry: 0.039, a: 'head', tag: 'snout' },
+  { y: 0.962, z: -0.885, rx: 0.055, ry: 0.052, a: 'head', tag: 'snout' },
+  { y: 0.97, z: -0.81, rx: 0.068, ry: 0.066, a: 'head', tag: 'head' },
+  { y: 0.974, z: -0.73, rx: 0.074, ry: 0.073, a: 'head', tag: 'head' },
   { y: 0.962, z: -0.665, rx: 0.056, ry: 0.058, a: 'head', b: 'neck2', w: 0.5, tag: 'neck' },
   { y: 0.925, z: -0.6, rx: 0.054, ry: 0.06, a: 'neck2', tag: 'neck' },
   { y: 0.86, z: -0.555, rx: 0.06, ry: 0.068, a: 'neck2', b: 'neck1', w: 0.5, tag: 'neck' },
   { y: 0.79, z: -0.49, rx: 0.08, ry: 0.09, a: 'neck1', tag: 'neck' },
   { y: 0.725, z: -0.385, rx: 0.125, ry: 0.13, a: 'neck1', b: 'chest', w: 0.7, tag: 'body' },
-  { y: 0.695, z: -0.28, rx: 0.175, ry: 0.165, a: 'chest', tag: 'body' },
-  { y: 0.678, z: -0.16, rx: 0.188, ry: 0.17, a: 'chest', b: 'pelvis', w: 0.5, tag: 'body' },
+  { y: 0.69, z: -0.28, rx: 0.175, ry: 0.19, a: 'chest', tag: 'body' },
+  { y: 0.675, z: -0.16, rx: 0.188, ry: 0.19, a: 'chest', b: 'pelvis', w: 0.5, tag: 'body' },
   { y: 0.678, z: -0.04, rx: 0.172, ry: 0.156, a: 'pelvis', tag: 'body' },
   { y: 0.682, z: 0.07, rx: 0.14, ry: 0.124, a: 'pelvis', tag: 'body' },
   { y: 0.687, z: 0.19, rx: 0.118, ry: 0.098, a: 'pelvis', b: 'tail1', w: 0.6, tag: 'tail' },
@@ -61,7 +61,7 @@ const BODY: Ring[] = [
   { y: 0.667, z: 0.83, rx: 0.034, ry: 0.028, a: 'tail3', b: 'tail4', w: 0.4, tag: 'tail' },
   { y: 0.663, z: 0.98, rx: 0.024, ry: 0.019, a: 'tail4', tag: 'tail' },
 ];
-const SNOUT_TIP = new THREE.Vector3(0, 0.948, -1.09);
+const SNOUT_TIP = new THREE.Vector3(0, 0.962, -1.075);
 const TAIL_TIP = new THREE.Vector3(0, 0.66, 1.09);
 
 const skinOf = (a: number, b = a, w = 0) => [a, b, 0, 0, 1 - w, w, 0, 0];
@@ -195,16 +195,16 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     // Faces around the ring (N = 10): j=2 spine, j=1/3 back, j=0/4 upper flank, j=9/5 lower flank, j=6..8 belly.
     const spine = j === 2, back = j === 1 || j === 3, upperFlank = j === 0 || j === 4, lowerFlank = j === 9 || j === 5;
     if (r.tag === 'snout') {
-      if (spine || back) return i === 0 ? C.dark : C.base;
+      if (spine || back) return C.base;
       if (upperFlank) return C.baseLight;
-      if (lowerFlank) return i < 3 ? C.claw : C.under; // mouth line
+      if (lowerFlank) return C.skin;
       return C.under;
     }
     if (r.tag === 'head') {
       if (spine) return C.baseDark;
       if (back) return C.base;
-      if (upperFlank) return i === 4 ? C.patch : C.baseLight;
-      if (lowerFlank) return i === 3 ? C.claw : C.under;
+      if (upperFlank) return C.patch; // blue patch wraps the eye
+      if (lowerFlank) return i === 4 ? C.rim : C.baseDark; // red rim behind the eye, darker rear jaw
       return C.under;
     }
     if (s < -0.6) return r.tag === 'tail' ? C.underWarm : C.under;
@@ -225,19 +225,23 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     for (let j = 0; j < N; j++) {
       const j1 = (j + 1) % N;
       const c = bodyColor(i, j);
-      g.quad(rings[i][j], rings[i][j1], rings[i + 1][j1], rings[i + 1][j], c, c, [skins[i], skins[i], skins[i + 1], skins[i + 1]]);
+      // Serrated streaks: on the cream flank line, alternate a light and a darker triangle per ring.
+      const serrate = (j === 0 || j === 4) && c === C.light;
+      const c2 = serrate ? (i % 2 ? C.baseLight : C.light) : c;
+      const c1 = serrate ? (i % 2 ? C.light : C.baseLight) : c;
+      g.quad(rings[i][j], rings[i][j1], rings[i + 1][j1], rings[i + 1][j], c1, c2, [skins[i], skins[i], skins[i + 1], skins[i + 1]]);
     }
   }
   // End caps.
   const sHead = skinOf(B.head);
-  for (let j = 0; code && j < N; j++) g.tri(rings[0][(j + 1) % N], rings[0][j], SNOUT_TIP, C.dark, [sHead, sHead, sHead]);
+  for (let j = 0; code && j < N; j++) g.tri(rings[0][(j + 1) % N], rings[0][j], SNOUT_TIP, j >= 5 && j <= 9 ? C.skin : C.baseDark, [sHead, sHead, sHead]);
   const last = rings.length - 1;
   const sT4 = skinOf(B.tail4);
   for (let j = 0; code && j < N; j++) g.tri(rings[last][j], rings[last][(j + 1) % N], TAIL_TIP, C.dark, [sT4, sT4, sT4]);
 
   // ---------- Eyes: round iris, pupil, catchlight, brow ridge ----------
   for (const sx of [-1, 1]) {
-    const c0 = new THREE.Vector3(sx * 0.064, 0.993, -0.79);
+    const c0 = new THREE.Vector3(sx * 0.066, 0.995, -0.785);
     const nrm = new THREE.Vector3(sx, 0.2, -0.22).normalize();
     const { side, up } = ringFrame(nrm);
     const E = 10;
@@ -246,8 +250,8 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
         const th = (k / E) * Math.PI * 2;
         return c0.clone().addScaledVector(nrm, out).addScaledVector(side, Math.cos(th) * rad).addScaledVector(up, Math.sin(th) * rad);
       });
-    const outer = ring(0.024, 0.0), iris = ring(0.019, 0.006), pupil = ring(0.008, 0.0085);
-    const ctr = c0.clone().addScaledVector(nrm, 0.009);
+    const outer = ring(0.024, 0.0), iris = ring(0.019, 0.003), pupil = ring(0.008, 0.0045);
+    const ctr = c0.clone().addScaledVector(nrm, 0.005);
     const sk: [number[], number[], number[]] = [sHead, sHead, sHead];
     for (let k = 0; k < E; k++) {
       const k1 = (k + 1) % E;
@@ -256,7 +260,7 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
       g.quad(iris[a], iris[b], pupil[b], pupil[a], C.eye, C.eye, [sHead, sHead, sHead, sHead]);
       g.tri(pupil[a], pupil[b], ctr, C.dark, sk);
     }
-    const glc = c0.clone().addScaledVector(nrm, 0.0105).addScaledVector(up, 0.007).addScaledVector(side, -sx * 0.005);
+    const glc = c0.clone().addScaledVector(nrm, 0.006).addScaledVector(up, 0.007).addScaledVector(side, -sx * 0.005);
     const gl = (dx: number, dy: number) => glc.clone().addScaledVector(side, dx).addScaledVector(up, dy);
     g.tri(gl(-0.004, -0.004), sx > 0 ? gl(0.004, -0.004) : gl(0, 0.005), sx > 0 ? gl(0, 0.005) : gl(0.004, -0.004), col(0xfffaf0), sk);
     // Brow ridge: a dark wedge above the eye gives the face its intent.
@@ -282,13 +286,13 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     const base = new THREE.Vector3(Math.cos(th) * 0.1, 0.74 + Math.sin(th) * 0.1, -0.43);
     const dir = new THREE.Vector3(Math.cos(th) * 0.35, Math.sin(th) * 0.2, 1).normalize();
     const nrm = new THREE.Vector3(-Math.sin(th), Math.cos(th), 0);
-    feather(g, base, dir, nrm, 0.14, 0.075, k % 2 ? C.base : C.baseDark, k % 2 ? C.light : C.baseDark, skinOf(B.neck1, B.chest, 0.3));
+    feather(g, base, dir, nrm, 0.17, 0.08, k % 2 ? C.base : C.baseDark, k % 2 ? C.light : C.baseDark, skinOf(B.neck1, B.chest, 0.3));
   }
   // Mantle: broad swept blades over the shoulders and hips (no reptile-like ridge).
   for (let k = 0; k < 6; k++) {
     const sx = k % 2 ? 1 : -1;
     const z = -0.3 + Math.floor(k / 2) * 0.16;
-    const base = new THREE.Vector3(sx * 0.06, 0.835 - Math.floor(k / 2) * 0.012, z);
+    const base = new THREE.Vector3(sx * 0.07, 0.83 - Math.floor(k / 2) * 0.03, z);
     const dir = new THREE.Vector3(sx * 0.45, -0.05, 1).normalize();
     feather(g, base, dir, new THREE.Vector3(sx * 0.3, 1, 0).normalize(), 0.2, 0.09, C.base, k < 2 ? C.baseDark : C.light, skinOf(k < 4 ? B.chest : B.pelvis));
   }
@@ -304,7 +308,7 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
   fan.forEach(([z, y, bone, len], k) => {
     for (const sx of [-1, 1]) {
       const spread = 0.5 + k * 0.06;
-      const dir = new THREE.Vector3(sx * Math.sin(spread), 0.1, Math.cos(spread));
+      const dir = new THREE.Vector3(sx * Math.sin(spread), 0.25, Math.cos(spread));
       const base = new THREE.Vector3(sx * 0.015, y + 0.005, z);
       feather(g, base, dir, upV, len, 0.085, k % 2 ? C.base : C.dark, k >= 3 ? C.accent : C.light, skinOf(B[bone]));
     }
@@ -318,7 +322,7 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     const bT = B[`thigh${side}`], bS = B[`shin${side}`], bM = B[`meta${side}`], bToe = B[`toe${side}`];
     const hipTop = H.clone().add(new THREE.Vector3(sx * 0.015, 0.05, 0.02));
     // Thigh: thick feathered drumstick.
-    if (code) limbTube(g, [hipTop, H.clone().lerp(K, 0.55).add(new THREE.Vector3(sx * 0.03, 0, -0.015)), K.clone().add(new THREE.Vector3(sx * 0.008, 0.01, 0))], [0.11, 0.105, 0.075], [bT, bT, bT], 7, (_s, j, up) =>
+    if (code) limbTube(g, [hipTop, H.clone().lerp(K, 0.55).add(new THREE.Vector3(sx * 0.03, 0, -0.015)), K.clone().add(new THREE.Vector3(sx * 0.008, 0.01, 0))], [0.125, 0.092, 0.05], [bT, bT, bT], 7, (_s, j, up) =>
       up > 0.4 ? C.base : j % 3 === 0 ? C.baseLight : C.base, false);
     // Thigh "trousers": downward shards.
     for (let k = 0; k < 5; k++) {
@@ -328,14 +332,14 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
       feather(g, base, dir, new THREE.Vector3(-Math.sin(th), 0, Math.cos(th)), 0.11, 0.07, C.base, C.baseDark, skinOf(bT));
     }
     // Shin (knee to ankle), metatarsus (ankle to ball).
-    if (code) limbTube(g, [K, K.clone().lerp(A, 0.5), A], [0.045, 0.033, 0.023], [bS, bS, bS], 6, (_s, _j, up) => (up > 0 ? C.base : C.baseDark), false);
+    if (code) limbTube(g, [K, K.clone().lerp(A, 0.5), A], [0.04, 0.028, 0.019], [bS, bS, bS], 6, (_s, _j, up) => (up > 0 ? C.base : C.baseDark), false);
     if (code) limbTube(g, [A, A.clone().lerp(F, 0.5), F], [0.022, 0.019, 0.017], [bM, bM, bM], 6, () => C.skin, false);
     // Toes III and IV forward, with dark claw tips.
     for (const off of [-0.012, 0.016]) {
       const t0 = F.clone().add(new THREE.Vector3(sx * off, -0.005, 0));
       const t1 = t0.clone().add(new THREE.Vector3(sx * off * 0.6, -0.015, -0.07));
       const t2 = t1.clone().add(new THREE.Vector3(0, -0.01, -0.035));
-      if (code) limbTube(g, [t0, t1, t2], [0.014, 0.01, 0.0], [bToe, bToe, bToe], 5, (seg) => (seg === 0 ? C.skin : C.claw), false);
+      limbTube(g, [t0, t1, t2], [0.014, 0.01, 0.0], [bToe, bToe, bToe], 5, (seg) => (seg === 0 ? C.skin : C.claw), false);
     }
     // Digit II with the raised sickle claw.
     const d0 = F.clone().add(new THREE.Vector3(-sx * 0.014, 0.0, -0.005));
@@ -343,7 +347,7 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     const c1 = d1.clone().add(new THREE.Vector3(0, 0.035, -0.02));
     const c2 = c1.clone().add(new THREE.Vector3(0, 0.012, -0.04));
     const c3 = c2.clone().add(new THREE.Vector3(0, -0.025, -0.03));
-    if (code) limbTube(g, [d0, d1, c1, c2, c3], [0.013, 0.011, 0.01, 0.006, 0.0], [bToe, bToe, bToe, bToe, bToe], 5, (seg) => (seg === 0 ? C.skin : C.claw), false);
+    limbTube(g, [d0, d1, c1, c2, c3], [0.013, 0.011, 0.01, 0.006, 0.0], [bToe, bToe, bToe, bToe, bToe], 5, (seg) => (seg === 0 ? C.skin : C.claw), false);
   }
 
   // ---------- Arms with folded wing feathers ----------
@@ -363,10 +367,10 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
       const onHand = t > 0.55;
       const base = onHand ? W.clone().lerp(tipH, (t - 0.55) / 0.45) : E.clone().lerp(W, t / 0.55);
       base.x += sx * 0.012;
-      const len = 0.2 + t * 0.17;
+      const len = 0.3 + t * 0.25;
       const fan = -0.38 + t * 0.5; // fanned: outer primaries angle down-back
       const dir = new THREE.Vector3(sx * 0.1, fan * 0.6 - 0.12, 1).normalize();
-      feather(g, base, dir, nrm, len, 0.065, k % 2 ? C.base : C.baseDark, t > 0.45 ? C.accent : C.light, skinOf(onHand ? bH : bF));
+      feather(g, base, dir, nrm, len, 0.095, k % 2 ? C.base : C.baseDark, t > 0.4 ? C.accent : C.light, skinOf(onHand ? bH : bF));
     }
   }
 
