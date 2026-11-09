@@ -21,7 +21,12 @@ Owner playtest on iPhone: fun 1-2/5, graphics 1-2/5 ("boxy, low-res, not close t
 - **[Decided by owner]** Before choosing an art direction, owner sees **examples of each** candidate direction (field journal ink and watercolor, paleo-art mural, amber-lit cinematic, bold graphic).
 - **[Owner priority]** Speed and pacing first: faster start, stronger sense of speed, more variety.
 
-Proposed hunt design (to confirm with owner):
+**[Decided by owner, after the art direction review]**
+- **Look: the hybrid** (field-journal ink, watercolor and paper on a bold graphic value plan). See docs/ART_BIBLE.md.
+- **Assets stay free.** No paid models. A scaly raptor is acceptable if that's what keeping it free requires (feathered remains preferred; avoid film-raptor design cues either way).
+- **Hunt design approved** as below. The prey changes by level (Level 1: Protoceratops).
+
+Hunt design (approved):
 - The prey runs ahead and stays visible. Clean running, combos and boosts close the gap; stumbles let it pull away. If it gets out of sight, the hunt fails (retry from checkpoint).
 - Final stretch: when within range, "Swipe up to pounce" with a brief slow-motion moment, then a tasteful freeze-frame (Field Journal style) before results.
 - Eggs no longer fit (no nest). Replacement rare collectible: **amber with an insect inclusion** (3 per level), which feeds the Field Journal and strengthens the amber motif.

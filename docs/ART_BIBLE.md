@@ -1,5 +1,15 @@
 # Raptor Race: Art Bible
 
+> **Owner decision (art direction review): the hybrid look.** The world is a naturalist's illustrated field journal come alive, built on a bold graphic value plan. Where older sections below describe flat-shaded low poly, this section wins.
+>
+> - **Structure (graphic):** three value bands per material (light, mid, dark), a two-band sky with a sun disc, cliffs as flat strata bands, a tight palette per level (about 12 hues). Hazards are always the darkest ink; the track is always the lightest wash.
+> - **Surface (journal):** dark ink contours on silhouettes and depth breaks (dip-pen weight, slightly broken), light interior lines only where form needs them, watercolor wash variation in the fills, warm paper grain. Line weight fades with distance.
+> - **Glow (amber):** only amber gems, amber inclusions and the sun glow (sprite halos, not full-screen bloom).
+> - **Stills (mural):** title art, Field Journal plates, the pounce freeze-frame and store art may be fully painterly.
+> - **Assets:** free only (CC0 preferred, CC-BY with credits). Scenery may come from photoscans, simplified and recolored to the palette; the ink and wash unify mixed sources.
+> - **Guardrails:** no Okami brush or celestial motifs, no Alto-style side-on dune silhouettes or sky gradients, no Journey cloth or glyph imagery, no film-raptor design cues.
+> - **Performance:** one full-screen post pass with baked noise textures (no per-pixel fbm), 4x MSAA on the scene target, within the mobile budget.
+
 The single source of truth for look and feel. Builders follow it; critics grade against it.
 
 ## 1. Style in one sentence
