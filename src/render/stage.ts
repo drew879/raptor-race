@@ -17,6 +17,7 @@ export class Stage {
   readonly sky: THREE.Mesh;
   readonly backdrop: THREE.Mesh;
   private camX = 0;
+  baseFov: number = CONFIG.camera.fov;
   private camY = 0;
   onResize: (w: number, h: number) => void = () => {};
 
@@ -35,7 +36,7 @@ export class Stage {
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const sc = this.sun.shadow.camera;
-    sc.left = -10; sc.right = 10; sc.top = 16; sc.bottom = -16; sc.near = 1; sc.far = 90;
+    sc.left = -7; sc.right = 7; sc.top = 13; sc.bottom = -11; sc.near = 1; sc.far = 90;
     this.sun.shadow.bias = -0.0008;
     this.sun.shadow.normalBias = 0.02;
     this.sun.shadow.radius = 2.5;
@@ -52,7 +53,7 @@ export class Stage {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     // Keep the three lanes framed in tall portrait screens by widening the vertical FOV.
-    this.camera.fov = CONFIG.camera.fov + Math.max(0, 0.55 - w / h) * 20;
+    this.camera.fov = this.baseFov = CONFIG.camera.fov + Math.max(0, 0.55 - w / h) * 20;
     this.camera.updateProjectionMatrix();
     this.onResize(this.renderer.domElement.height, this.camera.fov);
   }

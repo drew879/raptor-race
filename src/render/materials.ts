@@ -10,14 +10,16 @@ export const worldUniforms = {
   uRimColor: { value: new THREE.Color(GOBI.sunGlow) },
 };
 
+export const rimColors: Record<string, THREE.Color> = {};
 type Patchable = THREE.MeshLambertMaterial | THREE.MeshBasicMaterial | THREE.PointsMaterial;
 
-export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; bend?: boolean } = {}): T {
+export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; bend?: boolean; rimColor?: number } = {}): T {
   const rim = opts.rim ?? 0;
+  const rimCol = opts.rimColor !== undefined ? new THREE.Color(opts.rimColor) : null;
   const bend = opts.bend ?? true;
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uCurve = worldUniforms.uCurve;
-    shader.uniforms.uRimColor = worldUniforms.uRimColor;
+    shader.uniforms.uRimColor = rimCol ? { value: rimCol } : worldUniforms.uRimColor;
     if (bend) {
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', '#include <common>\nuniform float uCurve;')
@@ -38,7 +40,7 @@ export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; be
         );
     }
   };
-  mat.customProgramCacheKey = () => `rr-world-${rim.toFixed(3)}-${bend ? 1 : 0}`;
+  mat.customProgramCacheKey = () => `rr-world-${rim.toFixed(3)}-${bend ? 1 : 0}-${rimCol ? rimCol.getHexString() : 'w'}`;
   return mat;
 }
 
@@ -59,9 +61,9 @@ export function unlitMaterial(opts: { fog?: boolean; bend?: boolean; transparent
 export const MATS = {
   world: litMaterial({ rim: 0.12 }),
   hazard: litMaterial({ rim: 0.28 }),
-  character: litMaterial({ rim: 0.8, side: THREE.DoubleSide }),
+  character: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide }), { rim: 0.7, rimColor: 0xcfe3ff }),
   glow: unlitMaterial({ toneMapped: false }),
   backdrop: unlitMaterial({ fog: false, bend: false }),
-  egg: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color(0x6a5638) }), { rim: 0.5 }),
+  egg: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color(0x8a6a34) }), { rim: 0.5 }),
   outline: patchWorld(new THREE.MeshBasicMaterial({ color: new THREE.Color(0x5a2c0c), side: THREE.BackSide, fog: true }), {}),
 };

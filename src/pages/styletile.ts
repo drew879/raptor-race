@@ -70,8 +70,8 @@ app.innerHTML = `
     <div class="swatches" id="sw-world"></div>
   </section>
   <section>
-    <h2>Velociraptor · "Roadrunner" plumage</h2>
-    <p>Dark banded back over a pale belly for contrast on sand, with a cool teal accent on the wing and tail tips. The eye is amber.</p>
+    <h2>Velociraptor · "Gobi Streak" plumage</h2>
+    <p>A dark streaked back over a pale belly for contrast on sand, a cream streak from cheek to tail, and cool teal accents on the wing and tail tips. The eye is amber.</p>
     <div class="swatches" id="sw-raptor"></div>
   </section>
   <section class="type-sample">

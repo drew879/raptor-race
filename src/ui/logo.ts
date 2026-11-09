@@ -4,9 +4,12 @@
  */
 export function logoSVG(opts: { glow?: boolean } = {}) {
   const id = Math.random().toString(36).slice(2, 7);
-  const extrude = Array.from({ length: 7 }, (_, i) =>
-    `<text x="300" y="${128 + i}" text-anchor="middle" textLength="512" lengthAdjust="spacingAndGlyphs" font-family="Fraunces, Georgia, serif" font-weight="900" font-size="124" fill="${i < 6 ? '#E8890F' : '#3A2A1E'}" stroke="#3A2A1E" stroke-width="10" stroke-linejoin="round" paint-order="stroke">RAPTOR</text>`,
-  ).join('');
+  const T = (y: number, fill: string, stroke = '') =>
+    `<text x="300" y="${y}" text-anchor="middle" textLength="512" lengthAdjust="spacingAndGlyphs" font-family="Fraunces, Georgia, serif" font-weight="900" font-size="124" fill="${fill}" ${stroke}>RAPTOR</text>`;
+  const extrude = [
+    T(127, '#3A2A1E', 'stroke="#3A2A1E" stroke-width="10" stroke-linejoin="round" paint-order="stroke"'),
+    ...[126, 125, 124, 123, 122, 121].map((y, i) => T(y, i < 3 ? '#C8620A' : '#F09A18')),
+  ].join('');
   return `
 <svg class="rr-logo" viewBox="0 0 600 300" role="img" aria-label="Raptor Race">
   <defs>
@@ -33,7 +36,7 @@ export function logoSVG(opts: { glow?: boolean } = {}) {
     <!-- Amber specimen plate -->
     <path d="M168 180 L432 180 L456 210 L432 240 L168 240 L144 210 Z" fill="url(#plate-${id})" stroke="#3A2A1E" stroke-width="7" stroke-linejoin="round"/>
     <path d="M168 180 L432 180 L444 195 L156 195 Z" fill="#FFF3C4" opacity="0.55"/>
-    <text x="300" y="228" text-anchor="middle" textLength="200" lengthAdjust="spacingAndGlyphs" font-family="'Nunito Sans', system-ui, sans-serif" font-weight="900" font-size="46" fill="#3A2A1E">RACE</text>
+    <text x="300" y="228" text-anchor="middle" letter-spacing="10" font-family="'Nunito Sans', system-ui, sans-serif" font-weight="900" font-size="46" fill="#3A2A1E">RACE</text>
   </g>
 </svg>`;
 }

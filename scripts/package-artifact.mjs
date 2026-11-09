@@ -3,10 +3,14 @@
 // Usage: node scripts/package-artifact.mjs <page> <outName> "<Title>"
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
+import { execSync } from 'node:child_process';
 
 const [page = 'styletile', outName = 'raptor-race-style-tile', title = 'Raptor Race Style Tile'] = process.argv.slice(2);
-const dist = 'dist';
+// Build this page alone so everything lands in one bundle (no shared chunks to fetch).
+execSync('npx vite build --logLevel warn', { stdio: 'inherit', env: { ...process.env, RR_PAGE: page } });
+const dist = `dist-${page}`;
 const html = readFileSync(join(dist, `${page}.html`), 'utf8');
+if (/import\s*["'(]/.test(readFileSync(join(dist, [...html.matchAll(/src="\.?\/?([^"]+\.js)"/g)][0][1]), 'utf8').slice(0, 400))) throw new Error('bundle still imports another chunk');
 const js = [...html.matchAll(/<script[^>]*src="\.?\/?([^"]+)"[^>]*><\/script>/g)].map((m) => m[1]);
 const css = [...html.matchAll(/<link rel="stylesheet"[^>]*href="\.?\/?([^"]+)"[^>]*>/g)].map((m) => m[1]);
 

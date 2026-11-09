@@ -140,7 +140,7 @@ export class CollectibleField {
   private s = new THREE.Vector3();
   private p = new THREE.Vector3();
   private amberHalo = mix(GOBI.amberCore, GOBI.amberLight, 0.4);
-  private eggHalo = mix(0xfff1d6, GOBI.amberLight, 0.3);
+  private eggHalo = mix(GOBI.amberCore, GOBI.amberLight, 0.35);
   constructor(capacity = 300, fog = { near: 30, far: 150 }) {
     this.amberMesh = new THREE.InstancedMesh(amberGeometry(), MATS.glow, capacity);
     const eggGeo = eggGeometry();

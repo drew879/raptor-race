@@ -77,8 +77,8 @@ function arch(): THREE.BufferGeometry {
 function ribArch(): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const rng = new Rng(31);
-  const bone = mix(GOBI.bone, GOBI.sandShadow, 0.38);
-  const boneD = mix(GOBI.bone, GOBI.sandShadow, 0.7);
+  const bone = col(0xcdbb9a);
+  const boneD = col(0x8f6650);
   // Two support rocks.
   for (const sx of [-1, 1]) {
     const r = jitterGeometry(new THREE.IcosahedronGeometry(1, 0), 0.3, () => rng.next());
