@@ -9,7 +9,7 @@ const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--ena
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: dpr });
 page.on('pageerror', (e) => console.log('page error:', e.message));
 page.on('console', (m) => { if (m.type() === 'error') console.log('console:', m.text()); });
-for (const look of ['current', 'journal', 'mural', 'amber', 'graphic']) {
+for (const look of (process.env.LOOKS ?? 'current,journal,mural,amber,graphic,hybrid').split(',')) {
   for (const view of ['run', 'hero', 'wide']) {
     await page.goto(`http://localhost:5173/looks.html?look=${look}&view=${view}`);
     await page.waitForFunction(() => window.__ready === true, null, { timeout: 120000 });

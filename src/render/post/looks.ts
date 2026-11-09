@@ -5,7 +5,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
-export type LookName = 'journal' | 'mural' | 'amber' | 'graphic' | 'current';
+export type LookName = 'journal' | 'mural' | 'amber' | 'graphic' | 'hybrid' | 'current';
 
 /** Shared GLSL helpers: value noise, fbm, linear depth, depth-edge detection. */
 const COMMON = /* glsl */ `
@@ -140,18 +140,57 @@ const GRAPHIC = /* glsl */ `${COMMON}
     gl_FragColor = vec4(col, 1.0);
   }`;
 
+/** Hybrid: field-journal surface (ink, wash, paper) on a bold-graphic value plan (three bands, flat sky). */
+const HYBRID = /* glsl */ `${COMMON}
+  vec3 rgb2hsv(vec3 c) { vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0); vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r)); float d = q.x - min(q.w, q.y); float e = 1.0e-10;
+    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x); }
+  vec3 hsv2rgb(vec3 c) { vec3 p = abs(fract(c.xxx + vec3(1.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0); return c.z * mix(vec3(1.0), clamp(p - 1.0, 0.0, 1.0), c.y); }
+  float lumaAt(vec2 uv) { return luma(texture2D(tDiffuse, uv).rgb); }
+  void main() {
+    vec2 uv = vUv;
+    vec2 wob = (vec2(noise(uv * res / 14.0), noise(uv * res / 14.0 + 7.3)) - 0.5) * 2.0 / res;
+    vec3 c = texture2D(tDiffuse, uv + wob).rgb;
+    float sky = step(0.9999, texture2D(tDepth, uv).x);
+    // Graphic value plan: three soft-edged value bands per hue.
+    vec3 h = rgb2hsv(c);
+    float v = h.z;
+    float vb = v < 0.45 ? 0.36 : v < 0.75 ? 0.68 : 0.92;
+    h.z = mix(v, vb, 0.8);
+    h.y = min(h.y * 1.05, 0.85);
+    vec3 col = hsv2rgb(h);
+    // Journal surface: wash variation and paper grain, lightened toward the paper.
+    vec3 paper = vec3(0.965, 0.925, 0.845);
+    float grain = fbm(uv * res / 2.5) * 0.55 + fbm(uv * res / 90.0) * 0.45;
+    float washVar = fbm(uv * res / 200.0);
+    col = mix(paper, col, 0.84 + 0.12 * washVar) * (0.93 + 0.09 * grain);
+    // Sky: two flat wash bands on paper.
+    vec3 skyTop = mix(paper, vec3(0.55, 0.72, 0.84), 0.75), skyLow = mix(paper, vec3(0.98, 0.82, 0.62), 0.6);
+    vec3 skyc = mix(skyLow, skyTop, step(0.74, uv.y)) * (0.95 + 0.07 * grain);
+    col = mix(col, skyc, sky);
+    // Ink: contours plus light interior lines.
+    float e = depthEdge(uv + wob * 0.6, 1.2, 0.04);
+    vec2 o = dpr / res;
+    float gx = lumaAt(uv + vec2(o.x, 0.0)) - lumaAt(uv - vec2(o.x, 0.0));
+    float gy = lumaAt(uv + vec2(0.0, o.y)) - lumaAt(uv - vec2(0.0, o.y));
+    float inner = smoothstep(0.14, 0.26, length(vec2(gx, gy))) * (1.0 - sky);
+    float broken = smoothstep(0.3, 0.6, noise(uv * res / 5.0) + 0.3);
+    col = mix(col, vec3(0.19, 0.13, 0.1), clamp(e * 0.95 + inner * 0.35 * broken, 0.0, 1.0));
+    gl_FragColor = vec4(col, 1.0);
+  }`;
+
 export class LookPipeline {
   readonly composer: EffectComposer;
   private pass: ShaderPass | null = null;
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, readonly look: LookName) {
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-    const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType });
+    const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
     rt.depthTexture = new THREE.DepthTexture(size.x, size.y);
     this.composer = new EffectComposer(renderer, rt);
     this.composer.addPass(new RenderPass(scene, camera));
     if (look === 'amber') this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.55, 0.7, 0.8));
     this.composer.addPass(new OutputPass());
-    const frag = { journal: JOURNAL, mural: MURAL, amber: AMBER, graphic: GRAPHIC, current: '' }[look];
+    const frag = { journal: JOURNAL, mural: MURAL, amber: AMBER, graphic: GRAPHIC, hybrid: HYBRID, current: '' }[look];
     if (frag) {
       const uniforms: Record<string, THREE.IUniform> = {
         tDiffuse: { value: null }, tDepth: { value: rt.depthTexture }, res: { value: new THREE.Vector2(size.x, size.y) },
@@ -187,6 +226,7 @@ export function applyLookLighting(look: LookName, ctx: { sun: THREE.DirectionalL
       fog.color.set(0xf6b36e); fog.near = 20; fog.far = 170;
       break;
     case 'graphic':
+    case 'hybrid':
       sun.intensity = 2.6; hemi.intensity = 2.8;
       break;
   }
