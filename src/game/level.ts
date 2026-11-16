@@ -38,6 +38,8 @@ export interface LevelDef {
   /** Distance where the storm visibly starts to build (story beat). */
   stormRises: number;
   parScore: number;
+  /** The level's music arrangement (src/audio/music-styles.ts); the default when left out. */
+  music?: string;
 }
 
 export const speedAt = (lvl: Pick<LevelDef, 'length' | 'speed'>, d: number) =>

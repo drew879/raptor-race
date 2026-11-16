@@ -149,5 +149,6 @@ export const LEVEL1: LevelDef = B.build({
   prey: { species: 'protoceratops', startGap: 24, finale: 90 },
   checkpoints: [425 * K, 772 * K],
   stormRises: 772 * K,
+  music: 'chase-strings',
   parScore: 13000, // amber on the beat grid is a little sparser late in the level (faster running), so par moved with it
 });

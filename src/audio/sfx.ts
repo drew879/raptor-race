@@ -3,7 +3,7 @@
  * Works with an online AudioContext or an OfflineAudioContext (for automated loudness checks).
  */
 import { Music } from './music';
-import { DEFAULT_STYLE } from './music-styles';
+import { DEFAULT_STYLE, MUSIC_STYLES } from './music-styles';
 
 /** Music bus level relative to SFX: keeps music peaks about 8 dB under SFX peaks (AUDIO_BIBLE mix targets). */
 export const MUSIC_LEVEL = 0.26;
@@ -147,10 +147,10 @@ export class Sfx {
       }
       case 'screech': {
         // A pterosaur's harsh cry, falling in pitch: a buzzy saw through a narrow band, plus breath noise.
-        const o = this.ctx.createOscillator();
-        o.type = 'sawtooth';
-        o.frequency.setValueAtTime(1300 * v.pitch, t);
-        o.frequency.exponentialRampToValueAtTime(520 * v.pitch, t + 0.34);
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(1300 * v.pitch, t);
+        osc.frequency.exponentialRampToValueAtTime(520 * v.pitch, t + 0.34);
         const f = this.ctx.createBiquadFilter();
         f.type = 'bandpass';
         f.frequency.setValueAtTime(2200, t);
@@ -158,9 +158,9 @@ export class Sfx {
         f.Q.value = 2.2;
         const g = this.ctx.createGain();
         this.env(g, t, 0.16 * v.gain, 0.02, 0.33);
-        o.connect(f).connect(g).connect(this.panned(0.3));
-        o.start(t);
-        o.stop(t + 0.4);
+        osc.connect(f).connect(g).connect(this.panned(0.3));
+        osc.start(t);
+        osc.stop(t + 0.4);
         this.noiseBurst(t, 0.3, 0.06 * v.gain, { type: 'bandpass', f0: 3000, f1: 1500, q: 1.2 }, o, 0.02);
         break;
       }
@@ -185,6 +185,7 @@ export class AudioEngine {
   private musicBus: GainNode | null = null;
   private muted = false;
   private musicOn = true;
+  private styleId?: string;
   unlock() {
     if (this.ctx) { void this.ctx.resume(); return; }
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -199,7 +200,7 @@ export class AudioEngine {
     this.musicBus = this.ctx.createGain();
     this.musicBus.gain.value = this.musicOn ? MUSIC_LEVEL : 0;
     this.musicBus.connect(this.master);
-    this.music = new Music(this.ctx, this.musicBus, DEFAULT_STYLE);
+    this.music = new Music(this.ctx, this.musicBus, MUSIC_STYLES[this.styleId ?? ''] ?? DEFAULT_STYLE);
   }
   /** Amber pickup: with the music playing, a chord tone snapped onto the beat; otherwise the plain chime. */
   amber(song: number, rate: number) {
@@ -207,13 +208,19 @@ export class AudioEngine {
     if (this.musicOn && this.music?.isPlaying) this.music.chime(song, rate);
     else this.sfx?.play('amber');
   }
+  /** Pick the level's arrangement (falls back to the default). */
+  setMusicStyle(id?: string) {
+    this.styleId = id;
+    if (this.music) this.music.setStyle(MUSIC_STYLES[id ?? ''] ?? DEFAULT_STYLE);
+  }
   setMusic(on: boolean) {
     this.musicOn = on;
     if (this.musicBus) this.musicBus.gain.value = on ? MUSIC_LEVEL : 0;
   }
   play(name: SfxName, opts?: { dir?: number }) {
     if (!this.ctx || this.ctx.state !== 'running') return;
-    this.sfx?.play(name, opts);
+    // A sound must never break a frame: a bad node graph is logged and skipped.
+    try { this.sfx?.play(name, opts); } catch (e) { console.warn('sfx', name, e); }
   }
   setMuted(m: boolean) {
     this.muted = m;

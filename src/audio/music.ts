@@ -252,6 +252,39 @@ export class Music {
     this.duck.gain.setTargetAtTime(1, t + seconds, 0.15);
   }
 
+  /** The moment before the pounce: a rising swell (air and a string glide up an octave) over ~1.2 s. */
+  riser() {
+    const t = this.ctx.currentTime + 0.01;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'highpass';
+    f.frequency.setValueAtTime(2500, t);
+    f.frequency.exponentialRampToValueAtTime(7000, t + 1.2);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.14, t + 1.15);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.35);
+    src.connect(f).connect(g).connect(this.duck);
+    src.start(t, this.rnd() * 0.5); // the 2 s noise buffer must outlast the 1.4 s swell
+    src.stop(t + 1.4);
+    const root = this.style.chords[0].root + 24;
+    const o = this.ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(midiHz(root), t);
+    o.frequency.exponentialRampToValueAtTime(midiHz(root + 12), t + 1.2);
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 2400;
+    const og = this.ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.linearRampToValueAtTime(0.055, t + 1.0);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 1.35);
+    o.connect(lp).connect(og).connect(this.duck);
+    o.start(t);
+    o.stop(t + 1.4);
+  }
+
   /** The pounce: the style's sting, then silence for the finish fanfare. */
   sting() {
     const t = this.ctx.currentTime + 0.02;

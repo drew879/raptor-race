@@ -138,6 +138,11 @@ export const CHASE_STRINGS: MusicStyle = {
   step(m, bar, s16, t, I) {
     const chord = CHASE_CHORDS[bar];
     const r = chord.root + 12;
+    // A warm sustained string bed under everything (root and fifth), so even the opening has body.
+    if (s16 === 0) {
+      m.saw(t, r, 0.035, 1.95, { cutoff: 900 + I * 500, attack: 0.35, release: 0.35, detune: 10, pan: -0.2 });
+      m.saw(t, r + 7, 0.028, 1.95, { cutoff: 900 + I * 500, attack: 0.35, release: 0.35, detune: 10, pan: 0.2 });
+    }
     // Spiccato sixteenths, from the first bar.
     m.saw(t, r + CHASE_OST[s16], CHASE_ACC.has(s16) ? 0.07 : 0.045, 0.07, { cutoff: 1500 + I * 1200, release: 0.04, filterEnv: 1.8, pan: s16 % 2 ? 0.15 : -0.15 });
     if (I > 0.7) m.saw(t, r + 12 + CHASE_OST[s16], 0.03, 0.06, { cutoff: 2600, release: 0.04, pan: 0.3 });
@@ -161,6 +166,6 @@ export const CHASE_STRINGS: MusicStyle = {
 };
 
 export const MUSIC_STYLES: Record<string, MusicStyle> = { journal: JOURNAL, 'war-drums': WAR_DRUMS, 'chase-strings': CHASE_STRINGS };
-/** The style the game plays until the owner picks one. */
-export const DEFAULT_STYLE = JOURNAL;
+/** The style a level plays unless it names its own. */
+export const DEFAULT_STYLE = CHASE_STRINGS; // the owner's pick (playtest 6)
 export type { Music };

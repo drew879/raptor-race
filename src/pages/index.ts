@@ -168,6 +168,7 @@ const save = loadSave();
 const audio = new AudioEngine();
 audio.setMuted(!save.sound);
 audio.setMusic(save.music);
+audio.setMusicStyle(LEVEL.music);
 const syncSoundLabels = () => {
   $('btnSound').textContent = save.sound ? '♪' : '×';
   $('btnSound').setAttribute('aria-label', save.sound ? 'Sound on' : 'Sound off');
@@ -572,6 +573,7 @@ function handle(e: GameEvent) {
       showHint(e.hint);
       break;
     case 'pounceReady':
+      audio.music?.riser();
       $('pounce').hidden = false;
       timeScale = 0.6; // a beat of slow motion to land the moment
       haptic(20);
