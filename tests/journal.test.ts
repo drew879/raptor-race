@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CHAPTERS, CHAPTER_GATE, INCLUSION_PAGES, chapterUnlocked, levelUnlocked, lockReason, markPagesSeen, plumageUnlocked, recordMisses, showHint, unseenPages } from '../src/game/journal';
 import type { SaveData } from '../src/game/save';
-import { LEVEL1 } from '../src/game/level1';
+import { FLAMING_CLIFFS } from '../src/game/flaming-cliffs';
 
 const fresh = (): SaveData => ({ v: 1, best: {}, stars: {}, eggs: {}, amberBank: 0, sound: true, music: true, runs: 0 });
 
@@ -31,37 +31,37 @@ describe('chapter gates', () => {
 
 describe('inclusion rewards', () => {
   it('Level 1 has a page for each of its three inclusions', () => {
-    expect(INCLUSION_PAGES[LEVEL1.id]).toHaveLength(LEVEL1.pickups.filter((p) => p.kind === 'egg').length);
+    expect(INCLUSION_PAGES[FLAMING_CLIFFS.id]).toHaveLength(FLAMING_CLIFFS.pickups.filter((p) => p.kind === 'egg').length);
   });
   it('the second plumage unlocks with all three inclusions', () => {
     const s = fresh();
-    s.eggs[LEVEL1.id] = [true, true, false];
-    expect(plumageUnlocked(s, LEVEL1.id, 1)).toBe(false);
-    s.eggs[LEVEL1.id] = [true, true, true];
-    expect(plumageUnlocked(s, LEVEL1.id, 1)).toBe(true);
+    s.eggs[FLAMING_CLIFFS.id] = [true, true, false];
+    expect(plumageUnlocked(s, FLAMING_CLIFFS.id, 1)).toBe(false);
+    s.eggs[FLAMING_CLIFFS.id] = [true, true, true];
+    expect(plumageUnlocked(s, FLAMING_CLIFFS.id, 1)).toBe(true);
   });
   it('a hint shows after two runs that pass an inclusion without finding it', () => {
     const s = fresh();
     const ds = [100, 500, 900];
-    recordMisses(s, LEVEL1.id, ds, 600, [true, false, false]); // ran to 600: found #1, missed #2, never reached #3
-    expect(s.misses![LEVEL1.id]).toEqual([0, 1, 0]);
-    expect(showHint(s, LEVEL1.id, 1)).toBe(false);
-    recordMisses(s, LEVEL1.id, ds, 1000, [false, false, false]);
-    expect(showHint(s, LEVEL1.id, 1)).toBe(true);
-    expect(showHint(s, LEVEL1.id, 2)).toBe(false);
-    s.eggs[LEVEL1.id] = [false, true, false]; // found it later: the hint goes away
-    expect(showHint(s, LEVEL1.id, 1)).toBe(false);
+    recordMisses(s, FLAMING_CLIFFS.id, ds, 600, [true, false, false]); // ran to 600: found #1, missed #2, never reached #3
+    expect(s.misses![FLAMING_CLIFFS.id]).toEqual([0, 1, 0]);
+    expect(showHint(s, FLAMING_CLIFFS.id, 1)).toBe(false);
+    recordMisses(s, FLAMING_CLIFFS.id, ds, 1000, [false, false, false]);
+    expect(showHint(s, FLAMING_CLIFFS.id, 1)).toBe(true);
+    expect(showHint(s, FLAMING_CLIFFS.id, 2)).toBe(false);
+    s.eggs[FLAMING_CLIFFS.id] = [false, true, false]; // found it later: the hint goes away
+    expect(showHint(s, FLAMING_CLIFFS.id, 1)).toBe(false);
   });
 });
 
 describe('new journal pages', () => {
   it('pages found but not yet read are new until the journal is opened', () => {
     const s = fresh();
-    s.eggs[LEVEL1.id] = [true, false, true];
-    expect(unseenPages(s, LEVEL1.id)).toEqual([0, 2]);
-    markPagesSeen(s, LEVEL1.id);
-    expect(unseenPages(s, LEVEL1.id)).toEqual([]);
-    s.eggs[LEVEL1.id] = [true, true, true];
-    expect(unseenPages(s, LEVEL1.id)).toEqual([1]);
+    s.eggs[FLAMING_CLIFFS.id] = [true, false, true];
+    expect(unseenPages(s, FLAMING_CLIFFS.id)).toEqual([0, 2]);
+    markPagesSeen(s, FLAMING_CLIFFS.id);
+    expect(unseenPages(s, FLAMING_CLIFFS.id)).toEqual([]);
+    s.eggs[FLAMING_CLIFFS.id] = [true, true, true];
+    expect(unseenPages(s, FLAMING_CLIFFS.id)).toEqual([1]);
   });
 });

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { GOBI, col } from './palette';
-import { createBackdrop, createSky } from './sky';
+import { FOREST, GOBI, col } from './palette';
+import { createBackdrop, createForestBackdrop, createSky } from './sky';
 import { CONFIG } from '../game/config';
 import { damp } from '../core/math';
 
@@ -22,10 +22,14 @@ export class Stage {
   readonly backdrop: THREE.Mesh;
   private camX = 0;
   baseFov: number = CONFIG.camera.fov;
+  /** The level's visual downhill (see materials.ts uSlope): the chase camera aims lower to follow the ground. */
+  slope = 0;
   private camY = 0;
   onResize: (w: number, h: number) => void = () => {};
 
-  constructor(container: HTMLElement, opts: { preserveDrawingBuffer?: boolean } = {}) {
+  /** `biome` sets the light, fog, sky and backdrop (the Gobi by default). */
+  constructor(container: HTMLElement, opts: { preserveDrawingBuffer?: boolean; biome?: 'gobi' | 'forest' } = {}) {
+    const forest = opts.biome === 'forest';
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: opts.preserveDrawingBuffer ?? false });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.toneMapping = THREE.NeutralToneMapping;
@@ -34,10 +38,10 @@ export class Stage {
     this.renderer.shadowMap.type = THREE.PCFShadowMap; // PCFSoft was removed in this three.js; PCF + radius softens edges
     container.appendChild(this.renderer.domElement);
 
-    this.scene.fog = new THREE.Fog(col(GOBI.horizon), FOG.near, FOG.far);
-    this.hemi = new THREE.HemisphereLight(GOBI.hemiSky, GOBI.hemiGround, 2.6);
+    this.scene.fog = new THREE.Fog(col(forest ? FOREST.fog : GOBI.horizon), FOG.near, FOG.far);
+    this.hemi = new THREE.HemisphereLight(forest ? FOREST.hemiSky : GOBI.hemiSky, forest ? FOREST.hemiGround : GOBI.hemiGround, 2.6);
     this.scene.add(this.hemi);
-    this.sun = new THREE.DirectionalLight(GOBI.keyLight, 2.9);
+    this.sun = new THREE.DirectionalLight(forest ? FOREST.keyLight : GOBI.keyLight, 2.9);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const sc = this.sun.shadow.camera;
@@ -48,8 +52,9 @@ export class Stage {
     this.scene.add(this.sun, this.sun.target);
 
     this.camera = new THREE.PerspectiveCamera(CONFIG.camera.fov, 1, 0.1, 900);
-    this.sky = createSky(SUN_DIR);
-    this.backdrop = createBackdrop();
+    if (forest) this.sunDir.set(0.62, 0.55, 0.56).normalize(); // a higher morning sun, behind and to the right
+    this.sky = createSky(this.sunDir, forest ? FOREST : GOBI);
+    this.backdrop = forest ? createForestBackdrop() : createBackdrop();
     this.scene.add(this.sky, this.backdrop, this.world);
     this.resize(container.clientWidth, container.clientHeight);
   }
@@ -70,7 +75,7 @@ export class Stage {
     this.camX = snap ? tx : damp(this.camX, tx, 9, dt);
     this.camY = snap ? y : damp(this.camY, y, 6, dt);
     this.camera.position.set(this.camX, c.height + this.camY * 0.45, z + c.back);
-    this.camera.lookAt(this.camX * 0.85, c.lookHeight + this.camY * 0.5, z - c.lookAhead);
+    this.camera.lookAt(this.camX * 0.85, c.lookHeight + this.camY * 0.5 - this.slope * (c.back + c.lookAhead) * 0.8, z - c.lookAhead);
     this.follow(this.camX, z);
   }
 

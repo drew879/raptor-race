@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { B, restPos, type BoneName } from './model';
+import { B, restPos, type BoneName, type RestFn } from './model';
 import { clamp, easeInOutSine, lerp, TAU } from '../../core/math';
 
 /** Inputs the game feeds the animator each frame. All weights 0..1 unless noted. */
@@ -45,15 +45,23 @@ export class RaptorAnimator {
   private lookTarget = 0;
   private lookTimer = 1.5;
   private rest: Record<string, number> = {};
-  private restPelvis = restPos('pelvis');
-  private hipLocal = { L: restPos('thighL').sub(restPos('pelvis')), R: restPos('thighR').sub(restPos('pelvis')) };
+  private restPelvis: THREE.Vector3;
+  private hipLocal: { L: THREE.Vector3; R: THREE.Vector3 };
+  /** The finale: `pin` holds prey down (Velociraptor); `brood` curls around an egg (Caudipteryx). */
+  private finale: 'pin' | 'brood';
+  private strideScale: number;
   private len = { thigh: 0, shin: 0, meta: 0 };
   private euler = new THREE.Euler();
   private poses = { run: zeroPose(), idle: zeroPose(), slide: zeroPose(), air: zeroPose(), glide: zeroPose(), pin: zeroPose(), out: zeroPose() };
 
-  constructor(bones: THREE.Bone[]) {
+  constructor(bones: THREE.Bone[], opts: { rest?: RestFn; finale?: 'pin' | 'brood'; strideScale?: number } = {}) {
     this.bones = bones;
-    const H = restPos('thighR'), K = restPos('shinR'), A = restPos('metaR'), F = restPos('toeR');
+    const rest = opts.rest ?? restPos;
+    this.finale = opts.finale ?? 'pin';
+    this.strideScale = opts.strideScale ?? 1;
+    this.restPelvis = rest('pelvis');
+    this.hipLocal = { L: rest('thighL').sub(rest('pelvis')), R: rest('thighR').sub(rest('pelvis')) };
+    const H = rest('thighR'), K = rest('shinR'), A = rest('metaR'), F = rest('toeR');
     this.len.thigh = H.distanceTo(K);
     this.len.shin = K.distanceTo(A);
     this.len.meta = A.distanceTo(F);
@@ -86,7 +94,7 @@ export class RaptorAnimator {
     this.t += dt;
     const t = this.t;
     const stride = clamp(0.75 + inp.speed / 40, 0.75, 1.15);
-    const strideLen = 2.1 * stride;
+    const strideLen = 2.1 * stride * this.strideScale;
     this.phase = (this.phase + (Math.max(inp.speed, 0) / strideLen) * dt * (1 - inp.idle)) % 1;
     const p = this.phase;
     const k = clamp(inp.speed / 12, 0.3, 1.3);
@@ -216,7 +224,8 @@ export class RaptorAnimator {
     // ---------- Pin: the raptor-prey-restraint pose. Feet grip the back, body low and forward,
     // wings beating for balance, tail up as a counterweight. No gore: it holds, it doesn't bite. ----------
     const pn = this.poses.pin;
-    if (inp.pin > 0) {
+    if (inp.pin > 0 && this.finale === 'brood') this.brood(pn, t);
+    else if (inp.pin > 0) {
       Object.assign(pn, zeroPose());
       const beat = Math.sin(t * 13);
       const sway = Math.sin(t * 5.3);
@@ -273,6 +282,28 @@ export class RaptorAnimator {
     out.hX = out.headPitch - (out.pPitch + out.chX + out.n1X + out.n2X);
 
     this.apply(out);
+  }
+
+  /** Brooding: crouched low over the egg, arms curled forward around it, head down to look at it, tail fan
+   * raised and spread. (Oviraptor's family sat on their nests like birds.) */
+  private brood(pn: Pose, t: number) {
+    Object.assign(pn, zeroPose());
+    const breath = Math.sin(t * 2.4);
+    pn.pY = -0.24 + 0.006 * breath;
+    pn.pZ = 0.02;
+    pn.pPitch = -0.42;
+    pn.chX = -0.1;
+    pn.n1X = 0.3; pn.n2X = 0.15;
+    pn.headPitch = -0.75 + 0.05 * Math.sin(t * 1.3);
+    pn.hY = 0.12 * Math.sin(t * 0.8);
+    pn.t1X = -0.35; pn.t2X = -0.12; pn.t3X = -0.05; pn.t4X = 0;
+    pn.t1Y = 0.05 * Math.sin(t * 1.1); pn.t2Y = 0.05 * Math.sin(t * 1.1 - 0.5);
+    pn.uaLX = pn.uaRX = 0.75; pn.uaLZ = -0.55; pn.uaRZ = 0.55;
+    pn.faLY = 0.7; pn.faRY = -0.7;
+    pn.hdLY = 0.3; pn.hdRY = -0.3;
+    pn.fLY = 0.03; pn.fLZ = -0.04; pn.fLM = 0.95; pn.fLT = TOE_FLAT;
+    pn.fRY = 0.03; pn.fRZ = 0.1; pn.fRM = 0.85; pn.fRT = TOE_FLAT;
+    pn.breath = 0.02 * breath;
   }
 
   private set(name: BoneName, x: number, y: number, z: number) {

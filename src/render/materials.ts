@@ -10,6 +10,22 @@ export const worldUniforms = {
   /** Lateral bend (track curves): + bends the world to the right with distance. Animated per frame. */
   uBend: { value: 0 },
   uRimColor: { value: new THREE.Color(GOBI.sunGlow) },
+  /** Visual downhill, as a hill profile along the course: flat until `uSlopeFrom` (the crest), then dropping
+   * `uSlope` meters per meter until it levels out at `uSlopeTo` (the bottom), with soft bends at both ends. The
+   * drop is applied to screen positions relative to the camera, so the trail falls away while trees stay upright.
+   * 0 on level ground. */
+  uSlope: { value: 0 },
+  uSlopeFrom: { value: 0 },
+  uSlopeTo: { value: 1e6 },
+};
+
+/** The hill profile's height at course distance d (matches the shader). */
+const softplus = (x: number) => Math.max(x, 0) + 8 * Math.log(1 + Math.exp(-Math.abs(x) / 8));
+export const hillHeight = (d: number) => -worldUniforms.uSlope.value * (softplus(d - worldUniforms.uSlopeFrom.value) - softplus(d - worldUniforms.uSlopeTo.value));
+/** The hill's local grade at course distance d (0 on the flats). */
+export const hillGrade = (d: number) => {
+  const sig = (x: number) => 1 / (1 + Math.exp(-x / 8));
+  return worldUniforms.uSlope.value * (sig(d - worldUniforms.uSlopeFrom.value) - sig(d - worldUniforms.uSlopeTo.value));
 };
 
 /** Bends grow with distance squared, softening past this many meters so the far terrain never swings off its edge. */
@@ -25,14 +41,25 @@ export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; be
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uCurve = worldUniforms.uCurve;
     shader.uniforms.uBend = worldUniforms.uBend;
+    shader.uniforms.uSlope = worldUniforms.uSlope;
+    shader.uniforms.uSlopeFrom = worldUniforms.uSlopeFrom;
+    shader.uniforms.uSlopeTo = worldUniforms.uSlopeTo;
     shader.uniforms.uRimColor = rimCol ? { value: rimCol } : worldUniforms.uRimColor;
     if (bend) {
       shader.vertexShader = shader.vertexShader
-        .replace('#include <common>', '#include <common>\nuniform float uCurve, uBend;')
+        .replace('#include <common>', `#include <common>
+          uniform float uCurve, uBend, uSlope, uSlopeFrom, uSlopeTo;
+          float rrSoftplus(float x) { return max(x, 0.0) + 8.0 * log(1.0 + exp(-abs(x) / 8.0)); }
+          float rrHill(float d) { return -uSlope * (rrSoftplus(d - uSlopeFrom) - rrSoftplus(d - uSlopeTo)); }`)
         .replace(
           '#include <project_vertex>',
           `#include <project_vertex>
           { vec4 bentPos = mvPosition; float zz = bentPos.z * bentPos.z; bentPos.y -= uCurve * zz;
+            if (uSlope != 0.0) {
+              // The hill's height here relative to the camera's, applied along world up in view space.
+              vec3 wpos = transpose(mat3(viewMatrix)) * (mvPosition.xyz - viewMatrix[3].xyz);
+              bentPos.xyz += (viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz * (rrHill(-wpos.z) - rrHill(-cameraPosition.z));
+            }
             bentPos.x += uBend * zz / (1.0 + abs(bentPos.z) / ${BEND_KNEE.toFixed(1)}); gl_Position = projectionMatrix * bentPos; }`,
         );
     }
@@ -98,6 +125,8 @@ export const MATS = {
   character: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide }), { rim: 0.95, rimColor: 0xffd29a }), // warm sun-edge rim
   glow: unlitMaterial({ toneMapped: false }),
   backdrop: unlitMaterial({ fog: false, bend: false }),
+  /** The forest's terrain (no sand detail). */
+  forest: litMaterial({ rim: 0.1 }),
   egg: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color(0x8a6a34) }), { rim: 0.5 }),
   outline: patchWorld(new THREE.MeshBasicMaterial({ color: new THREE.Color(0x5a2c0c), side: THREE.BackSide, fog: true }), {}),
 };

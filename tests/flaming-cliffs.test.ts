@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LEVEL1 } from '../src/game/level1';
+import { FLAMING_CLIFFS } from '../src/game/flaming-cliffs';
 import { Session } from '../src/game/session';
 import { HAZARD_BOXES, hazardBox, testHit } from '../src/game/collision';
 import { CRASH_COPY } from '../src/game/copy';
@@ -10,14 +10,14 @@ import { HUMANLIKE, PERFECT, playLevel } from '../src/game/bot';
 
 describe('level 1 data', () => {
   it('has exactly three eggs and two checkpoints', () => {
-    expect(LEVEL1.pickups.filter((p) => p.kind === 'egg')).toHaveLength(3);
-    expect(LEVEL1.checkpoints).toHaveLength(2);
+    expect(FLAMING_CLIFFS.pickups.filter((p) => p.kind === 'egg')).toHaveLength(3);
+    expect(FLAMING_CLIFFS.checkpoints).toHaveLength(2);
   });
   it('never places amber inside a hazard volume', () => {
     const bad: string[] = [];
-    for (const p of LEVEL1.pickups) {
+    for (const p of FLAMING_CLIFFS.pickups) {
       if (p.kind !== 'amber') continue;
-      for (const h of LEVEL1.hazards) {
+      for (const h of FLAMING_CLIFFS.hazards) {
         const wide = h.type === 'gully' || h.type === 'ribArch';
         if (!wide && h.lane !== p.lane) continue;
         const box = hazardBox(h.type, h.len);
@@ -29,25 +29,25 @@ describe('level 1 data', () => {
   });
   it('never blocks all three lanes with boulders outside the updraft section', () => {
     const rows = new Map<number, Set<number>>();
-    for (const h of LEVEL1.hazards) if (h.type === 'boulder') rows.set(h.d, (rows.get(h.d) ?? new Set()).add(h.lane));
+    for (const h of FLAMING_CLIFFS.hazards) if (h.type === 'boulder') rows.set(h.d, (rows.get(h.d) ?? new Set()).add(h.lane));
     const walls = [...rows.entries()].filter(([, s]) => s.size === 3).map(([d]) => d);
-    const k = LEVEL1.length / 1100;
+    const k = FLAMING_CLIFFS.length / 1100;
     expect(walls.every((d) => d > 620 * k && d < 700 * k)).toBe(true);
   });
 });
 
 describe('forks', () => {
-  const spines = LEVEL1.hazards.filter((h) => h.type === 'spine');
+  const spines = FLAMING_CLIFFS.hazards.filter((h) => h.type === 'spine');
   it('level 1 has two forks, each with only jumpable or slidable obstacles on its routes', () => {
     expect(spines).toHaveLength(2);
     for (const sp of spines) {
-      const inside = LEVEL1.hazards.filter((h) => h !== sp && h.d >= sp.d - 1 && h.d <= sp.d + sp.len! + 1);
+      const inside = FLAMING_CLIFFS.hazards.filter((h) => h !== sp && h.d >= sp.d - 1 && h.d <= sp.d + sp.len! + 1);
       expect(inside.every((h) => h.type === 'ledge' || h.type === 'arch')).toBe(true);
       expect(inside.every((h) => h.lane !== sp.lane)).toBe(true);
     }
   });
   it('the runner can never be beside a spine in its lane, and swipes into it are refused', () => {
-    const s = new Session(LEVEL1);
+    const s = new Session(FLAMING_CLIFFS);
     const bot = new Bot(s, PERFECT);
     s.start();
     let refused = 0, alongsideInSpineLane = 0, preyInSpineLane = 0;
@@ -75,12 +75,12 @@ describe('forks', () => {
 });
 
 describe('setbacks and fork placement (owner playtest 4)', () => {
-  const spines = LEVEL1.hazards.filter((h) => h.type === 'spine');
+  const spines = FLAMING_CLIFFS.hazards.filter((h) => h.type === 'spine');
   it('every obstacle type has crash screen text', () => {
     for (const t of Object.keys(HAZARD_BOXES)) expect(CRASH_COPY[t as keyof typeof CRASH_COPY]?.[1], t).toBeTruthy();
   });
   it('running straight into a fin is a crash with the fin as its cause, and the run stays crashed', () => {
-    const s = new Session(LEVEL1);
+    const s = new Session(FLAMING_CLIFFS);
     s.start();
     s.resumeAt(spines[0].d - 18); // past the boulder that guards the approach
     let cause = '';
@@ -95,25 +95,25 @@ describe('setbacks and fork placement (owner playtest 4)', () => {
     expect(s.runner.lane).not.toBe(0);
   });
   it('nothing tall stands in an updraft glide (gliding height would hit a slide obstacle or a fin)', () => {
-    for (const p of LEVEL1.pickups.filter((q) => q.kind === 'updraft')) {
-      const end = p.d + speedAt(LEVEL1, p.d) * GLIDE_SECONDS + 10;
-      const tall = LEVEL1.hazards.filter((h) => (h.type === 'arch' || h.type === 'ribArch' || h.type === 'spine') && h.d + (h.len ?? 0) > p.d && h.d < end);
+    for (const p of FLAMING_CLIFFS.pickups.filter((q) => q.kind === 'updraft')) {
+      const end = p.d + speedAt(FLAMING_CLIFFS, p.d) * GLIDE_SECONDS + 10;
+      const tall = FLAMING_CLIFFS.hazards.filter((h) => (h.type === 'arch' || h.type === 'ribArch' || h.type === 'spine') && h.d + (h.len ?? 0) > p.d && h.d < end);
       expect(tall.map((h) => `${h.type}@${h.d}`)).toEqual([]);
     }
   });
   it('no fork starts within 3 s of an updraft glide landing, and no checkpoint sits inside a fork', () => {
-    for (const p of LEVEL1.pickups.filter((q) => q.kind === 'updraft')) {
-      const landing = p.d + speedAt(LEVEL1, p.d) * GLIDE_SECONDS;
-      for (const sp of spines) if (sp.d > p.d) expect(sp.d - landing, `fork at ${sp.d}`).toBeGreaterThan(3 * speedAt(LEVEL1, landing));
+    for (const p of FLAMING_CLIFFS.pickups.filter((q) => q.kind === 'updraft')) {
+      const landing = p.d + speedAt(FLAMING_CLIFFS, p.d) * GLIDE_SECONDS;
+      for (const sp of spines) if (sp.d > p.d) expect(sp.d - landing, `fork at ${sp.d}`).toBeGreaterThan(3 * speedAt(FLAMING_CLIFFS, landing));
     }
-    for (const cp of LEVEL1.checkpoints) for (const sp of spines) expect(cp < sp.d - 5 || cp > sp.d + sp.len! + 5).toBe(true);
+    for (const cp of FLAMING_CLIFFS.checkpoints) for (const sp of spines) expect(cp < sp.d - 5 || cp > sp.d + sp.len! + 5).toBe(true);
   });
 });
 
 describe('nesting ground and pterosaur', () => {
   it('a wanderer starts in one lane, walks across, and has settled in its final lane before you reach it', () => {
-    const w = LEVEL1.hazards.find((h) => h.type === 'wanderer')!;
-    const s = new Session(LEVEL1);
+    const w = FLAMING_CLIFFS.hazards.find((h) => h.type === 'wanderer')!;
+    const s = new Session(FLAMING_CLIFFS);
     s.start();
     s.resumeAt(w.d - 70);
     s.runner.snapToLane(w.lane === 0 ? 1 : 0); // stay out of its way
@@ -132,8 +132,8 @@ describe('nesting ground and pterosaur', () => {
     expect(settledAt).toBeGreaterThan(14); // in place with the better part of a second to spare
   });
   it('running straight into a settled wanderer crashes; a nester can be jumped; the pterosaur needs a slide', () => {
-    const w = LEVEL1.hazards.find((h) => h.type === 'wanderer')!;
-    const s = new Session(LEVEL1);
+    const w = FLAMING_CLIFFS.hazards.find((h) => h.type === 'wanderer')!;
+    const s = new Session(FLAMING_CLIFFS);
     s.start();
     s.resumeAt(w.d - 12);
     s.runner.snapToLane(w.lane);
@@ -150,18 +150,18 @@ describe('nesting ground and pterosaur', () => {
 
 describe('music sync', () => {
   it('time and distance convert both ways', () => {
-    for (const d of [0, 100, 800, 1649]) expect(distanceAtTime(LEVEL1, timeAt(LEVEL1, d))).toBeCloseTo(d, 6);
+    for (const d of [0, 100, 800, 1649]) expect(distanceAtTime(FLAMING_CLIFFS, timeAt(FLAMING_CLIFFS, d))).toBeCloseTo(d, 6);
   });
   it('every amber sits on the beat grid (lines on eighths, slides and jump arcs on sixteenths)', () => {
-    const amber = LEVEL1.pickups.filter((p) => p.kind === 'amber');
-    const onGrid = amber.filter((p) => { const k = timeAt(LEVEL1, p.d) / (BEAT / 4); return Math.abs(k - Math.round(k)) < 1e-4; });
+    const amber = FLAMING_CLIFFS.pickups.filter((p) => p.kind === 'amber');
+    const onGrid = amber.filter((p) => { const k = timeAt(FLAMING_CLIFFS, p.d) / (BEAT / 4); return Math.abs(k - Math.round(k)) < 1e-4; });
     expect(onGrid.length).toBe(amber.length);
   });
 });
 
 describe('level 1 playthrough', () => {
   it('a perfect player finishes cleanly and finds all three eggs', () => {
-    const res = playLevel(new Session(LEVEL1), PERFECT);
+    const res = playLevel(new Session(FLAMING_CLIFFS), PERFECT);
     console.log('perfect run', res);
     expect(res.finished).toBe(true);
     expect(res.pounced).toBe(true);
@@ -174,7 +174,7 @@ describe('level 1 playthrough', () => {
     const N = 120;
     let clean = 0, withRevive = 0, total = 0, neverLost = 0;
     for (let i = 0; i < N; i++) {
-      const res = playLevel(new Session(LEVEL1), { ...HUMANLIKE, seed: 1000 + i });
+      const res = playLevel(new Session(FLAMING_CLIFFS), { ...HUMANLIKE, seed: 1000 + i });
       total += res.score;
       if (res.caught === 0) clean++;
       if (res.caught <= 1) withRevive++;

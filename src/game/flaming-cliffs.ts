@@ -143,9 +143,11 @@ B.bend(790, 870, 1);
 B.bend(915, 975, -0.8);
 B.bend(1012, 1100, 1.1);
 
-export const LEVEL1: LevelDef = B.build({
+export const FLAMING_CLIFFS: LevelDef = B.build({
   id: 'flaming-cliffs',
   name: 'Flaming Cliffs',
+  biome: 'gobi',
+  hero: 'velociraptor',
   prey: { species: 'protoceratops', startGap: 24, finale: 90 },
   checkpoints: [425 * K, 772 * K],
   stormRises: 772 * K,

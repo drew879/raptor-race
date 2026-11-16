@@ -5,6 +5,7 @@ import { MATS } from '../materials';
 import { Rng } from '../../core/rng';
 import { addTube } from './props';
 import { scenery } from './scenery';
+import { forestHazardGeometry } from './forest-hazards';
 
 import type { HazardType } from '../../game/types';
 export type { HazardType };
@@ -268,8 +269,9 @@ export function hazardGeometry(type: HazardType, variant = 0, len = 0): THREE.Bu
   return GEOMS[type]!;
 }
 
-export function createHazard(type: HazardType, variant = 0, len = 0): THREE.Mesh {
-  const m = new THREE.Mesh(hazardGeometry(type, variant, len), MATS.hazard);
+export function createHazard(type: HazardType, variant = 0, len = 0, biome: 'gobi' | 'forest' = 'gobi'): THREE.Mesh {
+  const forest = biome === 'forest';
+  const m = new THREE.Mesh(forest ? forestHazardGeometry(type, variant, len) : hazardGeometry(type, variant, len), MATS.hazard);
   if (type === 'boulder') m.rotation.y = (variant * 2.39996) % (Math.PI * 2); // golden-angle spin for variety
   m.castShadow = true;
   m.receiveShadow = true;

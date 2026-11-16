@@ -8,20 +8,22 @@ import { CollectibleField, type Collectible } from '../render/world/collectibles
 import { createHazard } from '../render/world/hazards';
 import { PowerupView } from '../render/world/powerups';
 import { Protoceratops } from '../render/prey/protoceratops';
+import { EggView, buildNest } from '../render/prey/egg';
 import { Herd } from '../render/prey/herd';
 import { Pterosaur } from '../render/prey/pterosaur';
 import { Footprints } from '../render/footprints';
-import { Particles, SAND, SPARK } from '../render/fx';
+import { DIRT, Particles, SAND, SPARK } from '../render/fx';
 import { RaptorView } from '../render/raptor/view';
-import { GOBI, RAPTOR_DUSK, RAPTOR_GOBI_STREAK, col, mix, type RaptorPlumage } from '../render/palette';
+import { CAUD_FOREST, CAUD_SUNRISE, FOREST, GOBI, RAPTOR_DUSK, RAPTOR_GOBI_STREAK, col, mix, type RaptorPlumage } from '../render/palette';
 import { BLUE_AMBER_NOTE, CHAPTERS, INCLUSION_PAGES, PLUMAGES, chapterFound, chapterUnlocked, levelUnlocked, lockReason, plumageUnlocked, recordMisses, showHint as hintShown, unseenPages, markPagesSeen } from '../game/journal';
 import { inclusionArt, plumageSwatch } from '../ui/journal-art';
 import { Session, type GameEvent } from '../game/session';
 import { CONFIG } from '../game/config';
-import { LEVEL1 } from '../game/level1';
+import { levelNumber, pickLevel } from '../game/levels';
+import { LEVEL_COPY } from '../game/level-copy';
 import { curvatureAt, timeAt } from '../game/level';
 import { crashCopy } from '../game/copy';
-import { worldUniforms } from '../render/materials';
+import { hillGrade, worldUniforms } from '../render/materials';
 import { Input } from '../core/input';
 import { AudioEngine } from '../audio/sfx';
 import { loadSave, writeSave } from '../game/save';
@@ -36,7 +38,16 @@ type AppState = 'title' | 'journal' | 'prerun' | 'intro' | 'playing' | 'paused' 
 const params = new URLSearchParams(location.search);
 const SHOT = params.has('shot');
 let DEBUG = params.has('debug');
-const LEVEL = LEVEL1;
+const save = loadSave();
+/** The level is chosen when the page loads (the URL's ?level=, else the last one played); switching levels
+ * reloads the page, so everything below is built for this one level. */
+const LEVEL = pickLevel(params.get('level'), save.lastLevel);
+const COPY = LEVEL_COPY[LEVEL.id];
+const LEVEL_N = levelNumber(LEVEL.id);
+const BIOME = LEVEL.biome;
+const FORESTED = BIOME === 'forest';
+const EGG_PREY = LEVEL.prey.species === 'egg';
+const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
 const star = (filled: boolean, pop = false, delay = 0) =>
   `<svg class="star ${pop ? 'star-pop' : ''}" style="animation-delay:${delay}ms" viewBox="0 0 24 24"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 20.9l1.6-7L2 9.2l7.1-.6z" fill="${filled ? '#FFB21E' : 'none'}" stroke="#3A2A1E" stroke-width="2.2" stroke-linejoin="round"/></svg>`;
@@ -64,19 +75,19 @@ root.innerHTML = `
     </div>
   </div>
 </div>
-<div class="pounce" id="pounce" hidden>Swipe up to pounce!</div>
+<div class="pounce" id="pounce" hidden>${esc(COPY.pounce)}</div>
 <div class="spot" id="spot" hidden></div>
-<div class="callout" id="callout" hidden><div class="eyebrow">Rare find</div><h3>Blue amber, with an insect inside</h3><p>Trapped 75 million years ago. Find all 3 in this level for a star.</p><div class="tap">Tap to continue</div></div>
-<div class="quarry" id="quarry" hidden><div class="eyebrow">Field Journal · Today's quarry</div><h2>Protoceratops</h2><div class="latin">Protoceratops andrewsi · a parrot-beaked plant eater the size of a sheep</div></div>
+<div class="callout" id="callout" hidden><div class="eyebrow">Rare find</div><h3>${esc(COPY.callout.title)}</h3><p>${esc(COPY.callout.text)}</p><div class="tap">Tap to continue</div></div>
+<div class="quarry" id="quarry" hidden><div class="eyebrow">${esc(COPY.quarry.eyebrow)}</div><h2>${esc(COPY.quarry.name)}</h2><div class="latin">${esc(COPY.quarry.latin)}</div></div>
 <div class="skip" id="skip" hidden>Tap to skip</div>
-<div class="plate" id="plate" hidden><div class="plate-card"><div class="eyebrow">Field Journal · Plate I</div><h2>Fighting Dinosaurs</h2><p>Velociraptor and Protoceratops, locked together in the red sand of the Gobi. In 1971 a fossil of exactly this moment was found in these same rocks: ~75 million years ago, preserved by a collapsing dune.</p></div></div>
+<div class="plate" id="plate" hidden><div class="plate-card"><div class="eyebrow">${esc(COPY.plate.eyebrow)}</div><h2>${esc(COPY.plate.title)}</h2><p>${esc(COPY.plate.text)}</p></div></div>
 <div class="hint" id="hint" hidden><span class="glyph" id="hintGlyph"></span><span id="hintText"></span></div>
 <div class="floats" id="floats"></div>
 
 <section class="screen title" id="scrTitle">
   ${logoSVG()}
   <div class="actions">
-    <div class="sub">Level 1 · Flaming Cliffs</div>
+    <div class="sub">Level ${LEVEL_N} · ${esc(LEVEL.name)}</div>
     <button class="btn-amber" id="btnRun">Run</button>
     <div class="row">
       <button class="btn-paper" id="btnJournal">Field Journal</button>
@@ -88,10 +99,10 @@ root.innerHTML = `
 
 <section class="screen sheet" id="scrPrerun" hidden>
   <div class="card">
-    <div class="eyebrow">Field Journal · Level 1</div>
-    <div class="species">Velociraptor</div>
-    <div class="latin">Velociraptor mongoliensis · Gobi Desert · ~75 million years ago</div>
-    <p class="fact">The first Velociraptor fossil was found here, at the Flaming Cliffs, in 1923. Quill knobs on its forearm bones show it carried wing feathers. Today it's hunting: a Protoceratops is somewhere ahead in the dunes.</p>
+    <div class="eyebrow">Field Journal · Level ${LEVEL_N}</div>
+    <div class="species">${esc(COPY.species)}</div>
+    <div class="latin">${esc(COPY.latin)}</div>
+    <p class="fact">${esc(COPY.fact)}</p>
     <ul id="objectives"></ul>
     <div class="plumage" id="plumagePick"></div>
     <div class="buttons"><button class="btn-amber" id="btnGo">Run</button><button class="btn-paper" id="btnBack">Back</button></div>
@@ -122,11 +133,11 @@ root.innerHTML = `
 
 <section class="screen modal" id="scrCaught" hidden>
   <div class="card">
-    <div class="eyebrow" id="caughtEyebrow">The sandstorm caught you</div>
+    <div class="eyebrow" id="caughtEyebrow">${esc(COPY.caughtEyebrow)}</div>
     <h2 id="caughtTitle">Buried in sand</h2>
     <p class="fact" id="caughtFact">Many Gobi fossils were preserved when dunes collapsed on them. Let's not become one.</p>
     <div class="buttons">
-      <button class="btn-amber" id="btnRevive">Shake it off</button>
+      <button class="btn-amber" id="btnRevive">${esc(COPY.reviveLabel)}</button>
       <button class="btn-paper" id="btnCheckpoint">Back to checkpoint</button>
       <button class="btn-paper" id="btnQuit2">Quit to title</button>
     </div>
@@ -137,7 +148,7 @@ root.innerHTML = `
   <div class="card">
     <div class="eyebrow">The hunt</div>
     <h2 id="lostTitle">It got away</h2>
-    <p class="fact" id="lostFact">The Protoceratops slipped into the storm. Run clean to close the gap; every stumble lets it pull ahead.</p>
+    <p class="fact" id="lostFact">${esc(COPY.lost.distance)}</p>
     <div class="buttons">
       <button class="btn-amber" id="btnLostRetry">Back to checkpoint</button>
       <button class="btn-paper" id="btnQuit3">Quit to title</button>
@@ -147,8 +158,8 @@ root.innerHTML = `
 
 <section class="screen modal results" id="scrResults" hidden>
   <div class="card">
-    <div class="eyebrow">Flaming Cliffs · Complete</div>
-    <h2>Hunt complete!</h2>
+    <div class="eyebrow">${esc(LEVEL.name)} · Complete</div>
+    <h2>${esc(COPY.results.title)}</h2>
     <div class="big-score" id="rScore">0</div>
     <div class="stats"><div class="tag" style="font-size:18px">${amberIconSVG.replace('class="rr-amber-icon"', 'class="rr-amber-icon" style="width:15px;height:20px"')} <span id="rAmber">0</span></div><div class="eggrow" id="rEggs"></div><span class="newbest" id="rBest" hidden>New best</span></div>
     <ul id="rStars"></ul>
@@ -164,7 +175,6 @@ if (parseFloat(getComputedStyle(document.documentElement).paddingTop) > 0) docum
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
 // ---------------- Save & audio ----------------
-const save = loadSave();
 const audio = new AudioEngine();
 audio.setMuted(!save.sound);
 audio.setMusic(save.music);
@@ -182,34 +192,46 @@ const haptic = (ms: number) => { try { navigator.vibrate?.(ms); } catch { /* uns
 
 // ---------------- Scene ----------------
 const container = $('stage');
-const stage = new Stage(container, { preserveDrawingBuffer: SHOT });
-const streamer = new ChunkStreamer(stage.world, true, { gullies: LEVEL.hazards.filter((h) => h.type === 'gully').map((h) => h.d), sections: LEVEL.sections });
+const stage = new Stage(container, { preserveDrawingBuffer: SHOT, biome: BIOME });
+const streamer = new ChunkStreamer(stage.world, true, { gullies: LEVEL.hazards.filter((h) => h.type === 'gully').map((h) => h.d), sections: LEVEL.sections, biome: BIOME });
+if (LEVEL.slope) {
+  worldUniforms.uSlope.value = LEVEL.slope.grade;
+  worldUniforms.uSlopeFrom.value = LEVEL.slope.from;
+  worldUniforms.uSlopeTo.value = LEVEL.slope.to;
+}
+worldUniforms.uRimColor.value.set(FORESTED ? FOREST.sunGlow : GOBI.sunGlow);
 const items = new CollectibleField(400, FOG);
 const powerups = new PowerupView();
-const dust = new Particles(440, THREE.NormalBlending, FOG); // footfalls, lane kicks, landings, dune streamers and storm sand
+const dust = new Particles(440, THREE.NormalBlending, FOG, FORESTED ? DIRT : SAND); // footfalls, lane kicks, landings, dune streamers and storm sand
 const sparks = new Particles(200, THREE.AdditiveBlending, FOG);
-const PLUMAGE_COLORS: Record<string, RaptorPlumage> = { 'gobi-streak': RAPTOR_GOBI_STREAK, dusk: RAPTOR_DUSK };
+const PLUMAGE_COLORS: Record<string, RaptorPlumage> = { 'gobi-streak': RAPTOR_GOBI_STREAK, dusk: RAPTOR_DUSK, 'forest-fan': CAUD_FOREST, sunrise: CAUD_SUNRISE };
+const DEFAULT_PLUMAGE = PLUMAGES[LEVEL.id]?.[0]?.id ?? 'gobi-streak';
 const chosenPlumage = () => {
-  const id = save.plumage?.[LEVEL.id] ?? 'gobi-streak';
+  const id = save.plumage?.[LEVEL.id] ?? DEFAULT_PLUMAGE;
   const idx = (PLUMAGES[LEVEL.id] ?? []).findIndex((p) => p.id === id);
-  return idx > 0 && plumageUnlocked(save, LEVEL.id, idx) ? id : 'gobi-streak';
+  return idx > 0 && plumageUnlocked(save, LEVEL.id, idx) ? id : DEFAULT_PLUMAGE;
 };
-let raptor = new RaptorView(PLUMAGE_COLORS[chosenPlumage()]);
+const heroView = (plumage: string) => new RaptorView(PLUMAGE_COLORS[plumage] ?? PLUMAGE_COLORS[DEFAULT_PLUMAGE], { species: LEVEL.hero });
+let raptor = heroView(chosenPlumage());
 /** Rebuild the raptor in another plumage (menus only). */
 function applyPlumage(id: string) {
   save.plumage = { ...(save.plumage ?? {}), [LEVEL.id]: id };
   writeSave(save);
   stage.world.remove(raptor.root);
-  raptor = new RaptorView(PLUMAGE_COLORS[id] ?? RAPTOR_GOBI_STREAK);
+  raptor = heroView(id);
   stage.world.add(raptor.root);
 }
-const prey = new Protoceratops();
+const prey: Protoceratops | EggView = EGG_PREY ? new EggView() : new Protoceratops();
 stage.world.add(items.group, powerups.group, dust.field.points, sparks.field.points, raptor.root, prey.root);
+// The egg's nest at the top of the hill, just ahead of where the hero starts.
+const NEST_D = 1.6;
+if (EGG_PREY) { const nest = buildNest(); nest.position.set(0, -0.03, -NEST_D); stage.world.add(nest); }
 // Tracks in the sand: the raptor's own, and the prey's ahead of it (you're following its trail).
 const prints = new Footprints(40);
 const preyPrints = new Footprints(48, 2.4, 'quadruped');
 stage.world.add(prints.mesh, preyPrints.mesh);
-const SAND_TRACK = col(GOBI.track);
+const SAND_TRACK = col(FORESTED ? FOREST.track : GOBI.track);
+const LEAF_GOLD = col(FOREST.ginkgoLight), LEAF_BROWN = col(FOREST.litter);
 let printSide = 1, preyPrintAcc = 0, preyPrintSide = 1;
 // A distant herd walks the dunes through the level's 'herd' stretch.
 const herdAt = LEVEL.sections.findIndex((s) => s.kind === 'herd');
@@ -230,7 +252,8 @@ const resize = () => {
 addEventListener('resize', resize);
 resize();
 
-const fogColor = col(GOBI.horizon);
+const fogColor = col(FORESTED ? FOREST.fog : GOBI.horizon);
+look.setSky(BIOME);
 const stormFog = mix(GOBI.horizon, GOBI.sandMid, 0.55);
 
 // ---------------- Session ----------------
@@ -301,7 +324,7 @@ function setApp(s: AppState) {
 
 function renderObjectives() {
   const st = save.stars[LEVEL.id] ?? [false, false, false];
-  const labels = ['Catch the Protoceratops', 'Find all 3 amber inclusions', `Score ${LEVEL.parScore.toLocaleString('en-US')}`];
+  const labels = [COPY.catchGoal, 'Find all 3 amber inclusions', `Score ${LEVEL.parScore.toLocaleString('en-US')}`];
   $('objectives').innerHTML = labels.map((l, i) => `<li>${star(st[i])} ${l}</li>`).join('');
   const best = save.best[LEVEL.id];
   $('best').hidden = !best;
@@ -409,6 +432,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && app
 
 function startRun() {
   if (session.state !== 'ready') newSession();
+  save.lastLevel = LEVEL.id;
   inclusionIntro = 'pending';
   while (!pregenerate(1000)) { /* finish any terrain not built yet */ }
   hitches.length = 0;
@@ -422,10 +446,14 @@ function beginChase() {
   session.start();
   setApp('playing');
   camBlend = 1;
-  floatText('Hunt!', 'big', 30);
+  floatText(COPY.go, 'big', 30);
 }
 let introT = 0;
-const INTRO = CONFIG.intro;
+/** The opening shot's timing and framing. The egg: the hero walks up to its nest (walk), the egg twitches (graze),
+ * rocks hard (alert), then tips out and rolls off downhill as the camera swings behind (swing). */
+const INTRO = EGG_PREY
+  ? { ...CONFIG.intro, walk: 1.4, graze: 2.0, alert: 1.1, swing: 1.5, preyLead: LEVEL.prey.startGap - NEST_D, camAz: 0.95, camDist: 3.4, camHeight: 1.15, crane: 1.4 }
+  : { ...CONFIG.intro, walk: 0 };
 const introEnd = INTRO.graze + INTRO.alert + INTRO.swing;
 /** The prey's distance along the course during the intro: grazing short of its start gap, then bolting up to it. */
 function introPreyD() {
@@ -458,7 +486,8 @@ const HINTS: Record<HintKind, [string, string, string, string]> = {
   pterosaur: ['↓', 'Pterosaur! When it swoops in low, swipe down to duck', '0', '6px'],
 };
 function showHint(h: HintKind) {
-  const [g, t, nx, ny] = HINTS[h];
+  const [g, t0, nx, ny] = HINTS[h];
+  const t = COPY.hints?.[h] ?? t0;
   $('hintGlyph').textContent = g;
   $('hintGlyph').style.setProperty('--nx', nx);
   $('hintGlyph').style.setProperty('--ny', ny);
@@ -551,14 +580,14 @@ function handle(e: GameEvent) {
       haptic(30);
       shake = Math.max(shake, 0.45);
       flash();
-      floatText('Stumbled! The storm is closing in', 'banner', 30);
+      floatText(COPY.stumble, 'banner', 30);
       break;
     case 'crash': {
       audio.play('stumble');
       haptic(60);
       shake = Math.max(shake, 0.6);
       flash();
-      const copy = crashCopy(e.cause);
+      const copy = COPY.crash?.[e.cause] ?? crashCopy(e.cause);
       $('caughtEyebrow').textContent = copy[0];
       $('caughtTitle').textContent = copy[1];
       $('caughtFact').textContent = copy[2];
@@ -591,9 +620,7 @@ function handle(e: GameEvent) {
       $('pounce').hidden = true;
       timeScale = 1;
       $('lostTitle').textContent = 'It got away';
-      $('lostFact').textContent = e.reason === 'missed'
-        ? 'You were close! When "Swipe up to pounce" appears, swipe up right away.'
-        : 'The Protoceratops slipped out of sight. Run clean to close the gap; every stumble lets it pull ahead.';
+      $('lostFact').textContent = e.reason === 'missed' ? COPY.lost.missed : COPY.lost.distance;
       setbackT = 0;
       break;
     case 'finish':
@@ -602,8 +629,9 @@ function handle(e: GameEvent) {
       dust.emit(session.preyX, 0.1, -session.preyD, 34, { spread: 2.4, up: 0.8, back: 0, size: 0.55, grow: 2.6, life: 1.4, alpha: 0.45, drag: 1.4, gravity: 1.2, rand });
       timeScale = 1;
       // Freeze-frame as a Field Journal plate, then the results.
-      setTimeout(() => { $('plate').hidden = false; container.classList.add('freeze'); frozen = true; }, 1100);
-      setTimeout(() => { $('plate').hidden = true; container.classList.remove('freeze'); frozen = false; showResults(); }, 4600);
+      const plateAt = EGG_PREY ? 2100 : 1100; // the egg hatches first
+      setTimeout(() => { $('plate').hidden = false; container.classList.add('freeze'); frozen = true; }, plateAt);
+      setTimeout(() => { $('plate').hidden = true; container.classList.remove('freeze'); frozen = false; showResults(); }, plateAt + 3500);
       break;
   }
 }
@@ -633,7 +661,7 @@ function showResults() {
   $('rAmber').textContent = String(session.amber);
   $('rEggs').innerHTML = session.eggs.map((e) => eggIconSVG(e)).join('');
   $('rBest').hidden = !isBest;
-  const labels = ['Caught the Protoceratops', `Amber inclusions: ${session.eggs.filter(Boolean).length} of 3`, `Score ${LEVEL.parScore.toLocaleString('en-US')}`];
+  const labels = [COPY.caught, `Amber inclusions: ${session.eggs.filter(Boolean).length} of 3`, `Score ${LEVEL.parScore.toLocaleString('en-US')}`];
   $('rStars').innerHTML = labels.map((l, i) => `<li>${star(st[i], st[i], 300 + i * 220)} ${l}</li>`).join('');
   $('rPerf').textContent = hitches.length ? `Smoothness: ${hitches.length} hitch${hitches.length > 1 ? 'es' : ''}, worst ${Math.max(...hitches)} ms` : 'Smoothness: no hitches';
   setApp('results');
@@ -707,6 +735,8 @@ function syncCreatures(dt: number) {
 
 // ---------------- Per-frame sync ----------------
 const tmpV = new THREE.Vector3();
+/** The egg's finale, framed from ahead and to the side of the egg: the hero curled around it as it hatches. */
+const EGG_ENDING_CAM = { side: 2.75, height: 1.15, ahead: 0.85, lookHeight: 0.52, lookBack: 0.42 }; // framed for the hero at 1.2x
 const menuCam = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
 
 function syncWorld(dt: number) {
@@ -718,7 +748,7 @@ function syncWorld(dt: number) {
   for (const h of session.hazards) {
     live.add(h.id);
     if (!hazardMeshes.has(h.id)) {
-      const m = createHazard(h.type, h.id, h.len);
+      const m = createHazard(h.type, h.id, h.len, BIOME);
       m.position.set(h.x, 0, -h.d);
       stage.world.add(m);
       hazardMeshes.set(h.id, m);
@@ -755,11 +785,11 @@ function syncWorld(dt: number) {
     }
     if (r.sliding) dust.emit(r.x, 0.04, z - 0.2, 1, { spread: 1.2, up: 0.35, back: 1, size: 0.24, grow: 1.6, life: 0.4, alpha: 0.32, color: SAND, rand });
   }
-  if (r.glideLeft > 0 && fxRng.chance(0.5)) sparks.emit(r.x + (fxRng.next() - 0.5) * 1.6, r.y + 0.6, z + 0.5, 1, { spread: 0.3, up: 0.3, back: 6, size: 0.08, grow: 0, life: 0.5, alpha: 0.5, color: col(RAPTOR_GOBI_STREAK.accent), rand });
+  if (!FORESTED && r.glideLeft > 0 && fxRng.chance(0.5)) sparks.emit(r.x + (fxRng.next() - 0.5) * 1.6, r.y + 0.6, z + 0.5, 1, { spread: 0.3, up: 0.3, back: 6, size: 0.08, grow: 0, life: 0.5, alpha: 0.5, color: col(RAPTOR_GOBI_STREAK.accent), rand });
   dust.update(dt);
   sparks.update(dt);
   // The prey leaves tracks while it runs (not while hopping a ledge).
-  if ((app === 'playing' || app === 'intro') && session.state !== 'pouncing') {
+  if (!EGG_PREY && (app === 'playing' || app === 'intro') && session.state !== 'pouncing') {
     preyPrintAcc += (app === 'intro' ? introPreySpeed() : r.speed) * dt;
     if (preyPrintAcc > 0.9) {
       preyPrintAcc = 0;
@@ -771,7 +801,12 @@ function syncWorld(dt: number) {
   prints.update(dt, SAND_TRACK, stage.camera.position.z);
   preyPrints.update(dt, SAND_TRACK, stage.camera.position.z);
   // Wind: sand streaming off the dune crests ahead, and sheets of it blowing past as the storm builds.
-  if (app === 'playing' || app === 'intro') {
+  if (FORESTED && (app === 'playing' || app === 'intro' || app === 'title' || app === 'prerun') && fxRng.chance(0.3)) {
+    // Leaves drifting down through the light ahead (ginkgo gold and dry brown).
+    const x = fxRng.range(-6, 6), zz = z - fxRng.range(4, 30);
+    dust.emit(x, fxRng.range(2.5, 6), zz, 1, { spread: 0.2, up: -0.3, side: fxRng.range(-0.6, 0.6), back: 0, size: 0.09, grow: 0, life: 3.2, alpha: 0.85, gravity: 0.25, drag: 0.4, color: fxRng.chance(0.5) ? LEAF_GOLD : LEAF_BROWN, rand });
+  }
+  if (!FORESTED && (app === 'playing' || app === 'intro')) {
     const storm = clamp(session.storm * 0.85 + clamp((r.distance - LEVEL.stormRises) / (LEVEL.length - LEVEL.stormRises), 0, 1) * 0.6, 0, 1);
     if (fxRng.chance(0.35 + storm * 0.5)) {
       const sx = fxRng.chance(0.5) ? 1 : -1, x = sx * fxRng.range(5, 17), zz = z - fxRng.range(12, 55);
@@ -789,7 +824,12 @@ function syncWorld(dt: number) {
   const idle = !pinned && (down || app === 'title' || app === 'prerun' || app === 'intro' || app === 'results' || app === 'caught' || app === 'lost') ? 1 : 0;
   pinW = damp(pinW, pinned, 14, dt);
   idleW = damp(idleW, idle, 12, dt); // a quick ease, so a crash stops the legs without a pose snap
-  raptor.sync(r, dt, idleW, pinW);
+  if (EGG_PREY && (app === 'intro' || app === 'title' || app === 'prerun')) {
+    // The opening shot: it walks up to its nest, then stands looking down at the egg.
+    const w = app === 'intro' ? clamp(introT / INTRO.walk, 0, 1) : 1;
+    raptor.sync(r, dt, w < 1 ? 0 : idleW, pinW, w < 1 ? 1.9 : undefined);
+    raptor.root.position.z += (1 - Math.sin((w * Math.PI) / 2)) * 2.6;
+  } else raptor.sync(r, dt, idleW, pinW);
   furthestD = Math.max(furthestD, r.distance);
 
   // Prey: runs ahead in its lane, hops ledges; hidden on the menus.
@@ -804,10 +844,12 @@ function syncWorld(dt: number) {
   const pvx = (session.preyX - preyPrevX) / Math.max(dt, 1e-4);
   preyPrevX = session.preyX;
   const preyRunning = app === 'playing' || app === 'paused' || app === 'caught';
-  prey.root.visible = app !== 'title' && app !== 'prerun';
-  prey.root.position.set(session.preyX, 0, -pz);
+  prey.root.visible = EGG_PREY || (app !== 'title' && app !== 'prerun');
+  const inNest = EGG_PREY && (app === 'title' || app === 'prerun');
+  prey.root.position.set(inNest ? 0 : session.preyX, 0, inNest ? -NEST_D : -pz);
   let preySpeed = preyRunning ? r.speed : 0;
   if (session.pinned) prey.pose = 'pinned';
+  else if (inNest) prey.pose = 'graze';
   else if (app === 'intro') {
     const ti = introT - INTRO.graze;
     prey.pose = ti < 0 ? 'graze' : ti < INTRO.alert ? 'alert' : 'run';
@@ -821,8 +863,8 @@ function syncWorld(dt: number) {
   // Storm: stumble pressure plus the story beat building toward the end.
   const ambient = clamp((r.distance - LEVEL.stormRises) / (LEVEL.length - LEVEL.stormRises), 0, 1) * 0.32;
   const stormLevel = clamp(session.storm * 0.85 + ambient, 0, 1);
-  $('storm').style.opacity = (app === 'title' || app === 'prerun' ? 0 : stormLevel).toFixed(3);
-  look.storm = app === 'title' || app === 'prerun' ? 0 : clamp(stormLevel * 1.2, 0, 1);
+  $('storm').style.opacity = (app === 'title' || app === 'prerun' || FORESTED ? 0 : stormLevel).toFixed(3);
+  look.storm = app === 'title' || app === 'prerun' || FORESTED ? 0 : clamp(stormLevel * 1.2, 0, 1);
   const fog = stage.scene.fog as THREE.Fog;
   fog.color.copy(fogColor).lerp(stormFog, ambient * 1.6);
   fog.far = lerp(FOG.far, 120, ambient * 2.2);
@@ -851,7 +893,7 @@ function updateCamera(dt: number) {
   if (ending) {
     // The pounce: a low three-quarter shot from ahead and to the side, framing both animals' faces.
     const pz = -session.preyD;
-    const E = CONFIG.endingCam;
+    const E = EGG_PREY ? EGG_ENDING_CAM : CONFIG.endingCam;
     menuCam.pos.set(session.preyX + E.side, E.height, pz - E.ahead);
     menuCam.look.set(session.preyX, E.lookHeight, pz + E.lookBack);
   } else {
@@ -860,6 +902,7 @@ function updateCamera(dt: number) {
     menuCam.pos.set(r.x + Math.sin(a) * 3.5, 0.8 + r.y, z - 0.35 - Math.cos(a) * 3.5);
     menuCam.look.set(r.x - 0.1, 0.62 + r.y, z - 0.35);
   }
+  stage.slope = hillGrade(r.distance + 5); // aim down the hill (0 on the flats)
   stage.chase(r.x, r.y, z, dt);
   if (camBlend < 0.999) {
     const k = camBlend * camBlend * (3 - 2 * camBlend);
@@ -909,7 +952,8 @@ function introCamera(dt: number) {
   const dist = lerp(I.camDist, I.camDist * 0.85, push);
   const headZ = -(LEVEL.prey.startGap - I.preyLead) - 0.4;
   introPos.set(px + Math.sin(I.camAz) * dist, I.camHeight, headZ - Math.cos(I.camAz) * dist);
-  introLook.set(px, 0.55, pz - 0.25);
+  if (EGG_PREY) introLook.set(0, 0.42, Math.max(pz, -NEST_D - 4) + 0.75); // the egg and its parent, then the egg as it goes
+  else introLook.set(px, 0.55, pz - 0.25);
   stage.chase(r.x, r.y, z, dt, true);
   const k = smoothstep(0, 1, (introT - I.graze - I.alert) / I.swing);
   chaseLookV.set(stage.camera.position.x * 0.85, CONFIG.camera.lookHeight + r.y * 0.5, z - CONFIG.camera.lookAhead);
@@ -947,11 +991,11 @@ function step(dt: number) {
     for (const e of session.drainEvents()) handle(e);
     // No distance meter (owner: judge it by eye); one warning each time the prey pulls far ahead.
     if (app === 'playing' && session.state === 'running') {
-      if (!warnedFar && session.gap >= CONFIG.hunt.warnGap) {
+      if (!warnedFar && session.gap >= session.hunt.warnGap) {
         warnedFar = true;
         floatText('It\'s getting away!', 'banner', 30);
         haptic(25);
-      } else if (warnedFar && session.gap < CONFIG.hunt.warnGap - 6) warnedFar = false;
+      } else if (warnedFar && session.gap < session.hunt.warnGap - 6) warnedFar = false;
     }
     // Setbacks: after a short beat, a crash shows the crash screen and a lost prey shows "It got away".
     if (app === 'playing' && (session.state === 'caught' || session.state === 'lost')) {
@@ -1021,8 +1065,9 @@ function pregenerate(budgetMs: number) {
 // Compile every material once up front so the first boulder, arch, egg or power-up doesn't hitch.
 function warmShaders() {
   const g = new THREE.Group();
-  for (const t of ['boulder', 'ledge', 'gully', 'arch', 'ribArch'] as const) g.add(createHazard(t));
-  for (const h of LEVEL.hazards) if (h.type === 'spine') g.add(createHazard('spine', 0, h.len)); // also builds each fin once, up front
+  for (const t of ['boulder', 'ledge', 'gully', 'arch', 'ribArch'] as const) g.add(createHazard(t, 0, 0, BIOME));
+  for (let v = 1; v < 3; v++) g.add(createHazard('boulder', v, 0, BIOME)); // every blocker variant
+  for (const h of LEVEL.hazards) if (h.type === 'spine') g.add(createHazard('spine', 0, h.len, BIOME)); // also builds each fin once, up front
   g.position.set(0, -50, 0);
   stage.world.add(g);
   if (herd) herd.group.visible = true; // compile the instanced herd too (it's hidden until its stretch)

@@ -6,6 +6,7 @@ import { Noise2D } from '../../core/noise';
 import { Rng, hash2 } from '../../core/rng';
 import { smoothstep } from '../../core/math';
 import { CONFIG } from '../../game/config';
+import { buildForestChunk } from './forest';
 import { addBush, addCanyonWall, addHoodoo, addMesa, addNest, addRibcage, addRock, addScanBush, addScanCliff, addScanRock, addScanTree, addSkull, addVertebrae } from './props';
 
 const noise = new Noise2D(1923);
@@ -38,6 +39,8 @@ export interface TerrainLayout {
   gullies: number[];
   /** Landmark stretches, each running from `from` (world meters) to the next one. */
   sections?: { from: number; kind: SectionKind }[];
+  /** Which world to build (default the Gobi). In the forest, `gullies` are streams. */
+  biome?: 'gobi' | 'forest';
 }
 export function sectionAt(layout: TerrainLayout | undefined, d: number): SectionKind {
   let k: SectionKind = 'dunes';
@@ -287,12 +290,15 @@ export class ChunkStreamer {
   private attached = new Set<number>();
   private nextToBuild = 0;
   constructor(private parent: THREE.Object3D, private retain = true, private layout?: TerrainLayout) {}
+  private build(i: number) {
+    return this.layout?.biome === 'forest' ? buildForestChunk(i, this.layout) : buildChunk(i, { layout: this.layout });
+  }
 
   /** Build at most one missing chunk up to `maxIndex`. Returns true when all are built. */
   pregenerateStep(maxIndex: number) {
     while (this.nextToBuild <= maxIndex && this.cache.has(this.nextToBuild)) this.nextToBuild++;
     if (this.nextToBuild > maxIndex) return true;
-    this.cache.set(this.nextToBuild, buildChunk(this.nextToBuild, { layout: this.layout }));
+    this.cache.set(this.nextToBuild, this.build(this.nextToBuild));
     this.nextToBuild++;
     return this.nextToBuild > maxIndex;
   }
@@ -311,12 +317,12 @@ export class ChunkStreamer {
       }
     }
     let builtThisFrame = false;
-    for (let i = Math.max(0, lo); i <= hi; i++) {
+    for (let i = Math.max(-1, lo); i <= hi; i++) { // chunk -1: the ground behind the start (openings look back)
       if (this.attached.has(i)) continue;
       let ch = this.cache.get(i);
       if (!ch) {
         if (builtThisFrame) continue; // fallback path: at most one build per frame
-        ch = buildChunk(i, { layout: this.layout });
+        ch = this.build(i);
         this.cache.set(i, ch);
         builtThisFrame = true;
       }

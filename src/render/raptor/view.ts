@@ -1,26 +1,39 @@
 import * as THREE from 'three';
 import { buildRaptor } from './model';
+import { buildCaudipteryx, caudRest } from '../caudipteryx/model';
 import { velociraptorBody } from './assets';
 import { RaptorAnimator, defaultAnimInput, type RaptorAnimInput } from './anim';
 import type { RaptorPlumage } from '../palette';
 import type { Runner } from '../../game/runner';
 
 /** Visual raptor that mirrors a Runner's state. */
+/** Caudipteryx is drawn 20% larger than its model (hips ~0.72 m): still smaller than the Velociraptor. */
+export const CAUD_SCALE = 1.2;
+
 export class RaptorView {
   readonly root = new THREE.Group();
   readonly anim: RaptorAnimator;
   readonly input: RaptorAnimInput = defaultAnimInput();
-  /** Code-built body by default (it won the blind A/B review); `blenderBody` opts into the Blender mesh. */
-  constructor(plumage: RaptorPlumage, opts: { blenderBody?: boolean } = {}) {
+  /** Code-built body by default (it won the blind A/B review); `blenderBody` opts into the Blender mesh.
+   * `species` picks the hero: the Velociraptor, or Caudipteryx (same skeleton and animations, its own body). */
+  constructor(plumage: RaptorPlumage, opts: { blenderBody?: boolean; species?: 'velociraptor' | 'caudipteryx' } = {}) {
+    if (opts.species === 'caudipteryx') {
+      const { mesh, bones } = buildCaudipteryx(plumage);
+      mesh.scale.setScalar(CAUD_SCALE); // a little larger than life, so it reads from the chase camera
+      this.root.add(mesh);
+      this.anim = new RaptorAnimator(bones, { rest: caudRest, finale: 'brood', strideScale: 0.85 });
+      return;
+    }
     const { mesh, bones } = buildRaptor(plumage, opts.blenderBody ? { body: velociraptorBody() } : {});
     this.root.add(mesh);
     this.anim = new RaptorAnimator(bones);
   }
-  sync(r: Runner, dt: number, idle = 0, pin = 0) {
+  /** `speed` overrides the runner's speed for the legs (a walk in the opening shot). */
+  sync(r: Runner, dt: number, idle = 0, pin = 0, speed?: number) {
     this.root.position.set(r.x, r.y, -r.distance);
     this.root.rotation.y = -r.lean * 0.12;
     const i = this.input;
-    i.speed = r.speed * (1 - idle);
+    i.speed = (speed ?? r.speed) * (1 - idle);
     i.air = r.airWeight;
     i.vy = r.vy;
     i.slide = r.slideWeight;

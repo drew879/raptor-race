@@ -1,17 +1,19 @@
 import * as THREE from 'three';
 import { GeomBuilder } from './geom';
-import { GOBI, col, mix, shade } from './palette';
+import { FOREST, GOBI, col, mix, shade } from './palette';
 import { MATS, worldUniforms } from './materials';
 import { Rng } from '../core/rng';
 
+export type SkyColors = { skyZenith: number; skyMid: number; horizon: number; sunGlow: number };
+
 /** Painterly gradient sky dome with sun glow. Follows the camera. */
-export function createSky(sunDir: THREE.Vector3) {
+export function createSky(sunDir: THREE.Vector3, pal: SkyColors = GOBI) {
   const mat = new THREE.ShaderMaterial({
     uniforms: {
-      zenith: { value: col(GOBI.skyZenith) },
-      mid: { value: col(GOBI.skyMid) },
-      horizon: { value: col(GOBI.horizon) },
-      sunColor: { value: col(GOBI.sunGlow) },
+      zenith: { value: col(pal.skyZenith) },
+      mid: { value: col(pal.skyMid) },
+      horizon: { value: col(pal.horizon) },
+      sunColor: { value: col(pal.sunGlow) },
       sunDir: { value: sunDir.clone().normalize() },
     },
     vertexShader: /* glsl */ `
@@ -134,6 +136,92 @@ export function createBackdrop() {
   const mat = MATS.backdrop;
   mat.side = THREE.DoubleSide;
   mat.depthWrite = true; // real depth, so post effects can tell distant buttes from sky
+  const mesh = new THREE.Mesh(g.build(), mat);
+  mesh.renderOrder = -5;
+  mesh.frustumCulled = false;
+  mesh.name = 'backdrop';
+  return mesh;
+}
+
+/**
+ * Jehol Forest backdrop: from the hilltop you look out over a misty valley far below (the trail runs down into
+ * it): layered blue-green ridges, a lake catching the light, and a distant volcano with a soft plume (eruptions
+ * like it buried and preserved the Jehol fossils). Soft clouds. Follows the camera (no parallax).
+ */
+export function createForestBackdrop() {
+  const g = new GeomBuilder(false);
+  const rng = new Rng(125);
+  const F = FOREST;
+  const ridge = (dist: number, hMin: number, hMax: number, tint: THREE.Color, freq: number, phase: number, sink: number) => {
+    const M = 96;
+    for (let k = 0; k < M; k++) {
+      const a0 = -Math.PI + (2 * Math.PI * k) / M, a1 = -Math.PI + (2 * Math.PI * (k + 1)) / M;
+      const hAt = (a: number) => hMin + (hMax - hMin) * (0.5 + 0.5 * Math.sin(a * freq + phase)) * (0.75 + 0.25 * Math.sin(a * freq * 2.7 + phase * 1.9)) + 2.5 * Math.sin(a * freq * 6.1);
+      const p0 = new THREE.Vector3(Math.sin(a0) * dist, 0, -Math.cos(a0) * dist), p1 = new THREE.Vector3(Math.sin(a1) * dist, 0, -Math.cos(a1) * dist);
+      // Forested ridges: a slightly darker crest line over a lighter, hazier body.
+      const h0 = hAt(a0), h1 = hAt(a1);
+      g.quad(p1.clone().setY(sink), p0.clone().setY(sink), p0.clone().setY(h0 * 0.82), p1.clone().setY(h1 * 0.82), shade(tint, 1.04 + 0.03 * Math.sin(k * 1.3)));
+      g.quad(p1.clone().setY(h1 * 0.82), p0.clone().setY(h0 * 0.82), p0.clone().setY(h0), p1.clone().setY(h1), shade(tint, 0.93));
+    }
+  };
+  // The valley floor far below, misty, with a lake: a broad disc under the horizon line.
+  const floorY = -70;
+  const floorC = mix(F.ridgeNear, F.horizon, 0.55), lakeC = mix(F.water, F.horizon, 0.45);
+  const R0 = 160, R1 = 470;
+  for (let k = 0; k < 64; k++) {
+    const a0 = (k / 64) * Math.PI * 2, a1 = ((k + 1) / 64) * Math.PI * 2;
+    const q = (a: number, r: number) => new THREE.Vector3(Math.sin(a) * r, floorY, -Math.cos(a) * r);
+    const lake = Math.abs(Math.atan2(Math.sin((a0 + a1) / 2 - 0.35), Math.cos((a0 + a1) / 2 - 0.35))) < 0.32;
+    g.quad(q(a0, R0), q(a1, R0), q(a1, R1), q(a0, R1), lake ? lakeC : shade(floorC, 0.97 + 0.05 * Math.sin(k * 2.1)));
+  }
+  ridge(450, 30, 75, mix(F.ridgeFar, F.horizon, 0.45), 2.3, 0.7, floorY);
+  ridge(380, 12, 42, mix(F.ridgeNear, F.horizon, 0.5), 3.4, 2.1, floorY);
+  ridge(300, -20, 12, mix(F.ridgeNear, F.conifer, 0.25).lerp(col(F.horizon), 0.35), 4.6, 4.0, floorY);
+  // The volcano: a broad cone on the far horizon, a little left of ahead, with a soft plume drifting off.
+  const va = -0.42, vd = 440;
+  const vc = new THREE.Vector3(Math.sin(va) * vd, 0, -Math.cos(va) * vd);
+  const right = new THREE.Vector3(Math.cos(va), 0, Math.sin(va));
+  const vcol = mix(F.volcano, F.horizon, 0.45), vtop = shade(vcol, 0.9);
+  const prof = [[-70, -10], [-45, 30], [-22, 78], [-9, 96], [9, 96], [22, 78], [45, 30], [70, -10]];
+  for (let k = 0; k < prof.length - 1; k++) {
+    const [x0, y0] = prof[k], [x1, y1] = prof[k + 1];
+    const p0 = vc.clone().addScaledVector(right, x0), p1 = vc.clone().addScaledVector(right, x1);
+    g.quad(p1.clone().setY(floorY), p0.clone().setY(floorY), p0.clone().setY(y0), p1.clone().setY(y1), k === 3 ? vtop : shade(vcol, 0.96 + 0.04 * k / prof.length));
+  }
+  const plume = mix(F.plume, F.horizon, 0.25);
+  for (let i = 0; i < 7; i++) {
+    const c = vc.clone().add(new THREE.Vector3(0, 108 + i * 15, 0)).addScaledVector(right, i * i * 1.6 + i * 4);
+    const r = 10 + i * 4.5;
+    for (let k = 0; k < 10; k++) {
+      const t0 = (k / 10) * Math.PI * 2, t1 = ((k + 1) / 10) * Math.PI * 2;
+      g.tri(c, c.clone().addScaledVector(right, Math.cos(t1) * r).add(new THREE.Vector3(0, Math.sin(t1) * r * 0.6, 0)), c.clone().addScaledVector(right, Math.cos(t0) * r).add(new THREE.Vector3(0, Math.sin(t0) * r * 0.6, 0)), shade(plume, 0.92 + 0.1 * Math.sin(t0)));
+    }
+  }
+  // Soft morning clouds.
+  const top = mix(0xffffff, F.sunGlow, 0.3), low = mix(F.sunGlow, F.horizon, 0.6);
+  for (let i = 0; i < 12; i++) {
+    const a = i < 6 ? rng.range(-1.2, 1.2) : rng.range(-3.1, 3.1);
+    const dist = rng.range(400, 470);
+    const cx = Math.sin(a) * dist, cz = -Math.cos(a) * dist, cy = i < 6 ? rng.range(90, 160) : rng.range(150, 260);
+    const rightC = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+    const puffs = rng.int(3, 6);
+    let off = -puffs * 6;
+    for (let p = 0; p < puffs; p++) {
+      const r = rng.range(6, 13) * (p === 0 || p === puffs - 1 ? 0.7 : 1);
+      off += r * 0.9;
+      const center = new THREE.Vector3(cx, cy, cz).addScaledVector(rightC, off);
+      for (let k = 0; k < 8; k++) {
+        const t0 = (k / 8) * Math.PI, t1 = ((k + 1) / 8) * Math.PI;
+        const q0 = center.clone().addScaledVector(rightC, Math.cos(t0) * r).add(new THREE.Vector3(0, Math.sin(t0) * r * 0.75, 0));
+        const q1 = center.clone().addScaledVector(rightC, Math.cos(t1) * r).add(new THREE.Vector3(0, Math.sin(t1) * r * 0.75, 0));
+        g.tri(center, q1, q0, low.clone().lerp(top, 0.35 + Math.sin((t0 + t1) / 2) * 0.65));
+      }
+      off += r * 0.9;
+    }
+  }
+  const mat = MATS.backdrop;
+  mat.side = THREE.DoubleSide;
+  mat.depthWrite = true;
   const mesh = new THREE.Mesh(g.build(), mat);
   mesh.renderOrder = -5;
   mesh.frustumCulled = false;

@@ -88,6 +88,9 @@ export function chapterUnlocked(save: SaveData, chIdx: number): boolean {
 export function levelUnlocked(save: SaveData, chIdx: number, lvIdx: number): boolean {
   if (!chapterUnlocked(save, chIdx)) return false;
   if (lvIdx === 0) return true;
+  // A level you've already played stays open (the roster gained a new Level 1 ahead of the Velociraptor hunt).
+  const id = CHAPTERS[chIdx].levels[lvIdx].id;
+  if (save.best[id] || save.stars[id]?.some(Boolean)) return true;
   return caught(save, CHAPTERS[chIdx].levels[lvIdx - 1].id);
 }
 
@@ -103,6 +106,7 @@ export function lockReason(save: SaveData, chIdx: number, lvIdx: number): string
 
 /** Plumages per level: the default, and one unlocked by finding all three inclusions. */
 export const PLUMAGES: Record<string, { id: string; name: string }[]> = {
+  'jehol-forest': [{ id: 'forest-fan', name: 'Forest Fan' }, { id: 'sunrise', name: 'Sunrise' }],
   'flaming-cliffs': [{ id: 'gobi-streak', name: 'Gobi Streak' }, { id: 'dusk', name: 'Dusk' }],
 };
 export const plumageUnlocked = (save: SaveData, levelId: string, idx: number) => idx === 0 || foundIn(save, levelId) >= INCLUSIONS_PER_LEVEL;

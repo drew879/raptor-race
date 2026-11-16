@@ -189,6 +189,7 @@ const HYBRID_FAST = /* glsl */ `
   uniform sampler2D tDiffuse, tDepth, tNoise;
   uniform vec2 res;
   uniform float cNear, cFar, dpr, uStorm;
+  uniform vec3 uSkyGlow, uSkyHaze, uSkyBand, uSkyMid, uSkyTop, uHazeCol;
   uniform mat4 uInvProj;
   uniform mat3 uCamRot;
   varying vec2 vUv;
@@ -220,7 +221,7 @@ const HYBRID_FAST = /* glsl */ `
     vec3 paper = vec3(0.965, 0.925, 0.845);
     float grain = nf.r * 0.55 + nz.g * 0.45;
     col = mix(paper, col, 0.84 + 0.12 * nz.b) * (0.93 + 0.09 * grain);
-    vec3 skyTop = mix(paper, vec3(0.55, 0.72, 0.84), 0.75), skyLow = mix(paper, vec3(0.98, 0.82, 0.62), 0.6);
+    vec3 skyLow = mix(paper, uHazeCol, 0.6);
     // Aerial perspective: the far desert melts into the low sky in soft layers, so distance reads at a glance.
     float zH = -perspectiveDepthToViewZ(d0, cNear, cFar);
     float haze = smoothstep(35.0, 230.0, zH);
@@ -230,8 +231,8 @@ const HYBRID_FAST = /* glsl */ `
     vec4 vp = uInvProj * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
     float el = normalize(uCamRot * normalize(vp.xyz / vp.w)).y + (nz.g - 0.5) * 0.012;
     // Palette bands (Art Bible): sun-glow strip #FFE3B3, horizon #F4CFA0, a warm apricot band, mid #A9C7DC, zenith #6E9BC4.
-    vec3 sGlow = mix(paper, vec3(1.0, 0.89, 0.7), 0.8), sHaze = mix(paper, vec3(0.957, 0.812, 0.627), 0.8);
-    vec3 sApri = mix(paper, vec3(0.96, 0.74, 0.6), 0.7), sMid = mix(paper, vec3(0.663, 0.78, 0.863), 0.8), sTop = mix(paper, vec3(0.431, 0.608, 0.769), 0.85);
+    vec3 sGlow = mix(paper, uSkyGlow, 0.8), sHaze = mix(paper, uSkyHaze, 0.8);
+    vec3 sApri = mix(paper, uSkyBand, 0.7), sMid = mix(paper, uSkyMid, 0.8), sTop = mix(paper, uSkyTop, 0.85);
     vec3 skyc = mix(sGlow, sHaze, smoothstep(0.015, 0.03, el));
     skyc = mix(skyc, sApri, smoothstep(0.06, 0.075, el));
     skyc = mix(skyc, sMid, smoothstep(0.12, 0.135, el));
@@ -256,6 +257,17 @@ const HYBRID_FAST = /* glsl */ `
     gl_FragColor = vec4(col, 1.0);
   }`;
 
+/** Sky wash bands by view elevation (glow at the horizon, haze, a warm band, mid, top) and the aerial haze, per
+ * biome (Art Bible palettes). The Gobi: golden hour. The forest: a misty blue-green morning. */
+export const SKY_BANDS = {
+  gobi: { glow: [1.0, 0.89, 0.7], haze: [0.957, 0.812, 0.627], band: [0.96, 0.74, 0.6], mid: [0.663, 0.78, 0.863], top: [0.431, 0.608, 0.769], hazeCol: [0.98, 0.82, 0.62] },
+  forest: { glow: [1.0, 0.93, 0.76], haze: [0.86, 0.9, 0.8], band: [0.93, 0.89, 0.72], mid: [0.72, 0.84, 0.85], top: [0.5, 0.67, 0.8], hazeCol: [0.8, 0.86, 0.76] },
+};
+const skyUniforms = (b: (typeof SKY_BANDS)['gobi']) => ({
+  uSkyGlow: { value: new THREE.Vector3(...b.glow) }, uSkyHaze: { value: new THREE.Vector3(...b.haze) }, uSkyBand: { value: new THREE.Vector3(...b.band) },
+  uSkyMid: { value: new THREE.Vector3(...b.mid) }, uSkyTop: { value: new THREE.Vector3(...b.top) }, uHazeCol: { value: new THREE.Vector3(...b.hazeCol) },
+});
+
 export class LookPipeline {
   /** 0..1: how much the sandstorm tints the sky (game look). */
   storm = 0;
@@ -276,10 +288,17 @@ export class LookPipeline {
         cNear: { value: camera.near }, cFar: { value: camera.far }, time: { value: 0 }, dpr: { value: renderer.getPixelRatio() },
         tNoise: { value: look === 'game' ? bakeNoiseTexture() : null },
         uInvProj: { value: new THREE.Matrix4() }, uCamRot: { value: new THREE.Matrix3() }, uStorm: { value: 0 },
+        ...skyUniforms(SKY_BANDS.gobi),
       };
       this.pass = new ShaderPass(new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: frag }));
       this.composer.addPass(this.pass);
     }
+  }
+  /** The sky's wash bands and the aerial haze color for a biome. */
+  setSky(biome: keyof typeof SKY_BANDS) {
+    if (!this.pass) return;
+    const u = skyUniforms(SKY_BANDS[biome]) as Record<string, { value: THREE.Vector3 }>;
+    for (const k of Object.keys(u)) (this.pass.uniforms[k].value as THREE.Vector3).copy(u[k].value);
   }
   setSize(w: number, h: number, dpr: number) {
     this.composer.setPixelRatio(dpr);

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { HaloField } from './world/collectibles';
-import { GOBI, col, mix } from './palette';
+import { FOREST, GOBI, col, mix } from './palette';
 
 interface P { x: number; y: number; z: number; vx: number; vy: number; vz: number; life: number; max: number; size: number; grow: number; alpha: number; c: THREE.Color; g: number; drag: number }
 
@@ -8,7 +8,8 @@ interface P { x: number; y: number; z: number; vx: number; vy: number; vz: numbe
 export class Particles {
   readonly field: HaloField;
   private ps: P[] = [];
-  constructor(capacity: number, blending: THREE.Blending, fog = { near: 30, far: 150 }) {
+  /** `color` is the default puff color (sand in the Gobi, dirt in the forest). */
+  constructor(capacity: number, blending: THREE.Blending, fog = { near: 30, far: 150 }, private color?: THREE.Color) {
     this.field = new HaloField(capacity, fog, blending);
   }
   /** `side` adds sideways velocity (wind, lane changes); `gravity` and `drag` default to a settling puff (3.5, 2.5). */
@@ -20,7 +21,7 @@ export class Particles {
         x: x + (r() - 0.5) * 0.3 * sp, y, z: z + (r() - 0.5) * 0.3 * sp,
         vx: (o.side ?? 0) + (r() - 0.5) * 2.2 * sp, vy: (o.up ?? 1) * (0.5 + r()), vz: (o.back ?? 0) + (r() - 0.5) * 1.5 * sp,
         life: 0, max: (o.life ?? 0.6) * (0.7 + r() * 0.6), size: (o.size ?? 0.35) * (0.7 + r() * 0.6), grow: o.grow ?? 1.2,
-        alpha: o.alpha ?? 0.5, c: o.color ?? SAND, g: o.gravity ?? 3.5, drag: o.drag ?? 2.5,
+        alpha: o.alpha ?? 0.5, c: o.color ?? this.color ?? SAND, g: o.gravity ?? 3.5, drag: o.drag ?? 2.5,
       });
     }
   }
@@ -45,3 +46,5 @@ export class Particles {
 /** Dust a shade darker and warmer than the track, so puffs read against it (art review: they were invisible). */
 export const SAND = mix(GOBI.sandShadow, GOBI.sandMid, 0.45);
 export const SPARK = col(GOBI.amberLight);
+/** Forest dust: a dry dirt shade, darker than the trail. */
+export const DIRT = mix(FOREST.trackDark, FOREST.litter, 0.4);

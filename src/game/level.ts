@@ -8,24 +8,41 @@ export type HintKind = 'lanes' | 'jump' | 'slide' | 'updraft' | 'magnet' | 'fork
 export interface HazardEvent { d: number; type: HazardType; lane: Lane; len?: number; /** wanderer: the lane it starts in (`lane` is where it ends up) */ from?: Lane }
 export interface PickupEvent { d: number; kind: PickupKind; lane: Lane; y: number }
 export interface HintEvent { d: number; hint: HintKind }
-/** The kinds of landmark stretch a level is built from (terrain and scenery change per stretch). */
-export type SectionKind = 'dunes' | 'canyon' | 'hoodoos' | 'nest' | 'basin' | 'bones' | 'herd' | 'flats';
+/** The kinds of landmark stretch a level is built from (terrain and scenery change per stretch). Gobi stretches
+ * first, then the forest's. */
+export type SectionKind = 'dunes' | 'canyon' | 'hoodoos' | 'nest' | 'basin' | 'bones' | 'herd' | 'flats'
+  | 'hilltop' | 'conifers' | 'ginkgo' | 'ferns' | 'streamside' | 'clearing';
 export interface SectionEvent { from: number; kind: SectionKind }
 /** A visual bend in the track (the simulation stays straight). `amount` is signed curvature, + bends right. */
 export interface CurveEvent { d: number; len: number; amount: number }
 
+/** Where a level is set: palette, terrain, scenery and obstacle looks. */
+export type BiomeId = 'gobi' | 'forest';
+/** The dinosaur you play. */
+export type HeroId = 'velociraptor' | 'caudipteryx';
+/** What you chase: an animal that runs and steers, or an egg that rolls (it hops what it can't roll under). */
+export type PreySpecies = 'protoceratops' | 'egg';
+export type HuntTuning = { -readonly [K in keyof typeof CONFIG.hunt]: number };
+
 export interface PreyDef {
-  species: 'protoceratops';
+  species: PreySpecies;
   /** Gap at the start, in meters ahead of the raptor. */
   startGap: number;
   /** Where the prey tires and the pounce window opens (meters before the end). */
   finale: number;
+  /** This level's hunt tuning, over the defaults in CONFIG.hunt. */
+  hunt?: Partial<HuntTuning>;
 }
 
 export interface LevelDef {
   id: string;
   name: string;
+  biome: BiomeId;
+  hero: HeroId;
   prey: PreyDef;
+  /** Visual downhill (the simulation stays level): the trail drops `grade` meters per meter from the crest at
+   * `from` to the bottom at `to` (course meters). Leave out for level ground. */
+  slope?: { grade: number; from: number; to: number };
   length: number;
   speed: { start: number; end: number };
   checkpoints: number[];

@@ -1,7 +1,7 @@
 import { Runner, type RunnerAction } from './runner';
 import { CONFIG, laneX } from './config';
 import { hazardBox, isWide, testHit } from './collision';
-import { speedAt, type HintKind, type LevelDef } from './level';
+import { speedAt, type HintKind, type HuntTuning, type LevelDef } from './level';
 import type { HazardType, Lane, PickupKind } from './types';
 
 /** `len` > 0 for long hazards (the fork spine), which run from `d` to `d + len`. */
@@ -66,7 +66,11 @@ export class Session {
   private snap = { score: 0, amber: 0, combo: 1 };
   private eggOrder: number[] = [];
 
+  /** The hunt's tuning for this level (CONFIG.hunt with the level's overrides). */
+  readonly hunt: HuntTuning;
+
   constructor(readonly level: LevelDef) {
+    this.hunt = { ...CONFIG.hunt, ...level.prey.hunt };
     this.eggs = level.pickups.filter((p) => p.kind === 'egg').map(() => false);
     level.pickups.forEach((p, i) => { if (p.kind === 'egg') this.eggOrder.push(i); });
     this.runner.listener = (e, dir) => this.events.push({ t: 'move', e, dir });
@@ -124,9 +128,11 @@ export class Session {
       this.preyLaneTarget = count(-1) < count(1) ? -1 : 1;
       return;
     }
-    // Boulders block a lane; the prey also goes around arches when it can (it's too tall to duck).
+    // Boulders block a lane; the prey also goes around arches when it can (it's too tall to duck). An egg rolls
+    // straight through an arch's hollow.
     const ahead = this.hazards.filter((h) => h.d > this.preyD + 2 && h.d < this.preyD + 14);
-    const blocked = (lane: number) => ahead.some((h) => (h.type === 'boulder' || h.type === 'arch' || h.type === 'spine' || h.type === 'nester' || h.type === 'wanderer') && h.lane === lane);
+    const egg = this.level.prey.species === 'egg';
+    const blocked = (lane: number) => ahead.some((h) => (h.type === 'boulder' || (h.type === 'arch' && !egg) || h.type === 'spine' || h.type === 'nester' || h.type === 'wanderer') && h.lane === lane);
     if (blocked(this.preyLaneTarget)) {
       const options = [-1, 0, 1].filter((l) => !blocked(l));
       if (options.length) this.preyLaneTarget = options.sort((a, b) => Math.abs(a - this.preyLaneTarget) - Math.abs(b - this.preyLaneTarget))[0];
@@ -171,7 +177,7 @@ export class Session {
     this.combo = 1;
     this.chain = 0;
     // Hunting: a stumble lets the prey pull away instead of ending the run.
-    this.preyD += CONFIG.hunt.stumbleGap;
+    this.preyD += this.hunt.stumbleGap;
     this.storm = 1;
     this.invuln = 0.8;
     this.events.push({ t: 'stumble' });
@@ -188,7 +194,7 @@ export class Session {
     this.time += dt;
     if (this.state === 'pouncing') {
       // The leap: an arc that lands the raptor on the prey's back, then the hunt is won.
-      const H = CONFIG.hunt;
+      const H = this.hunt;
       this.pounceT += dt;
       const r = this.runner;
       const target = this.preyD - H.pinOffset;
@@ -226,7 +232,7 @@ export class Session {
     this.stream();
 
     // Prey: runs at the raptor's speed; clean running slowly closes the gap, stumbles widen it.
-    const H = CONFIG.hunt;
+    const H = this.hunt;
     this.preyD += r.speed * dt;
     if (this.inFinale) {
       // The prey tires: the gap closes fast and the pounce window opens.
@@ -276,7 +282,7 @@ export class Session {
         // Cleared an obstacle in our own lane by jumping or sliding: small style bonus.
         if (h.type !== 'boulder' && h.type !== 'spine' && h.type !== 'wanderer' && Math.abs(r.x - h.x) < box.hx + 0.26) {
           this.score += 50;
-          this.preyD -= CONFIG.hunt.closePerClear;
+          this.preyD -= this.hunt.closePerClear;
           this.events.push({ t: 'clear', bonus: 50 });
         }
         continue;
@@ -307,7 +313,7 @@ export class Session {
         case 'amber':
           this.amber++;
           this.chain++;
-          this.preyD -= CONFIG.hunt.closePerAmber;
+          this.preyD -= this.hunt.closePerAmber;
           this.score += 10 * this.combo;
           this.events.push({ t: 'amber', x: p.x, y: p.y, d: p.d, chain: this.chain });
           if (this.chain % 25 === 0 && this.combo < 5) {

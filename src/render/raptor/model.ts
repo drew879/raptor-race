@@ -64,9 +64,9 @@ const BODY: Ring[] = [
 const SNOUT_TIP = new THREE.Vector3(0, 0.962, -1.075);
 const TAIL_TIP = new THREE.Vector3(0, 0.66, 1.09);
 
-const skinOf = (a: number, b = a, w = 0) => [a, b, 0, 0, 1 - w, w, 0, 0];
+export const skinOf = (a: number, b = a, w = 0) => [a, b, 0, 0, 1 - w, w, 0, 0];
 
-function ringFrame(t: THREE.Vector3) {
+export function ringFrame(t: THREE.Vector3) {
   const ref = Math.abs(t.y) > 0.9 ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 1, 0);
   const side = new THREE.Vector3().crossVectors(ref, t).normalize();
   const up = new THREE.Vector3().crossVectors(t, side).normalize();
@@ -74,7 +74,7 @@ function ringFrame(t: THREE.Vector3) {
 }
 
 /** Generic tapered tube between points (for limbs). Rigid binding to one bone per segment. */
-function limbTube(
+export function limbTube(
   g: GeomBuilder,
   pts: THREE.Vector3[],
   radii: number[],
@@ -113,7 +113,7 @@ function limbTube(
 }
 
 /** Diamond feather shard with a colored tip band. Double-sided material renders both faces. */
-function feather(
+export function feather(
   g: GeomBuilder,
   base: THREE.Vector3,
   dir: THREE.Vector3,
@@ -388,16 +388,22 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
 
   const geometry = g.build();
 
-  // Skeleton
+  return skinned(geometry, (name) => restPos(name), 'raptor');
+}
+
+/** Rest positions of a skeleton with the raptor's bones (same names, order and parents), in model space. */
+export type RestFn = (name: BoneName) => THREE.Vector3;
+
+/** Builds the skeleton from rest positions and binds the geometry to it. */
+export function skinned(geometry: THREE.BufferGeometry, rest: RestFn, name: string): RaptorBuild {
   const bones: THREE.Bone[] = [];
-  BONE_DEFS.forEach(([name, parentIdx, p]) => {
+  BONE_DEFS.forEach(([bn, parentIdx]) => {
     const parent = parentIdx as number;
     const b = new THREE.Bone();
-    b.name = name;
-    const pos = new THREE.Vector3(...(p as unknown as [number, number, number]));
+    b.name = bn;
+    const pos = rest(bn);
     if (parent >= 0) {
-      const pp = new THREE.Vector3(...((BONE_DEFS[parent] as (typeof BONE_DEFS)[number])[2] as unknown as [number, number, number]));
-      b.position.copy(pos.sub(pp));
+      b.position.copy(pos.sub(rest(BONE_DEFS[parent][0])));
       bones[parent].add(b);
     } else b.position.copy(pos);
     bones.push(b);
@@ -408,6 +414,6 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
   mesh.bind(skeleton);
   mesh.castShadow = true;
   mesh.frustumCulled = false;
-  mesh.name = 'raptor';
+  mesh.name = name;
   return { mesh, bones };
 }

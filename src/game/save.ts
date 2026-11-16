@@ -16,6 +16,8 @@ export interface SaveData {
   journalSeen?: Record<string, boolean[]>;
   /** Per level, the chosen plumage id. */
   plumage?: Record<string, string>;
+  /** The level played last (the title screen opens on it). */
+  lastLevel?: string;
 }
 const KEY = 'raptor-race-save-v1';
 const fresh = (): SaveData => ({ v: 1, best: {}, stars: {}, eggs: {}, amberBank: 0, sound: true, music: true, runs: 0 });
