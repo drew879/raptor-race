@@ -314,8 +314,7 @@ export function addCanyonWall(g: GeomBuilder, sgn: 1 | -1, zNear: number, zFar: 
     // Talus apron from the trail edge up to the foot of the wall.
     const ta = new THREE.Vector3(sgn * 4.4, -0.05, za), tb = new THREE.Vector3(sgn * 4.4, -0.05, zb);
     const fa = new THREE.Vector3(faceX(za, 0), Math.min(1.1, topA), za), fb = new THREE.Vector3(faceX(zb, 0), Math.min(1.1, topB), zb);
-    if (sgn > 0) g.quad(ta, tb, fb, fa, shade(talus, 0.95 + 0.06 * Math.sin(za * 1.7)));
-    else g.quad(tb, ta, fa, fb, shade(talus, 0.95 + 0.06 * Math.sin(za * 1.7)));
+    faceQuad(g, ta, tb, fb, fa, new THREE.Vector3(-sgn, 1, 0), shade(talus, 0.95 + 0.06 * Math.sin(za * 1.7)));
     for (let L = 0; L < LAYERS.length - 1; L++) {
       const y0a = Math.max(1.1 * Math.min(1, ha * 3), LAYERS[L] * ha), y0b = Math.max(1.1 * Math.min(1, hb * 3), LAYERS[L] * hb);
       const y1a = Math.min(topA, LAYERS[L + 1] * ha), y1b = Math.min(topB, LAYERS[L + 1] * hb);
@@ -324,14 +323,21 @@ export function addCanyonWall(g: GeomBuilder, sgn: 1 | -1, zNear: number, zFar: 
       const p0 = new THREE.Vector3(xa, y0a, za), p1 = new THREE.Vector3(xb, y0b, zb);
       const p2 = new THREE.Vector3(xb, Math.max(y0b, y1b), zb), p3 = new THREE.Vector3(xa, Math.max(y0a, y1a), za);
       const c = shade(strata[L % strata.length], 0.97 + 0.03 * Math.sin(za * 0.2 + L)); // gentle drift: no tiled seams
-      if (sgn > 0) g.quad(p0, p1, p2, p3, c); else g.quad(p1, p0, p3, p2, c);
+      faceQuad(g, p0, p1, p2, p3, new THREE.Vector3(-sgn, 0, 0), c); // faces the trail
       // Terrace: from this layer's face back to the next layer's face (or the crown).
       const last = y1a >= topA - 1e-3 && y1b >= topB - 1e-3;
       const xa2 = last ? xa + sgn * 3 : faceX(za, L + 1), xb2 = last ? xb + sgn * 3 : faceX(zb, L + 1);
       const q0 = p3, q1 = p2, q2 = new THREE.Vector3(xb2, p2.y, zb), q3 = new THREE.Vector3(xa2, p3.y, za);
       const top = shade(mix(GOBI.cliffPale, GOBI.sandLight, 0.35), 0.98 + 0.02 * Math.sin(za * 0.2 + L));
-      if (sgn > 0) g.quad(q0, q1, q2, q3, top); else g.quad(q1, q0, q3, q2, top);
+      faceQuad(g, q0, q1, q2, q3, new THREE.Vector3(0, 1, 0), top); // faces the sky
       if (last) break;
     }
   }
+}
+
+/** A quad wound to face `outward`, whatever order the corners come in. */
+function faceQuad(g: GeomBuilder, a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, d: THREE.Vector3, outward: THREE.Vector3, color: THREE.Color) {
+  const n = new THREE.Vector3().crossVectors(new THREE.Vector3().subVectors(b, a), new THREE.Vector3().subVectors(c, a));
+  if (n.dot(outward) >= 0) g.quad(a, b, c, d, color);
+  else g.quad(d, c, b, a, color);
 }
