@@ -49,7 +49,7 @@ class Leg {
   constructor(parent: THREE.Object3D, at: THREE.Vector3, upperLen: number, lowerLen: number, r: number, haunch: number, readonly restU: number, readonly restL: number, mat: THREE.Material) {
     const gu = new GeomBuilder(), gl = new GeomBuilder();
     addTube(gu, [new THREE.Vector3(0, 0.05, 0), new THREE.Vector3(0, -upperLen * 0.45, 0.0), new THREE.Vector3(0, -upperLen - 0.02, 0)], [r * haunch, r * 1.05, r * 0.8], 8, (s) => (s === 0 ? col(P.hide) : col(P.leg)));
-    addTube(gl, [new THREE.Vector3(0, 0.03, 0), new THREE.Vector3(0, -lowerLen * 0.6, 0.0), new THREE.Vector3(0, -lowerLen, -0.02)], [r * 0.85, r * 0.7, r * 0.8], 7, () => col(P.leg));
+    addTube(gl, [new THREE.Vector3(0, 0.03, 0), new THREE.Vector3(0, -lowerLen * 0.6, 0.0), new THREE.Vector3(0, -lowerLen, -0.02)], [r * 0.85, r * 0.6, r * 0.5], 7, () => col(P.leg)); // tapering to the foot
     // A broad, flat foot with blunt claws.
     const f = new THREE.Vector3(0, -lowerLen - 0.005, -0.02);
     const fw = r * 1.1;
@@ -85,7 +85,7 @@ export class Protoceratops {
 
     // ---- Body: deep barrel, back dipping behind the head and rising to high hips ----
     const gb = new GeomBuilder();
-    const bodyCol = (i: number, up: number) => (up > 0.6 ? (i % 2 ? col(P.band) : col(P.back)) : up > 0.15 ? col(P.hide) : up < -0.55 ? col(P.belly) : mix(P.hide, P.belly, 0.45));
+    const bodyCol = (i: number, up: number) => (up > 0.6 ? (i % 2 ? col(P.band) : col(P.back)) : up > 0.15 ? col(P.hide) : up < -0.3 ? col(P.belly) : mix(P.hide, P.belly, 0.5));
     loftBox(gb, [
       [-0.4, 0.55, 0.3, 0.12], [-0.3, 0.62, 0.24, 0.18], [-0.12, 0.73, 0.2, 0.24], [0.06, 0.84, 0.23, 0.24], [0.22, 0.86, 0.3, 0.19], [0.34, 0.82, 0.4, 0.13],
     ], 12, bodyCol, [true, true], 0.75);
@@ -141,12 +141,19 @@ export class Protoceratops {
     // A shallow cone opening up and back, so it reads as a shield from the front, a dome from behind and a
     // long sloping plate in profile (not a flat disc that vanishes edge-on).
     const fp = (a: number, r: number) => new THREE.Vector3(Math.cos(a) * r * 1.02, 0.04 + Math.sin(a) * r * 0.9 - (1 - Math.sin(a)) * r * 0.12, 0.02 + r * (0.62 + 0.22 * Math.sin(a)));
+    // One solid shield with a scalloped dark rim and two eye-spots (alternating wedge colors read as a turkey's
+    // tail from behind, per the art review). A second skin a hair behind it shows hide brown from the back.
+    const back = (p: THREE.Vector3) => p.clone().add(new THREE.Vector3(0, -0.006, 0.012));
     for (let k = 0; k < F; k++) {
-      const a0 = Math.PI * (-0.04 + (1.08 * k) / F), a1 = Math.PI * (-0.04 + (1.08 * (k + 1)) / F);
-      const i0 = fp(a0, 0.07), i1 = fp(a1, 0.07), m0 = fp(a0, 0.27), m1 = fp(a1, 0.27), o0 = fp(a0, 0.36), o1 = fp(a1, 0.36);
+      const a0 = Math.PI * (-0.04 + (1.08 * k) / F), a1 = Math.PI * (-0.04 + (1.08 * (k + 1)) / F), am = (a0 + a1) / 2;
+      const i0 = fp(a0, 0.07), i1 = fp(a1, 0.07), m0 = fp(a0, 0.27), m1 = fp(a1, 0.27), o0 = fp(a0, 0.33), o1 = fp(a1, 0.33), om = fp(am, 0.39);
       const spot = k === 3 || k === 8;
-      gh.quad(i0, i1, m1, m0, spot ? col(P.spot) : k % 2 ? col(P.frill) : shade(col(P.frill), 0.86));
+      gh.quad(i0, i1, m1, m0, spot ? col(P.spot) : col(P.frill));
       gh.quad(m0, m1, o1, o0, col(P.frillRim));
+      gh.tri(o0, o1, om, col(P.frillRim)); // scallop
+      gh.quad(back(m0), back(m1), back(i1), back(i0), shade(col(P.back), 0.95));
+      gh.quad(back(o0), back(o1), back(m1), back(m0), shade(col(P.back), 0.85));
+      gh.tri(back(om), back(o1), back(o0), shade(col(P.back), 0.85));
     }
     this.head.add(new THREE.Mesh(gh.build(), mat));
     this.head.position.set(0, 0.58, -0.36);
@@ -168,8 +175,8 @@ export class Protoceratops {
     // ---- Legs: short and sturdy; the hind pair longer, with big haunches ----
     // [x, hipY, z, upper, lower, radius, haunch, restUpper, restLower]
     const L: [number, number, number, number, number, number, number, number, number][] = [
-      [-0.15, 0.42, -0.26, 0.2, 0.2, 0.062, 1.35, -0.12, 0.22], [0.15, 0.42, -0.26, 0.2, 0.2, 0.062, 1.35, -0.12, 0.22],
-      [-0.17, 0.52, 0.16, 0.26, 0.26, 0.075, 1.6, 0.38, -0.62], [0.17, 0.52, 0.16, 0.26, 0.26, 0.075, 1.6, 0.38, -0.62],
+      [-0.15, 0.42, -0.26, 0.2, 0.21, 0.062, 1.4, -0.22, 0.4], [0.15, 0.42, -0.26, 0.2, 0.21, 0.062, 1.4, -0.22, 0.4],
+      [-0.17, 0.52, 0.16, 0.27, 0.27, 0.075, 1.7, 0.5, -0.85], [0.17, 0.52, 0.16, 0.27, 0.27, 0.075, 1.7, 0.5, -0.85], // a deeper knee bend
     ];
     for (const [x, y, z, ul, ll, r, hn, ru, rl] of L) {
       // Hip height so the bent leg's foot just touches the ground.
