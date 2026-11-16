@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHAPTERS, CHAPTER_GATE, INCLUSION_PAGES, chapterUnlocked, levelUnlocked, lockReason, plumageUnlocked, recordMisses, showHint } from '../src/game/journal';
+import { CHAPTERS, CHAPTER_GATE, INCLUSION_PAGES, chapterUnlocked, levelUnlocked, lockReason, markPagesSeen, plumageUnlocked, recordMisses, showHint, unseenPages } from '../src/game/journal';
 import type { SaveData } from '../src/game/save';
 import { LEVEL1 } from '../src/game/level1';
 
@@ -51,5 +51,17 @@ describe('inclusion rewards', () => {
     expect(showHint(s, LEVEL1.id, 2)).toBe(false);
     s.eggs[LEVEL1.id] = [false, true, false]; // found it later: the hint goes away
     expect(showHint(s, LEVEL1.id, 1)).toBe(false);
+  });
+});
+
+describe('new journal pages', () => {
+  it('pages found but not yet read are new until the journal is opened', () => {
+    const s = fresh();
+    s.eggs[LEVEL1.id] = [true, false, true];
+    expect(unseenPages(s, LEVEL1.id)).toEqual([0, 2]);
+    markPagesSeen(s, LEVEL1.id);
+    expect(unseenPages(s, LEVEL1.id)).toEqual([]);
+    s.eggs[LEVEL1.id] = [true, true, true];
+    expect(unseenPages(s, LEVEL1.id)).toEqual([1]);
   });
 });

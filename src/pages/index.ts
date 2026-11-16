@@ -12,7 +12,7 @@ import { Herd } from '../render/prey/herd';
 import { Particles, SAND, SPARK } from '../render/fx';
 import { RaptorView } from '../render/raptor/view';
 import { GOBI, RAPTOR_DUSK, RAPTOR_GOBI_STREAK, col, mix, type RaptorPlumage } from '../render/palette';
-import { BLUE_AMBER_NOTE, CHAPTERS, INCLUSION_PAGES, PLUMAGES, chapterFound, chapterUnlocked, levelUnlocked, lockReason, plumageUnlocked, recordMisses, showHint as hintShown } from '../game/journal';
+import { BLUE_AMBER_NOTE, CHAPTERS, INCLUSION_PAGES, PLUMAGES, chapterFound, chapterUnlocked, levelUnlocked, lockReason, plumageUnlocked, recordMisses, showHint as hintShown, unseenPages, markPagesSeen } from '../game/journal';
 import { inclusionArt, plumageSwatch } from '../ui/journal-art';
 import { Session, type GameEvent } from '../game/session';
 import { CONFIG } from '../game/config';
@@ -151,6 +151,7 @@ root.innerHTML = `
     <div class="stats"><div class="tag" style="font-size:18px">${amberIconSVG.replace('class="rr-amber-icon"', 'class="rr-amber-icon" style="width:15px;height:20px"')} <span id="rAmber">0</span></div><div class="eggrow" id="rEggs"></div><span class="newbest" id="rBest" hidden>New best</span></div>
     <ul id="rStars"></ul>
     <div class="perf" id="rPerf"></div>
+    <button class="journal-new" id="btnNewPage" hidden></button>
     <div class="buttons"><button class="btn-amber" id="btnAgain">Run again</button><button class="btn-paper" id="btnTitle">Title</button></div>
   </div>
 </section>
@@ -301,7 +302,7 @@ function renderEggs() {
 
 // ---------------- Field Journal ----------------
 const stars3 = (st: boolean[]) => st.map((v) => star(v)).join('');
-function renderJournal() {
+function renderJournal(fresh: number[] = []) {
   const parts: string[] = [];
   CHAPTERS.forEach((ch, ci) => {
     const open = chapterUnlocked(save, ci);
@@ -318,7 +319,7 @@ function renderJournal() {
       const pages = INCLUSION_PAGES[lv.id];
       if (!unlocked || !pages) return;
       const found = save.eggs[lv.id] ?? [];
-      parts.push(`<div class="pages">${pages.map((pg, i) => `<div class="page ${found[i] ? 'found' : 'missing'}">${inclusionArt(pg.art, !!found[i])}<div class="page-text"><b>${found[i] ? pg.title : `Inclusion ${i + 1}: not found yet`}</b><p>${
+      parts.push(`<div class="pages">${pages.map((pg, i) => `<div class="page ${found[i] ? 'found' : 'missing'} ${lv.id === LEVEL.id && fresh.includes(i) ? 'is-new' : ''}">${inclusionArt(pg.art, !!found[i])}<div class="page-text"><b>${found[i] ? pg.title : `Inclusion ${i + 1}: not found yet`}${lv.id === LEVEL.id && fresh.includes(i) ? ' <span class="new-tag">New</span>' : ''}</b><p>${
         found[i] ? pg.fact : hintShown(save, lv.id, i) ? `<span class="hint-tag">Hint</span> ${pg.hint}` : 'Find it in a run to fill this page. If you miss it twice, a hint appears here.'
       }</p></div></div>`).join('')}</div>`);
       parts.push(`<p class="note">${BLUE_AMBER_NOTE}</p>`);
@@ -351,8 +352,26 @@ const input = new Input(root, (a: RunnerAction) => { if (app === 'playing') sess
 input.enabled = false;
 
 $('btnRun').addEventListener('click', () => { renderObjectives(); renderPlumagePick(); setApp('prerun'); });
-$('btnJournal').addEventListener('click', () => { renderJournal(); setApp('journal'); });
-$('btnJournalBack').addEventListener('click', () => setApp('title'));
+// The journal opens from the title, or from the results after a run that filled a new page.
+let journalFrom: AppState = 'title';
+function openJournal(from: AppState) {
+  journalFrom = from;
+  const fresh = unseenPages(save, LEVEL.id);
+  renderJournal(fresh);
+  markPagesSeen(save, LEVEL.id);
+  writeSave(save);
+  syncJournalBadge();
+  setApp('journal');
+  const first = fresh.length ? document.querySelector<HTMLElement>('#journalBody .page.is-new') : null;
+  $('scrJournal').scrollTop = first ? Math.max(0, first.offsetTop - 80) : 0;
+}
+function syncJournalBadge() {
+  const n = unseenPages(save, LEVEL.id).length;
+  $('btnJournal').innerHTML = n ? `Field Journal <span class="badge">${n} new</span>` : 'Field Journal';
+}
+$('btnJournal').addEventListener('click', () => openJournal('title'));
+$('btnNewPage').addEventListener('click', () => openJournal('results'));
+$('btnJournalBack').addEventListener('click', () => { if (journalFrom === 'title') { syncJournalBadge(); } setApp(journalFrom); });
 $('btnBack').addEventListener('click', () => setApp('title'));
 $('btnGo').addEventListener('click', startRun);
 $('btnSound').addEventListener('click', toggleSound);
@@ -409,6 +428,7 @@ function introPreySpeed() {
 }
 root.addEventListener('pointerdown', () => { if (app === 'intro' && introT > 0.3) introT = introEnd; });
 function toTitle() {
+  syncJournalBadge();
   newSession();
   camBlend = 0;
   renderObjectives();
@@ -579,6 +599,10 @@ function showResults() {
   const prevStars = save.stars[LEVEL.id] ?? [false, false, false];
   save.stars[LEVEL.id] = prevStars.map((v, i) => v || st[i]);
   endRunForHints();
+  // Point the player at any journal page this run filled in.
+  const fresh = unseenPages(save, LEVEL.id).length;
+  $('btnNewPage').hidden = fresh === 0;
+  $('btnNewPage').innerHTML = `<span class="np-icon">📖</span> ${fresh === 1 ? 'New journal page' : `${fresh} new journal pages`} <span class="np-go">Read</span>`;
   const prevEggs = save.eggs[LEVEL.id] ?? [false, false, false];
   save.eggs[LEVEL.id] = prevEggs.map((v, i) => v || session.eggs[i]);
   const score = Math.round(session.score);
@@ -948,6 +972,7 @@ root.addEventListener('pointerdown', () => {
 const hitches: number[] = [];
 
 // Boot.
+syncJournalBadge();
 renderEggs();
 renderObjectives();
 setApp('title');

@@ -31,6 +31,13 @@ Newest first. Every session updates this before pushing.
 - [x] Inclusions are now saved the moment you pick one up (before, only on finishing the level)
 - [x] Playtest 5: slide obstacles read as jumpable, so the arch is now a tall sandstone overhang with a low dark tunnel and the rib bones a fallen giant's ribcage hanging over the trail; collision tops raised above any jump (tests: a jump at its peak hits both; no tall obstacle inside a glide)
 - [x] GitHub Pages: workflow deploys every push to https://drew879.github.io/raptor-race/ after typecheck and tests; Add to Home Screen support (manifest, iPhone web-app tags, icon drawn in code); verified the build runs from the /raptor-race/ sub-path. The Claude artifact link is retired (owner)
+## Level 1 wrap-up (owner approved A-D, playtest 5; I stage it)
+- [x] D. Journal discoverability: results screen offers "N new journal pages", the title's Field Journal button shows a "new" badge, the journal opens at the new pages with a New tag
+- [ ] B. Music v3: two previews (war drums vs chase strings) for the owner to pick, then the final
+- [ ] C. Nesting ground (resting and wandering Protoceratops) and a swooping pterosaur in the storm
+- [ ] A. Graphics polish: raptor, light and sky, ground, effects (critic before and after)
+- Amber stays score only (owner). After the wrap-up: a new Level 1 with an Oviraptor chasing a runaway egg downhill; this level becomes Level 2 (owner, for Aidan)
+
 - [ ] Later: Level 2 (new raptor and prey); forks that split into two full three-lane paths
 - [x] Forks: a sandstone fin down the middle lane splits the trail into two routes (one rough and rich, one easy); swipes into the fin are refused with a soft bump; the prey takes the easy side; Level 1 has two (design 704-750 and 922-968)
 - [x] Automatic bends: a lateral view-space bend (sim stays straight), far scenery swings round, the camera banks; nine bends in Level 1

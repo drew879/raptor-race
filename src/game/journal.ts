@@ -120,4 +120,12 @@ export function recordMisses(save: SaveData, levelId: string, inclusionDistances
   });
   return m;
 }
+/** Inclusion pages found but not yet looked at in the journal. */
+export const unseenPages = (save: SaveData, levelId: string) =>
+  (save.eggs[levelId] ?? []).map((f, i) => (f && !save.journalSeen?.[levelId]?.[i] ? i : -1)).filter((i) => i >= 0);
+export function markPagesSeen(save: SaveData, levelId: string) {
+  const seen = (save.journalSeen ??= {});
+  seen[levelId] = (save.eggs[levelId] ?? []).map((f, i) => !!f || !!seen[levelId]?.[i]);
+}
+
 export const showHint = (save: SaveData, levelId: string, i: number) => (save.misses?.[levelId]?.[i] ?? 0) >= 2 && !save.eggs[levelId]?.[i];

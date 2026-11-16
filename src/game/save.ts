@@ -12,6 +12,8 @@ export interface SaveData {
   seenInclusion?: boolean;
   /** Per level, how many runs passed each inclusion without finding it (hints show after two). */
   misses?: Record<string, number[]>;
+  /** Per level, which inclusion pages the player has already seen in the journal (new ones get a badge). */
+  journalSeen?: Record<string, boolean[]>;
   /** Per level, the chosen plumage id. */
   plumage?: Record<string, string>;
 }

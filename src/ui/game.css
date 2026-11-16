@@ -162,3 +162,13 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; backgrou
 .swatch-art { width: 64px; height: 40px; }
 .plumage .pl-label { font-weight: 900; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 2px; }
 .plumage .pl-hint { font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+
+/* New journal page: a bright paper button on the results card, a badge on the title's Field Journal button. */
+.journal-new { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; border: 2px solid var(--ink); border-radius: 10px;
+  background: linear-gradient(165deg, #E6FBFF, #9FDCEE); box-shadow: 0 3px 0 var(--ink); font-family: var(--display); font-weight: 900; font-size: 16px; color: var(--ink);
+  animation: pulse .7s ease-in-out infinite alternate; }
+.journal-new .np-icon { font-size: 18px; }
+.journal-new .np-go { margin-left: auto; font-family: inherit; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+.badge, .new-tag { display: inline-block; font-family: var(--body, inherit); font-weight: 900; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase;
+  background: #2FA3C7; color: #fff; border: 1.5px solid var(--ink); border-radius: 6px; padding: 1px 5px; margin-left: 4px; vertical-align: 2px; }
+.journal .page.is-new { border-color: #2FA3C7; box-shadow: 0 0 0 2px rgba(47,163,199,.35); }
