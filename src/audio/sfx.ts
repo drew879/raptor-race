@@ -165,7 +165,7 @@ export class Sfx {
         break;
       }
       case 'finish': {
-        [60, 64, 67, 72, 76].forEach((m, i) => {
+        [61, 65, 68, 73, 77].forEach((m, i) => { // C# major, the game's home key
           this.tone(t + i * 0.12, midiHz(m), 'triangle', 0.14, 0.003, 0.6, o);
           this.tone(t + i * 0.12, midiHz(m) * 4, 'sine', 0.02, 0.001, 0.1, o); // mallet click
         });
@@ -221,6 +221,12 @@ export class AudioEngine {
     if (!this.ctx || this.ctx.state !== 'running') return;
     // A sound must never break a frame: a bad node graph is logged and skipped.
     try { this.sfx?.play(name, opts); } catch (e) { console.warn('sfx', name, e); }
+  }
+  /** The landing: the music's own ending when it's in its finale, otherwise the fanfare. */
+  finale() {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    if (this.musicOn && this.music?.isEnding) this.music.finale();
+    else this.play('finish');
   }
   setMuted(m: boolean) {
     this.muted = m;

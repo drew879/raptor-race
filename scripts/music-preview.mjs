@@ -1,5 +1,6 @@
 // Renders a WAV preview of the music offline in Chromium: 16 s at low intensity, then full, with amber chains.
-// Usage: node scripts/music-preview.mjs <out.wav> [--style=journal|war-drums|chase-strings] [--base=http://localhost:5173]
+// Usage: node scripts/music-preview.mjs <out.wav> [--style=journal|war-drums|chase-strings] [--ending] [--base=http://localhost:5173]
+// --ending renders the end of a level instead: the chase, the pounce riser, the pounce and the landing.
 import { chromium } from './lib/pw.mjs';
 import { writeFileSync } from 'node:fs';
 const out = process.argv[2] ?? 'artifacts/music-preview.wav';
@@ -9,7 +10,7 @@ const b = await chromium.launch();
 const p = await b.newPage();
 await p.goto(`${base}/audio-lab.html`);
 await p.waitForFunction(() => typeof window.__renderPreview === 'function');
-const [L, R] = await p.evaluate((st) => window.__renderPreview(st), style);
+const [L, R] = await p.evaluate(([st, end]) => window.__renderPreview(st, end), [style, process.argv.includes('--ending')]);
 await b.close();
 const n = L.length, data = Buffer.alloc(44 + n * 4);
 data.write('RIFF', 0); data.writeUInt32LE(36 + n * 4, 4); data.write('WAVE', 8); data.write('fmt ', 12);

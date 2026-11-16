@@ -597,7 +597,7 @@ function handle(e: GameEvent) {
       setbackT = 0;
       break;
     case 'finish':
-      audio.play('finish');
+      audio.finale();
       // The pin: a burst of sand around the pair.
       dust.emit(session.preyX, 0.1, -session.preyD, 34, { spread: 2.4, up: 0.8, back: 0, size: 0.55, grow: 2.6, life: 1.4, alpha: 0.45, drag: 1.4, gravity: 1.2, rand });
       timeScale = 1;

@@ -28,11 +28,13 @@ export interface MusicStyle {
   level: number;
   /** Schedule sixteenth `s16` of bar `bar` at audio time `t`. `I` is the hunt's intensity, 0..1. */
   step(m: Music, bar: number, s16: number, t: number, I: number): void;
-  /** The pounce. */
-  sting(m: Music, t: number): void;
+  /** The pounce: the leap. Notes held until the landing go to `held`, which the landing fades out. */
+  sting(m: Music, t: number, held: AudioNode): void;
+  /** The landing: the music's last word, left to ring out over the journal plate. */
+  finale(m: Music, t: number): void;
 }
 
-export interface SawOpts { cutoff?: number; q?: number; attack?: number; release?: number; detune?: number; filterEnv?: number; pan?: number; vibrato?: number; tremolo?: number; type?: OscillatorType }
+export interface SawOpts { cutoff?: number; q?: number; attack?: number; release?: number; detune?: number; filterEnv?: number; pan?: number; vibrato?: number; tremolo?: number; type?: OscillatorType; dest?: AudioNode }
 
 export class Music {
   readonly out: GainNode;
@@ -45,6 +47,8 @@ export class Music {
   private seed = 9;
   private lastStep = -Infinity;
   private playing = false;
+  private ending = false;
+  private held: GainNode | null = null;
   private chain = 0;
   private lastChimeSong = -10;
   /** 0..1: how many layers play. Set every frame from the hunt. */
@@ -170,7 +174,7 @@ export class Music {
       amp = tg;
     }
     flt.connect(g);
-    amp.connect(this.panTo(o.pan ?? 0));
+    amp.connect(o.dest ?? this.panTo(o.pan ?? 0));
     for (const det of [-(o.detune ?? 7), o.detune ?? 7]) {
       const osc = ctx.createOscillator();
       osc.type = o.type ?? 'sawtooth';
@@ -198,7 +202,7 @@ export class Music {
     flt.Q.value = q;
     const g = this.env(t, gain, 0.003, dur);
     src.connect(flt).connect(g).connect(this.panTo(pan));
-    src.start(t, this.rnd() * 1.5);
+    src.start(t, this.rnd() * Math.max(0, 1.95 - dur)); // the 2 s noise buffer must outlast the hit
     src.stop(t + dur + 0.03);
   }
 
@@ -225,6 +229,7 @@ export class Music {
     this.out.gain.linearRampToValueAtTime(1, t + 0.25);
     this.tone.frequency.setTargetAtTime(16000, t, 0.05);
     this.playing = true;
+    this.ending = false;
     this.lastStep = -Infinity;
   }
 
@@ -235,6 +240,7 @@ export class Music {
     this.out.gain.setValueAtTime(this.out.gain.value, t);
     this.out.gain.linearRampToValueAtTime(0.0001, t + fade);
     this.playing = false;
+    this.ending = false;
   }
 
   /** Muffled while paused (the song position holds, so nothing new is scheduled). */
@@ -288,9 +294,36 @@ export class Music {
   /** The pounce: the style's sting, then silence for the finish fanfare. */
   sting() {
     const t = this.ctx.currentTime + 0.02;
-    this.style.sting(this, t);
+    this.held = this.ctx.createGain();
+    this.held.connect(this.duck);
+    this.style.sting(this, t, this.held);
     this.playing = false;
-    this.out.gain.setTargetAtTime(0.0001, t + 1.4, 0.4);
+    this.ending = true;
+    // If the landing never comes, fade out anyway.
+    this.out.gain.cancelScheduledValues(t);
+    this.out.gain.setValueAtTime(Math.max(0.0001, this.out.gain.value), t);
+    this.out.gain.setTargetAtTime(0.0001, t + 3, 0.4);
+  }
+
+  /** Between the pounce and the landing. */
+  get isEnding() { return this.ending; }
+
+  /** The landing: the held notes give way to the style's final chord, which rings out over the plate (4.5 s). */
+  finale() {
+    if (!this.ending) return;
+    this.ending = false;
+    const t = this.ctx.currentTime + 0.01;
+    if (this.held) {
+      this.held.gain.setValueAtTime(1, t);
+      this.held.gain.linearRampToValueAtTime(0.0001, t + 0.2);
+      this.held = null;
+    }
+    this.out.gain.cancelScheduledValues(t);
+    this.out.gain.setValueAtTime(Math.max(0.0001, this.out.gain.value), t);
+    this.out.gain.linearRampToValueAtTime(1, t + 0.04);
+    this.out.gain.setValueAtTime(1, t + 3.0);
+    this.out.gain.linearRampToValueAtTime(0.0001, t + 4.5); // the results card comes up at 4.6 s
+    this.style.finale(this, t);
   }
 
   /**

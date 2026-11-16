@@ -50,9 +50,14 @@ export const JOURNAL: MusicStyle = {
     }
   },
   sting(m, t) {
-    m.drum(t, 120, 42, 0.9, 0.45, 0.12, 900);
-    [73, 76, 80, 85].forEach((n, k) => m.marimba(t + k * 0.04, n, 0.16, (k - 1.5) * 0.25));
-    m.bass(t, 37, 0.3, 1.2);
+    m.drum(t, 120, 42, 0.9, 0.3, 0.1, 900);
+    [73, 76, 80, 85].forEach((n, k) => m.marimba(t + k * 0.04, n, 0.11, (k - 1.5) * 0.25));
+    m.bass(t, 37, 0.22, 1.2);
+  },
+  finale(m, t) {
+    m.drum(t, 120, 42, 1.2, 0.3, 0.1, 900);
+    [61, 65, 68, 73, 77].forEach((n, k) => m.marimba(t + k * 0.06, n, 0.11, (k - 2) * 0.2));
+    m.bass(t, 37, 0.22, 2.4);
   },
 };
 
@@ -104,10 +109,15 @@ export const WAR_DRUMS: MusicStyle = {
     // High tremolo strings when the prey is close.
     if (I > 0.75 && s16 === 0) m.saw(t, 72 + ((chord.tones[0] - 0 + 12) % 12), 0.03, 1.9, { cutoff: 3500, attack: 0.3, release: 0.25, tremolo: 13, pan: 0.3 });
   },
-  sting(m, t) {
+  sting(m, t, held) {
     m.taiko(t, 0.42, 0.9);
     m.taiko(t + 0.25, 0.3, 1.1);
-    for (const n of [49, 56, 61, 64]) m.saw(t, n, 0.06, 1.0, { cutoff: 1600, filterEnv: 2, release: 0.6, detune: 12 });
+    for (const n of [44, 56, 60, 63]) m.saw(t, n, 0.05, 3, { cutoff: 1600, attack: 1.2, release: 0.3, detune: 12, dest: held });
+  },
+  finale(m, t) {
+    m.taiko(t, 0.45, 0.85);
+    m.taiko(t + 0.18, 0.3, 1.0);
+    for (const n of [37, 49, 56, 61, 65]) m.saw(t, n, 0.05, 2.0, { cutoff: 1500, filterEnv: 2, release: 1.8, detune: 12 });
   },
 };
 
@@ -158,10 +168,22 @@ export const CHASE_STRINGS: MusicStyle = {
     // Tremolo on the fifth when the prey is close.
     if (I > 0.75 && s16 === 0) m.saw(t, 80 + ((chord.tones[2] - 8 + 12) % 12), 0.025, 1.9, { cutoff: 4000, attack: 0.2, release: 0.2, tremolo: 14, pan: -0.3 });
   },
-  sting(m, t) {
-    m.drum(t, 110, 40, 0.8, 0.35, 0.1, 500);
-    m.hiss(t, 1.2, 0.08, 'highpass', 5000, 0.5);
-    for (const n of [49, 56, 61, 64, 68]) m.saw(t, n, 0.05, 0.9, { cutoff: 2600, filterEnv: 1.5, release: 0.5, detune: 9 });
+  sting(m, t, held) {
+    // The leap: a hit, then the fifth (G# major) held and swelling under a timpani roll, waiting for the landing.
+    m.drum(t, 110, 40, 0.8, 0.25, 0.08, 500);
+    for (const [n, g, trem] of [[44, 0.07, 0], [56, 0.05, 0], [60, 0.04, 12], [63, 0.04, 12], [68, 0.035, 12]] as const) {
+      m.saw(t, n, g, 3, { cutoff: 1400, attack: 1.4, release: 0.3, detune: 9, dest: held, ...(trem ? { tremolo: trem } : {}) });
+    }
+    for (let k = 0; k < 22; k++) m.drum(t + 0.12 + k * 0.072, 104, 98, 0.18, 0.04 + 0.12 * (k / 21), 0, 0); // roll on G#
+  },
+  finale(m, t) {
+    // The landing: home on C# major (a bright major ending to the minor chase), ringing out over the plate.
+    m.drum(t, 92, 36, 1.6, 0.24, 0.08, 400);
+    m.drum(t, 70, 68, 2.2, 0.15, 0, 0); // timpani on C#
+    m.hiss(t, 1.8, 0.035, 'highpass', 6500, 0.5); // cymbal wash
+    for (const [n, g, cut] of [[37, 0.045, 500], [49, 0.04, 900], [56, 0.03, 1600], [61, 0.027, 2200], [65, 0.024, 2600], [68, 0.024, 3000], [73, 0.02, 3400], [77, 0.014, 3600]] as const) {
+      m.saw(t, n, g, 1.6, { cutoff: cut, filterEnv: 1.6, attack: 0.03, release: 3.2, detune: 9, pan: ((n % 5) - 2) * 0.1, ...(n > 60 ? { vibrato: 5 } : {}) });
+    }
   },
 };
 

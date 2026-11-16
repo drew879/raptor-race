@@ -44,10 +44,34 @@ async function measureMusic(intensity: number, storm: number, styleId = 'journal
   const rms = Math.sqrt(sum / (2 * buf.length));
   return { name: `music:${styleId}@${intensity}`, peakDb: +(20 * Math.log10(peak + 1e-9)).toFixed(1), rmsDb: +(20 * Math.log10(rms + 1e-9)).toFixed(1), durMs: 10000 };
 }
-(window as unknown as { __audio: Promise<unknown> }).__audio = Promise.all([...NAMES.map(measure), ...Object.keys(MUSIC_STYLES).flatMap((id) => [measureMusic(0.25, 0, id), measureMusic(1, 0.6, id)])]);
+/** The level ending at full intensity: the pounce at 1 s, the landing 1.71 s later (the pounce's 0.6 s at 0.35 slow
+ * motion). Reports the peak and how long it rings after the landing (to -60 dB). */
+async function measureEnding(styleId: string) {
+  const sr = 44100;
+  const ctx = new OfflineAudioContext(2, sr * 8, sr);
+  const bus = ctx.createGain();
+  bus.gain.value = MUSIC_LEVEL;
+  bus.connect(ctx.destination);
+  const m = new Music(ctx, bus, MUSIC_STYLES[styleId]);
+  m.intensity = 1;
+  m.start(0);
+  for (let s = 0; s < 1; s += 0.1) m.update(s, 1, 0.1, s);
+  const pounce = 1, land = 2.71;
+  void ctx.suspend(pounce).then(() => { m.sting(); void ctx.resume(); });
+  void ctx.suspend(land).then(() => { m.finale(); void ctx.resume(); });
+  const buf = await ctx.startRendering();
+  let peak = 0, last = 0;
+  for (let c = 0; c < 2; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < d.length; i++) { const a = Math.abs(d[i]); if (a > peak) peak = a; if (a > 0.001) last = Math.max(last, i); }
+  }
+  return { name: `music:${styleId}:ending`, peakDb: +(20 * Math.log10(peak + 1e-9)).toFixed(1), rmsDb: 0, durMs: Math.round((last / sr - land) * 1000) };
+}
+(window as unknown as { __audio: Promise<unknown> }).__audio = Promise.all([...NAMES.map(measure), ...Object.keys(MUSIC_STYLES).flatMap((id) => [measureMusic(0.25, 0, id), measureMusic(1, 0.6, id), measureEnding(id)])]);
 
 /** Renders a music preview (scripts/music-preview.mjs): low intensity, then full, with on-beat amber chains. */
-(window as unknown as { __renderPreview: (styleId?: string) => Promise<number[][]> }).__renderPreview = async (styleId = 'journal') => {
+(window as unknown as { __renderPreview: (styleId?: string, ending?: boolean) => Promise<number[][]> }).__renderPreview = async (styleId = 'journal', ending = false) => {
+  if (ending) return renderEnding(styleId);
   const sr = 44100, secs = 34;
   const ctx = new OfflineAudioContext(2, sr * secs, sr);
   const bus = ctx.createGain();
@@ -68,3 +92,22 @@ async function measureMusic(intensity: number, storm: number, styleId = 'journal
   const buf = await ctx.startRendering();
   return [Array.from(buf.getChannelData(0)), Array.from(buf.getChannelData(1))];
 };
+
+/** The end of a level as the player hears it: 8 s of the chase at full intensity, the pounce riser, the pounce, and
+ * the landing 1.71 s later, left to ring out. */
+async function renderEnding(styleId: string) {
+  const sr = 44100, secs = 15;
+  const ctx = new OfflineAudioContext(2, sr * secs, sr);
+  const bus = ctx.createGain();
+  bus.gain.value = MUSIC_LEVEL;
+  bus.connect(ctx.destination);
+  const m = new Music(ctx, bus, MUSIC_STYLES[styleId]);
+  m.intensity = 0.95;
+  m.start(0);
+  for (let s = 0; s < 8; s += 0.05) m.update(s, 1, 0.05, s);
+  void ctx.suspend(6.6).then(() => { m.riser(); void ctx.resume(); });
+  void ctx.suspend(8).then(() => { m.sting(); void ctx.resume(); });
+  void ctx.suspend(9.71).then(() => { m.finale(); void ctx.resume(); });
+  const buf = await ctx.startRendering();
+  return [Array.from(buf.getChannelData(0)), Array.from(buf.getChannelData(1))];
+}
