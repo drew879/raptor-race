@@ -302,22 +302,25 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     const dir = new THREE.Vector3(sx * 0.45, -0.05, 1).normalize();
     feather(g, base, dir, new THREE.Vector3(sx * 0.3, 1, 0).normalize(), 0.2, 0.09, C.base, k < 2 ? C.baseDark : C.light, skinOf(k < 4 ? B.chest : B.pelvis));
   }
-  // Tail fan: pairs of shards spreading outward, longest near the tip.
-  const fan: Array<[number, number, BoneName, number]> = [
-    [0.6, 0.67, 'tail2', 0.2],
-    [0.76, 0.668, 'tail3', 0.25],
-    [0.9, 0.665, 'tail3', 0.27],
-    [1.02, 0.662, 'tail4', 0.24],
-  ];
-  fan.forEach(([z, y, bone, len], k) => {
+  // Tail frond: a dense, overlapping leaf of feathers along the back half of the tail, broadest two thirds of
+  // the way out, swept back and banded dark and light, with accent tips at the end (owner playtest 5 review: the
+  // old four sparse pairs read as ladder rungs from the chase camera).
+  const FROND = 11;
+  for (let k = 0; k < FROND; k++) {
+    const t = k / (FROND - 1);
+    const z = 0.36 + t * 0.66;
+    const y = 0.675 - t * 0.012;
+    const bone: BoneName = t < 0.28 ? 'tail2' : t < 0.7 ? 'tail3' : 'tail4';
+    const len = 0.1 + 0.2 * Math.sin(Math.PI * Math.min(1, t * 1.25)) ** 0.8;
+    const band = Math.floor(k / 2) % 2 === 0;
     for (const sx of [-1, 1]) {
-      const spread = 0.48 + k * 0.06;
-      const dir = new THREE.Vector3(sx * Math.sin(spread), 0.22, Math.cos(spread));
-      const base = new THREE.Vector3(sx * 0.012, y + 0.006, z);
-      feather(g, base, dir, upV, len, 0.13, k % 2 ? C.base : C.baseDark, k >= 2 ? C.accent : C.light, skinOf(B[bone]));
+      const spread = 0.42 + t * 0.12;
+      const dir = new THREE.Vector3(sx * Math.sin(spread), 0.12, Math.cos(spread));
+      const base = new THREE.Vector3(sx * 0.02, y + 0.008, z);
+      feather(g, base, dir, upV, len, 0.1, band ? C.baseDark : C.base, t > 0.62 ? C.accent : band ? C.dark : C.light, skinOf(B[bone]));
     }
-  });
-  feather(g, TAIL_TIP.clone().add(new THREE.Vector3(0, 0, -0.04)), new THREE.Vector3(0, 0.06, 1), upV, 0.2, 0.11, C.dark, C.accent, skinOf(B.tail4));
+  }
+  feather(g, TAIL_TIP.clone().add(new THREE.Vector3(0, 0, -0.06)), new THREE.Vector3(0, 0.06, 1), upV, 0.24, 0.12, C.dark, C.accent, skinOf(B.tail4));
 
   // ---------- Legs ----------
   for (const side of ['L', 'R'] as const) {

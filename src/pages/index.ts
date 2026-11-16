@@ -10,6 +10,7 @@ import { PowerupView } from '../render/world/powerups';
 import { Protoceratops } from '../render/prey/protoceratops';
 import { Herd } from '../render/prey/herd';
 import { Pterosaur } from '../render/prey/pterosaur';
+import { Footprints } from '../render/footprints';
 import { Particles, SAND, SPARK } from '../render/fx';
 import { RaptorView } from '../render/raptor/view';
 import { GOBI, RAPTOR_DUSK, RAPTOR_GOBI_STREAK, col, mix, type RaptorPlumage } from '../render/palette';
@@ -203,6 +204,11 @@ function applyPlumage(id: string) {
 }
 const prey = new Protoceratops();
 stage.world.add(items.group, powerups.group, dust.field.points, sparks.field.points, raptor.root, prey.root);
+// Tracks in the sand: the raptor's own, and the prey's ahead of it (you're following its trail).
+const prints = new Footprints(72);
+stage.world.add(prints.mesh);
+const SAND_TRACK = col(GOBI.track);
+let printSide = 1, preyPrintAcc = 0, preyPrintSide = 1;
 // A distant herd walks the dunes through the level's 'herd' stretch.
 const herdAt = LEVEL.sections.findIndex((s) => s.kind === 'herd');
 const herd = herdAt >= 0 ? new Herd(LEVEL.sections[herdAt].from, LEVEL.sections[herdAt + 1]?.from ?? LEVEL.length) : null;
@@ -237,6 +243,7 @@ let titleOrbit = 0;
 let hintTimer = 0;
 
 function resetWorld() {
+  prints.clear();
   for (const m of hazardMeshes.values()) stage.world.remove(m);
   hazardMeshes.clear();
   pickupViews.clear();
@@ -733,6 +740,7 @@ function syncWorld(dt: number) {
     footAcc += r.speed * dt;
     if (footAcc > 1.05) {
       footAcc = 0;
+      if (!r.sliding) { printSide = -printSide; prints.add(r.x + printSide * 0.09, z + 0.15, 1.15, -r.lean * 0.15); }
       dust.emit(r.x + (fxRng.next() - 0.5) * 0.2, 0.03, z + 0.15, r.sliding ? 5 : 2, { spread: 0.6, up: 0.15, back: 2.5, size: 0.22, grow: 1.6, life: 0.45, alpha: 0.28, rand });
     }
     if (r.sliding) dust.emit(r.x, 0.04, z - 0.2, 1, { spread: 1.2, up: 0.35, back: 1, size: 0.24, grow: 1.6, life: 0.4, alpha: 0.32, color: SAND, rand });
@@ -740,6 +748,17 @@ function syncWorld(dt: number) {
   if (r.glideLeft > 0 && fxRng.chance(0.5)) sparks.emit(r.x + (fxRng.next() - 0.5) * 1.6, r.y + 0.6, z + 0.5, 1, { spread: 0.3, up: 0.3, back: 6, size: 0.08, grow: 0, life: 0.5, alpha: 0.5, color: col(RAPTOR_GOBI_STREAK.accent), rand });
   dust.update(dt);
   sparks.update(dt);
+  // The prey leaves tracks while it runs (not while hopping a ledge).
+  if ((app === 'playing' || app === 'intro') && session.state !== 'pouncing') {
+    preyPrintAcc += (app === 'intro' ? introPreySpeed() : r.speed) * dt;
+    if (preyPrintAcc > 0.9) {
+      preyPrintAcc = 0;
+      preyPrintSide = -preyPrintSide;
+      const pzv = app === 'intro' ? introPreyD() : session.preyD;
+      if (!session.hazards.some((h) => h.type === 'gully' && Math.abs(h.d - pzv) < 1.8)) prints.add(session.preyX + preyPrintSide * 0.16, -pzv + 0.3, 1.3);
+    }
+  }
+  prints.update(dt, SAND_TRACK);
   herd?.update(dt, r.distance);
   streamer.update(r.distance);
 

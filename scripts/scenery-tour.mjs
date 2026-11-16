@@ -1,11 +1,13 @@
 // Warps the real game page through each landmark stretch and captures the chase view without HUD banners.
-// Usage: node scripts/scenery-tour.mjs <outDir> [design-meter marks like 320:canyon,455:hoodoos]
+// Usage: node scripts/scenery-tour.mjs <outDir> [design-meter marks like 320:canyon,455:hoodoos] [--dpr=2]
 import { chromium } from './lib/pw.mjs';
 import { mkdirSync } from 'node:fs';
-const [outDir = 'artifacts/tour', marksArg = '20:dunes,330:canyon,470:hoodoos,650:basin,735:bones,840:herd,1040:flats'] = process.argv.slice(2);
+const pos = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const dpr = Number((process.argv.find((a) => a.startsWith('--dpr=')) ?? '--dpr=1').slice(6));
+const [outDir = 'artifacts/tour', marksArg = '20:dunes,330:canyon,470:hoodoos,650:basin,735:bones,840:herd,1040:flats'] = pos;
 mkdirSync(outDir, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: dpr, isMobile: true, hasTouch: true });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 await page.goto('http://localhost:5173/index.html?shot=1&nointro=1');

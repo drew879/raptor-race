@@ -211,11 +211,23 @@ const HYBRID_FAST = /* glsl */ `
     h.z = mix(v, vb, 0.8);
     h.y = min(h.y * 1.05, 0.85);
     vec3 col = hsv2rgb(h);
+    // Golden hour: lights lean warm, shadows lean cool violet (instead of plain darker browns).
+    float shadowK = 1.0 - smoothstep(0.3, 0.55, h.z), lightK = smoothstep(0.75, 0.95, h.z);
+    col = mix(col, col * vec3(0.86, 0.88, 1.08), shadowK * 0.55);
+    col = mix(col, col * vec3(1.05, 1.0, 0.92), lightK * 0.5);
     vec3 paper = vec3(0.965, 0.925, 0.845);
     float grain = nf.r * 0.55 + nz.g * 0.45;
     col = mix(paper, col, 0.84 + 0.12 * nz.b) * (0.93 + 0.09 * grain);
     vec3 skyTop = mix(paper, vec3(0.55, 0.72, 0.84), 0.75), skyLow = mix(paper, vec3(0.98, 0.82, 0.62), 0.6);
-    col = mix(col, mix(skyLow, skyTop, step(0.74, uv.y)) * (0.95 + 0.07 * grain), sky);
+    // Aerial perspective: the far desert melts into the low sky in soft layers, so distance reads at a glance.
+    float zH = -perspectiveDepthToViewZ(d0, cNear, cFar);
+    float haze = smoothstep(35.0, 230.0, zH);
+    col = mix(col, skyLow * (0.97 + 0.04 * grain), (1.0 - sky) * (floor(haze * 4.0 + 0.5) / 4.0 * 0.35 + haze * 0.2));
+    // Sky: wash bands keyed to the rendered sky's own gradient, so they follow the horizon when the camera banks.
+    float sl = smoothstep(0.62, 0.8, dot(c, vec3(-0.6, 0.25, 1.1)) + 0.25);
+    float sb = floor(sl * 3.0 + 0.5) / 3.0;
+    vec3 skyc = mix(skyLow, skyTop, mix(sl, sb, 0.85));
+    col = mix(col, skyc * (0.95 + 0.07 * grain), sky);
     // Ink: Laplacian depth breaks (contours) plus light interior lines from value breaks.
     vec2 o = 1.2 * dpr / res;
     float z = -perspectiveDepthToViewZ(d0, cNear, cFar);
