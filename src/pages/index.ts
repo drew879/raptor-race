@@ -747,7 +747,7 @@ function syncWorld(dt: number) {
     if (footAcc > 1.05) {
       footAcc = 0;
       if (!r.sliding) { printSide = -printSide; prints.add(r.x + printSide * 0.09, z + 0.15, 1.15, -r.lean * 0.15); }
-      dust.emit(r.x + (fxRng.next() - 0.5) * 0.2, 0.03, z + 0.15, r.sliding ? 5 : 2, { spread: 0.6, up: 0.15, back: 2.5, size: 0.22, grow: 1.6, life: 0.45, alpha: 0.28, rand });
+      dust.emit(r.x + (fxRng.next() - 0.5) * 0.2, 0.03, z + 0.15, r.sliding ? 6 : 3, { spread: 0.7, up: 0.2, back: 2.5, size: 0.4, grow: 1.7, life: 0.5, alpha: 0.34, rand });
     }
     if (r.sliding) dust.emit(r.x, 0.04, z - 0.2, 1, { spread: 1.2, up: 0.35, back: 1, size: 0.24, grow: 1.6, life: 0.4, alpha: 0.32, color: SAND, rand });
   }

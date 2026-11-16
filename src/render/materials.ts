@@ -18,7 +18,7 @@ export const BEND_KNEE = 90;
 export const rimColors: Record<string, THREE.Color> = {};
 type Patchable = THREE.MeshLambertMaterial | THREE.MeshBasicMaterial | THREE.PointsMaterial;
 
-export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; bend?: boolean; rimColor?: number } = {}): T {
+export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; bend?: boolean; rimColor?: number; sand?: boolean } = {}): T {
   const rim = opts.rim ?? 0;
   const rimCol = opts.rimColor !== undefined ? new THREE.Color(opts.rimColor) : null;
   const bend = opts.bend ?? true;
@@ -36,6 +36,33 @@ export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; be
             bentPos.x += uBend * zz / (1.0 + abs(bentPos.z) / ${BEND_KNEE.toFixed(1)}); gl_Position = projectionMatrix * bentPos; }`,
         );
     }
+    if (opts.sand) {
+      // Sand surface detail on flat ground: thin wind-ripple troughs and crusty patches, in world space, fading out
+      // with distance (so they never shimmer). Strong enough to survive the post pass's value bands.
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vSandPos;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\nvSandPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', `#include <common>
+          varying vec3 vSandPos;
+          float sandHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+          float sandNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+            return mix(mix(sandHash(i), sandHash(i + vec2(1, 0)), f.x), mix(sandHash(i + vec2(0, 1)), sandHash(i + vec2(1, 1)), f.x), f.y); }`)
+        .replace('#include <color_fragment>', `#include <color_fragment>
+          {
+            vec3 sn = normalize(cross(dFdx(vSandPos), dFdy(vSandPos)));
+            float sandFlat = smoothstep(0.86, 0.97, abs(sn.y)) * (1.0 - step(2.5, vSandPos.y)); // ('flat' is reserved in GLSL ES 3)
+            float fade = sandFlat * (1.0 - smoothstep(10.0, 28.0, length(vViewPosition)));
+            if (fade > 0.001) {
+              vec2 w = vSandPos.xz;
+              // Short, wavy ripple strokes in patches (hand-drawn hatching), ~0.6 m apart.
+              float wav = sin((w.x * 0.35 + w.y * 0.94) * 10.0 + 2.2 * sin(w.y * 0.6 + w.x * 0.4) + 3.0 * sandNoise(w * 0.8));
+              float trough = smoothstep(0.9, 0.99, wav) * smoothstep(0.45, 0.75, sandNoise(w * 0.9 + 3.0));
+              float crust = sandNoise(w * 0.45) - 0.5;
+              diffuseColor.rgb *= 1.0 - fade * (0.32 * trough - 0.07 * crust);
+            }
+          }`);
+    }
     if (rim > 0 && shader.fragmentShader.includes('vViewPosition')) {
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', '#include <common>\nuniform vec3 uRimColor;')
@@ -47,14 +74,14 @@ export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; be
         );
     }
   };
-  mat.customProgramCacheKey = () => `rr-world-${rim.toFixed(3)}-${bend ? 1 : 0}-${rimCol ? rimCol.getHexString() : 'w'}`;
+  mat.customProgramCacheKey = () => `rr-world-${rim.toFixed(3)}-${bend ? 1 : 0}-${rimCol ? rimCol.getHexString() : 'w'}-${opts.sand ? 's' : ''}`;
   return mat;
 }
 
 /** Flat-shaded, vertex-colored lit material used by almost everything in the world. */
-export function litMaterial(opts: { rim?: number; side?: THREE.Side; bend?: boolean } = {}) {
+export function litMaterial(opts: { rim?: number; side?: THREE.Side; bend?: boolean; sand?: boolean } = {}) {
   const m = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: opts.side ?? THREE.FrontSide });
-  return patchWorld(m, { rim: opts.rim ?? 0.0, bend: opts.bend });
+  return patchWorld(m, { rim: opts.rim ?? 0.0, bend: opts.bend, sand: opts.sand });
 }
 
 /** Unlit vertex-colored material (emissive look for amber, sky props). */
@@ -66,7 +93,7 @@ export function unlitMaterial(opts: { fog?: boolean; bend?: boolean; transparent
 
 /** Shared material instances (one program each). */
 export const MATS = {
-  world: litMaterial({ rim: 0.12 }),
+  world: litMaterial({ rim: 0.12, sand: true }),
   hazard: litMaterial({ rim: 0.4 }),
   character: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide }), { rim: 0.95, rimColor: 0xffd29a }), // warm sun-edge rim
   glow: unlitMaterial({ toneMapped: false }),

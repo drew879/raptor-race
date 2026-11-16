@@ -42,5 +42,6 @@ export class Particles {
   }
 }
 
-export const SAND = mix(GOBI.sandLight, GOBI.track, 0.5);
+/** Dust a shade darker and warmer than the track, so puffs read against it (art review: they were invisible). */
+export const SAND = mix(GOBI.sandShadow, GOBI.sandMid, 0.45);
 export const SPARK = col(GOBI.amberLight);

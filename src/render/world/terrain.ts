@@ -118,7 +118,8 @@ export function buildChunk(index: number, opts: { mesas?: boolean; layout?: Terr
         const gr = index * rows + r;
         const n = hash2(c * sgn, gr, 21);
         const t = smoothstep(0, 6, hAvg);
-        let base = t > 0.5 ? mix(sandM, sandL, (t - 0.5) * 2) : mix(sandS, sandM, 0.55 + t * 0.9);
+        // Back toward the palette's sand (the post pass was pushing the old mix to a hot orange).
+        let base = (t > 0.5 ? mix(sandM, sandL, (t - 0.5) * 2) : mix(sandS, sandM, 0.7 + t * 0.6)).lerp(col(GOBI.track), 0.18);
         // A darker wash fanning out from each gully's ends, so the ditch reads as part of the land.
         const wash = (1 - Math.min(1, gullyNear((a.z + cc.z) / 2) / 3.2)) * (1 - smoothstep(TRACK, TRACK + 7, Math.abs((a.x + cc.x) / 2)));
         if (wash > 0) base = base.clone().lerp(col(sandS), wash * 0.75);
