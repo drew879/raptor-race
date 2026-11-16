@@ -1,9 +1,10 @@
 html, body { height: 100%; overflow: hidden; overscroll-behavior: none; background: #f4cfa0; }
 /* The Home Screen app on iPhone blurs a band under the status bar a little deeper than the safe area (owner playtest
-   9: the tops of the score, amber and pause were blurred), so the top UI sits lower there. */
+   9: the tops of the score, amber and pause were blurred), so the top UI sits lower there (playtest 10: 30 px was
+   more than needed). */
 :root { --top-clear: 0px; }
-@media (display-mode: standalone), (display-mode: fullscreen) { :root { --top-clear: 30px; } }
-#game.home-screen { --top-clear: 30px; }
+@media (display-mode: standalone), (display-mode: fullscreen) { :root { --top-clear: 16px; } }
+#game.home-screen { --top-clear: 16px; }
 #game { position: fixed; inset: 0; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 #stage, #stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(80, 40, 20, 0.26) 100%); }
@@ -44,6 +45,13 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; backgrou
 .hint { position: absolute; left: 0; right: 0; margin: 0 auto; width: fit-content; top: calc(env(safe-area-inset-top, 0px) + var(--top-clear) + 176px); display: flex; align-items: center; gap: 12px;
   padding: 10px 16px; max-width: min(calc(100% - 32px), 340px); line-height: 1.3; border: 2px solid var(--ink); border-radius: 12px; background: var(--paper); background-image: var(--grain);
   box-shadow: 0 3px 0 var(--ink); font-weight: 800; font-size: 16px; color: var(--ink); pointer-events: none; animation: hintIn .25s ease-out; }
+.fork-hint { position: absolute; left: 12px; right: 12px; top: calc(env(safe-area-inset-top, 0px) + var(--top-clear) + 176px); display: flex; justify-content: space-between; gap: 12px; pointer-events: none; animation: hintIn .25s ease-out; }
+.fork-side { display: flex; align-items: center; gap: 8px; padding: 8px 12px; line-height: 1.2; border: 2px solid var(--ink); border-radius: 12px; background: var(--paper); background-image: var(--grain);
+  box-shadow: 0 3px 0 var(--ink); font-weight: 800; font-size: 16px; color: var(--ink); }
+.fork-side .glyph { font-family: var(--display); font-weight: 900; font-size: 28px; line-height: 1; color: var(--amber-deep); animation: nudge 1s ease-in-out infinite; }
+.fork-side.left .glyph { --nx: -6px; }
+.fork-side.right { text-align: right; }
+.fork-side.right .glyph { --nx: 6px; }
 .hint .glyph { font-family: var(--display); font-weight: 900; font-size: 26px; line-height: 1; color: var(--amber-deep); animation: nudge 1s ease-in-out infinite; }
 @keyframes hintIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes nudge { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(var(--nx, 0), var(--ny, 0)); } }
@@ -122,15 +130,11 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; backgrou
 #stage.freeze canvas { filter: sepia(.35) contrast(1.05) saturate(.9); transition: filter .4s; }
 @keyframes plateIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* First-encounter callout for amber inclusions */
+/* The ring that follows the first amber inclusion while its hint is up */
 .spot { position: absolute; width: 74px; height: 74px; margin: -37px 0 0 -37px; border-radius: 50%; border: 3px solid #7fe3ff;
   box-shadow: 0 0 0 4px rgba(58,42,30,.55), 0 0 24px rgba(127,227,255,.9); pointer-events: none; animation: spotPulse .8s ease-in-out infinite alternate; }
 @keyframes spotPulse { from { transform: scale(.9); } to { transform: scale(1.12); } }
-.callout { position: absolute; left: 0; right: 0; margin: 0 auto; width: min(calc(100% - 32px), 330px); bottom: calc(env(safe-area-inset-bottom, 0px) + 120px);
   background: var(--paper); background-image: var(--grain); border: 2px solid var(--ink); border-radius: 10px; box-shadow: 4px 5px 0 var(--ink); padding: 14px 16px; }
-.callout h3 { font-family: var(--display); font-weight: 900; font-size: 21px; margin: 2px 0 6px; }
-.callout p { margin: 0 0 8px; font-size: 14px; line-height: 1.45; }
-.callout .tap { font-weight: 900; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--amber-deep); }
 
 /* Opening shot: a Field Journal quarry card and a skip prompt. */
 .quarry { position: absolute; left: 0; right: 0; margin: 0 auto; width: min(calc(100% - 32px), 330px); top: calc(env(safe-area-inset-top, 0px) + var(--top-clear) + 22px);

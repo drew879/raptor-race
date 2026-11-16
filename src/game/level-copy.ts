@@ -23,8 +23,8 @@ export interface LevelCopy {
   results: { title: string };
   lost: { distance: string; missed: string };
   stumble: string;
-  /** The first-inclusion callout. */
-  callout: { title: string; text: string };
+  /** The hint as the first amber inclusion of a run comes up (short: it's read mid-run). */
+  inclusionHint: string;
   hints?: Partial<Record<HintKind, string>>;
   crash?: Partial<Record<HazardType | 'storm', [string, string, string]>>;
   /** The crash screen's default eyebrow line (what caught you). */
@@ -53,7 +53,7 @@ export const LEVEL_COPY: Record<string, LevelCopy> = {
       missed: 'You were close! When "Swipe up to pounce" appears, swipe up right away.',
     },
     stumble: 'Stumbled! The storm is closing in',
-    callout: { title: 'Blue amber, with an insect inside', text: 'Trapped 75 million years ago. Find all 3 in this level for a star.' },
+    inclusionHint: 'Blue amber with an insect inside! Grab it',
     caughtEyebrow: 'The sandstorm caught you',
     reviveLabel: 'Shake it off',
   },
@@ -77,7 +77,7 @@ export const LEVEL_COPY: Record<string, LevelCopy> = {
       missed: 'So close! When "Swipe up to scoop it up" appears, swipe up right away.',
     },
     stumble: 'Stumbled! Keep your eye on the egg',
-    callout: { title: 'Blue amber, with something inside', text: 'Tree resin turns to amber over millions of years. Find all 3 in this level for a star.' },
+    inclusionHint: 'Blue amber with something inside! Grab it',
     hints: {
       lanes: 'Swipe left or right to change lanes',
       jump: 'Swipe up to jump logs and streams',

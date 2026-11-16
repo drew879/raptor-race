@@ -4,7 +4,7 @@
   "description": "Hunt a Protoceratops across the Gobi as a Velociraptor.",
   "start_url": "./",
   "scope": "./",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F3E6CC",
   "theme_color": "#F4CFA0",

@@ -25,8 +25,16 @@ Newest first. Every session updates this before pushing.
 - [x] Owner OK'd the downhill pass (playtest 9): it's the default now (`?hill=1` shows the steady grade)
 - [x] Playtest 9: hollow trunks looked too narrow to fit through. Two causes: the roots meant to stay clear of the opening were filtered on the wrong axis (they grew across it), and bark columns straddled its edges (dark blades). Roots now flare from the sides only and the bark columns meet the opening at its edges
 - [x] Playtest 9: the Home Screen strip stayed (now the ground's brown). Detection now also uses the display mode, and tapping the build number on the title shows the screen measurements (screen, window, viewport, game, safe areas, mode) for a screenshot if it persists. The top UI sits 30 px lower in the Home Screen app, clear of the status bar's blur
-- [ ] Owner: check the strip and the top blur on the phone (or send the build-number readout)
-- [ ] Next (owner): a brief for rebuilding Level 1 as a comparison (owner's answers in hand: new repo drew879/raptor-race-fable; tools and art its call; describe the look and mood conceptually and collaborate on concept art first; design rules only for the course; title, pause, results, journal, music and sound without details). Open: build it locally on the owner's MacBook or in the cloud
+- [x] A brief for rebuilding Level 1 from scratch (docs/level1-rebuild-brief.md): the owner will build it on the MacBook in drew879/raptor-race-fable; tools and art its call; the look and mood as ideas with concept art first; design rules only for the course; menus, journal, music and sound without details; the owner's working rules
+- [x] Playtest 10:
+  - The Home Screen strip: the readout showed the game 956 tall but only the top 894 shown (short by the status bar's 62). The manifest asked for "fullscreen", which iOS handles badly (WebKit reports point to "standalone"); it's "standalone" now. The icon has to be added again to pick it up
+  - The top UI sat too far down (30 px extra was more than the blur needs): 16 px now
+  - Roots inside hollows on a few trunks: the trees beside them spread roots up to 1.4 m sideways into the next lane (lanes are 1.5 m apart); roots now stay within their own lane (hollow trunks within 1.3 m)
+  - The Amber Sense hint and its banner overlapped: banners now always sit below a hint card, moving down together if a hint comes up after them
+  - The first inclusion's card no longer pauses the game: it's a hint like the others, ~3.4 s ahead, with a ring that follows the inclusion on screen (projected the way the world shaders draw it: hill, curve and bend)
+  - The fork hint is two cards with arrows: "Harder, more rewards" on the left, "Easier, fewer rewards" on the right (both levels put the rich side on the left)
+  - The pterosaur warning comes ~2.9 s ahead (was ~1.9 s), and its screech at ~2.8 s (was ~2.2 s)
+- [ ] Owner: re-add the Home Screen icon and check the strip; check the new hints
 
 ## Previous milestone: rework after owner playtest (fun 1-2/5, graphics 1-2/5)
 - [x] Speed: Level 1 runs 15-21 m/s (was 10-14), course scaled 1.5x so every reaction window keeps its duration; snappier lane change (0.14 s); lower, closer camera with speed FOV kick; edge streaks; near-track scenery

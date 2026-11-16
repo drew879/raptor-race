@@ -36,6 +36,8 @@ Hunt design (approved):
 - The pounce lands the raptor on the prey's back and holds it there in the raptor-prey-restraint pose (feet gripping, wings beating for balance, head down). No bites, no blood. The prey braces with its head thrown up. The freeze-frame holds that moment.
 - Eggs no longer fit (no nest). Replacement rare collectible: **amber with an insect inclusion** (3 per level), which feeds the Field Journal and strengthens the amber motif.
 
+**Hints (owner playtest 10):** short cards near the top, readable mid-run, every run; banners always sit below a card. Nothing but the pause button pauses the game: the first amber inclusion of a run gets a hint ~3.4 s ahead with a ring that follows it on screen. At a fork, two cards with arrows: "Harder, more rewards" on the left, "Easier, fewer rewards" on the right.
+
 ## 3. Controls
 | Input | Action |
 |---|---|

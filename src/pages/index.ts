@@ -24,7 +24,7 @@ import { DOWNHILL, LOOK, downhill2, lookAt, setLook } from '../render/look';
 import { LEVEL_COPY } from '../game/level-copy';
 import { curvatureAt, timeAt } from '../game/level';
 import { crashCopy } from '../game/copy';
-import { applyLookMaterials, hillGrade, hillHeight, setHill, worldUniforms } from '../render/materials';
+import { BEND_KNEE, applyLookMaterials, hillGrade, hillHeight, setHill, worldUniforms } from '../render/materials';
 import { Input } from '../core/input';
 import { AudioEngine } from '../audio/sfx';
 import { loadSave, writeSave } from '../game/save';
@@ -82,11 +82,14 @@ root.innerHTML = `
 </div>
 <div class="pounce" id="pounce" hidden>${esc(COPY.pounce)}</div>
 <div class="spot" id="spot" hidden></div>
-<div class="callout" id="callout" hidden><div class="eyebrow">Rare find</div><h3>${esc(COPY.callout.title)}</h3><p>${esc(COPY.callout.text)}</p><div class="tap">Tap to continue</div></div>
 <div class="quarry" id="quarry" hidden><div class="eyebrow">${esc(COPY.quarry.eyebrow)}</div><h2>${esc(COPY.quarry.name)}</h2><div class="latin">${esc(COPY.quarry.latin)}</div></div>
 <div class="skip" id="skip" hidden>Tap to skip</div>
 <div class="plate" id="plate" hidden><div class="plate-card"><div class="eyebrow">${esc(COPY.plate.eyebrow)}</div><h2>${esc(COPY.plate.title)}</h2><p>${esc(COPY.plate.text)}</p></div></div>
 <div class="hint" id="hint" hidden><span class="glyph" id="hintGlyph"></span><span id="hintText"></span></div>
+<div class="fork-hint" id="forkHint" hidden>
+  <div class="fork-side left"><span class="glyph">←</span><span>Harder,<br>more rewards</span></div>
+  <div class="fork-side right"><span>Easier,<br>fewer rewards</span><span class="glyph">→</span></div>
+</div>
 <div class="floats" id="floats"></div>
 
 <section class="screen title" id="scrTitle">
@@ -505,7 +508,8 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && app
 function startRun() {
   if (session.state !== 'ready') newSession();
   save.lastLevel = LEVEL.id;
-  inclusionIntro = 'pending';
+  inclusionHinted = false;
+  spotTarget = null;
   while (!pregenerate(1000)) { /* finish any terrain not built yet */ }
   hitches.length = 0;
   save.runs++;
@@ -560,24 +564,42 @@ const HINTS: Record<HintKind, [string, string, string, string]> = {
 };
 function showHint(h: HintKind) {
   const [g, t0, nx, ny] = HINTS[h];
-  const t = COPY.hints?.[h] ?? t0;
-  $('hintGlyph').textContent = g;
+  showMessage(g, COPY.hints?.[h] ?? t0, nx, ny, h === 'fork');
+}
+/** Show a hint card (or, at a fork, the two-sided card: harder with more rewards on the left, easier on the right;
+ * both levels put the rich route on the left). Owner playtest 10: the fork's sentence was hard to read mid-run. */
+function showMessage(glyph: string, text: string, nx = '0', ny = '0', fork = false) {
+  $('hintGlyph').textContent = glyph;
   $('hintGlyph').style.setProperty('--nx', nx);
   $('hintGlyph').style.setProperty('--ny', ny);
-  $('hintText').textContent = t;
-  const el = $('hint');
-  el.hidden = false;
+  $('hintText').textContent = text;
+  $('hint').hidden = fork;
+  $('forkHint').hidden = !fork;
+  const el = $(fork ? 'forkHint' : 'hint');
   el.style.animation = 'none';
   void el.offsetWidth;
   el.style.animation = '';
-  hintTimer = 3.2;
+  hintTimer = fork ? 3.6 : 3.2;
+  // Banners already up move down below the card together, keeping their stacking.
+  const floats = [...$('floats').children] as HTMLElement[];
+  const shift = hintBottom() - Math.min(...floats.map((f) => parseFloat(f.style.top)));
+  if (shift > 0) for (const f of floats) f.style.top = `${parseFloat(f.style.top) + shift}%`;
+}
+/** Where a showing hint card ends (percent of the screen height), so banners can sit below it (owner playtest 10:
+ * the Amber Sense hint and its banner overlapped). 0 when no card is up. */
+function hintBottom() {
+  const card = !$('hint').hidden ? $('hint') : !$('forkHint').hidden ? $('forkHint') : null;
+  if (!card) return 0;
+  const box = root.getBoundingClientRect();
+  return ((card.getBoundingClientRect().bottom - box.top + 12) / box.height) * 100;
 }
 let bannerSlots = 0;
 function floatText(text: string, kind: 'big' | 'small' | 'banner', topPct: number) {
   const el = document.createElement('div');
   el.className = `float ${kind}`;
   el.textContent = text;
-  // Banners stack instead of overlapping when several fire together.
+  // Below any hint card, and banners stack instead of overlapping when several fire together.
+  topPct = Math.max(topPct, hintBottom());
   if (kind === 'banner') {
     topPct += bannerSlots * 7;
     bannerSlots++;
@@ -787,7 +809,7 @@ function syncCreatures(dt: number) {
       v.root.rotation.set(Math.atan2(y2 - y, Math.max(0.3, ahead - ahead2)) * 0.8, Math.PI, (x2 - x) * 0.6, 'YXZ');
       v.root.visible = dz < 118 && dz > -32;
       v.update(dt, dz > 70 ? 0.6 : dz > 4 ? 0.12 : 1);
-      if (dz < 46 && !screeched.has(h.id)) { screeched.add(h.id); audio.play('screech'); }
+      if (dz < 60 && !screeched.has(h.id)) { screeched.add(h.id); audio.play('screech'); } // ~2.8 s ahead
     } else {
       v.root.position.set(h.x, 0, -h.d);
       if (h.type === 'nester') {
@@ -1082,6 +1104,7 @@ function step(dt: number) {
   }
   if (app === 'playing' || app === 'finishing' || app === 'results') {
     if (app === 'playing') { bot?.step(dt * timeScale); checkInclusionIntro(); }
+    syncSpot();
     session.step(dt * timeScale);
     for (const e of session.drainEvents()) handle(e);
     // No distance meter (owner: judge it by eye); one warning each time the prey pulls far ahead.
@@ -1105,7 +1128,7 @@ function step(dt: number) {
     session.step(dt);
     session.drainEvents();
   }
-  if (hintTimer > 0) { hintTimer -= dt; if (hintTimer <= 0) $('hint').hidden = true; }
+  if (hintTimer > 0) { hintTimer -= dt; if (hintTimer <= 0) { $('hint').hidden = true; $('forkHint').hidden = true; } }
   syncWorld(app === 'paused' || frozen ? 0 : dt);
   updateCamera(dt);
 }
@@ -1188,32 +1211,40 @@ function adaptQuality(dt: number) {
   }
 }
 
-// First encounter with an amber inclusion: pause, circle it on screen, explain, continue on tap.
-let inclusionIntro: 'pending' | 'showing' | 'done' = 'pending';
+// The first amber inclusion of each run gets a hint like the others (owner playtest 10: it used to pause the game
+// with a tap-to-continue card). It comes ~3.4 s ahead, so there's time to change lanes for it, and a ring follows
+// the inclusion on screen while the hint is up.
+const INCLUSION_LEAD = 3.4;
+let inclusionHinted = false;
+let spotTarget: { x: number; y: number; d: number; taken: boolean } | null = null;
 const projV = new THREE.Vector3();
 function checkInclusionIntro() {
-  if (inclusionIntro !== 'pending' || save.seenInclusion || app !== 'playing') return;
-  if (bot && !params.has('introshot')) { inclusionIntro = 'done'; return; } // autoplay never waits for a tap
-  const first = session.pickups.find((p) => p.kind === 'egg' && !p.taken && p.d - session.distance > 14 && p.d - session.distance < 30);
+  if (inclusionHinted || app !== 'playing') return;
+  const r = session.runner;
+  const first = session.pickups.find((p) => p.kind === 'egg' && !p.taken && p.d > r.distance + 6 && (p.d - r.distance) / Math.max(1, r.speed) < INCLUSION_LEAD);
   if (!first) return;
-  inclusionIntro = 'showing';
-  timeScale = 0;
-  projV.set(first.x, first.y, -first.d).project(stage.camera);
+  inclusionHinted = true;
+  spotTarget = first;
+  showMessage('◆', COPY.inclusionHint);
+}
+/** Where a world point is drawn on screen (normalized device coordinates): the world shaders drop it by the hill,
+ * curve it away with distance and bend it with the trail (materials.ts patchWorld), so this does the same. */
+function projectDrawn(x: number, y: number, d: number, out: THREE.Vector3) {
+  const cam = stage.camera, u = worldUniforms;
+  out.set(x, y + hillHeight(d) - hillHeight(-cam.position.z), -d).applyMatrix4(cam.matrixWorldInverse);
+  const zz = out.z * out.z;
+  out.y -= u.uCurve.value * zz;
+  out.x += (u.uBend.value * zz) / (1 + Math.abs(out.z) / BEND_KNEE);
+  return out.applyMatrix4(cam.projectionMatrix);
+}
+function syncSpot() {
   const spot = $('spot');
+  if (!spotTarget || hintTimer <= 0 || spotTarget.taken || spotTarget.d < session.distance + 2) { spotTarget = null; spot.hidden = true; return; }
+  projectDrawn(spotTarget.x, spotTarget.y, spotTarget.d, projV);
   spot.style.left = `${((projV.x + 1) / 2) * 100}%`;
   spot.style.top = `${((1 - projV.y) / 2) * 100}%`;
   spot.hidden = false;
-  $('callout').hidden = false;
-  input.enabled = false;
 }
-root.addEventListener('pointerdown', () => {
-  if (inclusionIntro !== 'showing') return;
-  inclusionIntro = 'done';
-  timeScale = 1;
-  $('spot').hidden = true;
-  $('callout').hidden = true;
-  setTimeout(() => { if (app === 'playing') input.enabled = true; }, 120);
-});
 
 // Hitch log: frames over 50 ms during a run, summarized on the results screen.
 const hitches: number[] = [];

@@ -95,7 +95,7 @@ B.hz(790, 'ledge', 0).hz(790, 'boulder', -1, 1).arcOver(790, 0);
 B.hz(806, 'arch', 0).hz(806, 'boulder', -1, 1).low(802, 810, 0);
 B.hz(822, 'ledge', 0).arcOver(822, 0);
 B.hz(838, 'boulder', 0).hz(838, 'ledge', -1).hz(838, 'arch', 1).arcOver(838, -1).low(834, 842, 1);
-B.hint(832, 'pterosaur');
+B.hint(818, 'pterosaur'); // ~2.9 s ahead (owner playtest 10: was ~1.9 s, a little late)
 B.hz(858, 'pterosaur', 0).low(854, 862, 0); // swoops in low across all lanes: slide
 B.hz(876, 'gully', 0).arcOver(876, 0);
 // Egg 3: jump the ledge in the middle, then cut right behind the boulder.
