@@ -6,7 +6,7 @@ import type { HazardType } from '../../game/types';
 
 /**
  * Jehol Forest obstacles: the same collision boxes as the Gobi's (collision.ts), dressed as forest.
- * - boulder (go around): a standing tree trunk with flared roots, or a mossy boulder
+ * - boulder (go around): a standing tree trunk with flared roots (three sizes)
  * - ledge (jump): a fallen log across the lane
  * - arch (slide, one lane): a giant old trunk with an arched hollow through its base
  * - ribArch (slide, all lanes): a fallen trunk propped across the trail at head height
@@ -59,17 +59,11 @@ function log(g: GeomBuilder, c: THREE.Vector3, dir: THREE.Vector3, len: number, 
   void rng;
 }
 
-/** Lane blocker: a standing trunk (rising out of view) with root flares, or (variant 2) a mossy boulder. */
+/** Lane blocker: a standing trunk (rising out of view) with root flares. Three sizes (all fill the lane). */
 function blocker(variant: number): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const rng = new Rng(300 + variant);
-  if (variant % 3 === 2) {
-    const main = jitterGeometry(new THREE.IcosahedronGeometry(1, 1), 0.25, () => rng.next());
-    g.appendGeometry(main, new THREE.Matrix4().compose(new THREE.Vector3(0, 0.7, 0), new THREE.Quaternion(), new THREE.Vector3(0.68, 0.78, 0.6)), (_i, c, n) =>
-      shade(n.y > 0.35 ? mix(F.moss, F.mossLight, 0.4 + 0.3 * Math.sin(c.x * 5)) : mix(F.rock, F.rockMoss, 0.3), 0.92 + 0.1 * Math.sin(c.x * 7 + c.z * 5)));
-    return g.build();
-  }
-  const R = 0.5, H = 16, n = 10;
+  const R = [0.5, 0.56, 0.62][variant % 3], H = 16, n = 10;
   const rot = rng.range(0, 6.28);
   for (let s = 0; s < 4; s++) {
     const y0 = [0, 0.6, 3, 8][s], y1 = [0.6, 3, 8, H][s];
@@ -127,8 +121,8 @@ function hollowTrunk(): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const rng = new Rng(71);
   const R = 1.15, n = 16, H = 18;
-  const HW = 0.6; // half-width of the hollow
-  const hole = (x: number) => 0.68 + 0.16 * Math.sqrt(Math.max(0, 1 - (x / HW) ** 2)); // its arched roof
+  const HW = 0.68; // half-width of the hollow
+  const hole = (x: number) => 0.7 + 0.24 * Math.sqrt(Math.max(0, 1 - (x / HW) ** 2)); // its arched roof
   const p = (y: number, r: number, a: number) => new THREE.Vector3(Math.sin(a) * r, y, Math.cos(a) * r);
   for (let k = 0; k < n; k++) {
     const a0 = (k / n) * Math.PI * 2, a1 = ((k + 1) / n) * Math.PI * 2;
@@ -168,27 +162,33 @@ function hollowTrunk(): THREE.BufferGeometry {
   return g.build();
 }
 
-/** Slide (all lanes): a fallen trunk propped across the trail at head height on a root plate and a boulder,
- * with moss hanging off it. Its underside is at 0.8 m (collision from 0.72). */
+/** Slide (all lanes): a big fallen trunk propped across the trail on its root plate and a broken stump, with moss
+ * hanging off it. Its underside is ~1 m up (collision from 0.72) and its top well above any jump, so it reads as
+ * something to duck under, never to hop (owner playtest 5). */
 function proppedTrunk(): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const rng = new Rng(83);
-  const r = 0.4, cy = 1.22;
+  const r = 0.52, cy = 1.52;
   log(g, new THREE.Vector3(0, cy, 0), new THREE.Vector3(1, 0.04, 0), 7.6, r, 10, rng, false);
   // Root plate on the left: a broad disc of roots and soil standing on edge.
-  const rp = new THREE.Vector3(-3.9, 1.3, 0);
+  const rp = new THREE.Vector3(-3.9, 1.5, 0);
   for (let k = 0; k < 12; k++) {
     const a0 = (k / 12) * Math.PI * 2, a1 = ((k + 1) / 12) * Math.PI * 2;
     const q = (a: number, rr: number) => rp.clone().add(new THREE.Vector3(0, Math.sin(a) * rr, Math.cos(a) * rr));
     oquad(g, q(a0, 0.3), q(a1, 0.3), q(a1, 1.35), q(a0, 1.35), new THREE.Vector3(1, 0, 0), shade(mix(F.litterDark, F.bark, 0.4), 0.9 + 0.15 * Math.sin(k * 2.3)));
     oquad(g, q(a0, 0.3), q(a1, 0.3), q(a1, 1.35), q(a0, 1.35), new THREE.Vector3(-1, 0, 0), shade(col(F.litterDark), 0.8));
   }
-  // A boulder under the right end.
-  g.appendGeometry(jitterGeometry(new THREE.IcosahedronGeometry(1, 1), 0.25, () => rng.next()), new THREE.Matrix4().compose(new THREE.Vector3(3.5, 0.45, 0), new THREE.Quaternion(), new THREE.Vector3(0.6, 0.55, 0.6)), (_i, c, nn) => shade(nn.y > 0.3 ? col(F.rockMoss) : col(F.rock), 0.95 + 0.08 * Math.sin(c.x * 6)));
-  // Hanging moss: short strands under the trunk (ending well above the slide line).
-  for (let k = 0; k < 14; k++) {
-    const x = -3 + k * 0.45 + rng.range(-0.1, 0.1);
-    const top = new THREE.Vector3(x, cy - r * 0.9, rng.range(-0.15, 0.15)), len = rng.range(0.12, 0.3);
+  // A broken stump under the right end, the trunk resting on it.
+  for (let k = 0; k < 8; k++) {
+    const a0 = (k / 8) * Math.PI * 2, a1 = ((k + 1) / 8) * Math.PI * 2;
+    const p = (a: number, y: number, rr: number) => new THREE.Vector3(3.55 + Math.cos(a) * rr, y, Math.sin(a) * rr);
+    const out = new THREE.Vector3(Math.cos((a0 + a1) / 2), 0, Math.sin((a0 + a1) / 2));
+    oquad(g, p(a0, 0, 0.55), p(a1, 0, 0.55), p(a1, cy - r + 0.05 + (k % 3) * 0.06, 0.45), p(a0, cy - r + 0.05 + ((k + 2) % 3) * 0.06, 0.45), out, bark(out, k));
+  }
+  // Hanging moss: strands under the trunk (ending well above the slide line).
+  for (let k = 0; k < 16; k++) {
+    const x = -3.1 + k * 0.4 + rng.range(-0.1, 0.1);
+    const top = new THREE.Vector3(x, cy - r * 0.9, rng.range(-0.15, 0.15)), len = rng.range(0.1, 0.24);
     oquad(g, top.clone().add(new THREE.Vector3(-0.04, 0, 0)), top.clone().add(new THREE.Vector3(0.04, 0, 0)), top.clone().add(new THREE.Vector3(0.01, -len, 0)), top.clone().add(new THREE.Vector3(-0.01, -len, 0)), new THREE.Vector3(0, 0, 1), mix(F.moss, F.mossLight, rng.next()));
   }
   return g.build();

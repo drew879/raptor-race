@@ -13,13 +13,33 @@ import type { SaveData } from './save';
 export interface InclusionPage {
   /** What's trapped inside. */
   title: string;
-  art: 'feather' | 'tick' | 'ant';
+  art: 'feather' | 'tick' | 'ant' | 'web' | 'bird' | 'tail';
   fact: string;
   /** Where to find it, shown after two runs that miss it. */
   hint: string;
 }
 
 export const INCLUSION_PAGES: Record<string, InclusionPage[]> = {
+  'jehol-forest': [
+    {
+      title: 'A spider web',
+      art: 'web',
+      fact: 'In amber from Spain about 110 million years old, scientists found a spider web with its prey still caught in it: 26 silk threads dotted with sticky glue droplets, holding a fly, a mite, a beetle and a wasp. Described in 2006, it was the oldest web with trapped prey ever found.',
+      hint: 'Where the trail runs under the old trunks, slide through the hollow in the left lane.',
+    },
+    {
+      title: 'A baby bird',
+      art: 'bird',
+      fact: '"Belone" is a hatchling bird caught in amber from Myanmar about 99 million years ago, only days or weeks after it hatched. It already had flight feathers. It belonged to the enantiornithines, a group of birds that died out with the dinosaurs.',
+      hint: 'At the fallen giant tree, take the rough left side and slide through the hollow trunk.',
+    },
+    {
+      title: 'A dinosaur\'s tail',
+      art: 'tail',
+      fact: 'In 2016, scientists described a feathered tail in 99-million-year-old amber from Myanmar: eight bones from the tail of a young dinosaur, its feathers kept in 3D. It turned up at an amber market, where it had been taken for a bit of plant.',
+      hint: 'Near the bottom of the hill, a log lies across the right lane. Jump it.',
+    },
+  ],
   'flaming-cliffs': [
     {
       title: 'A feather',
@@ -49,14 +69,15 @@ export const BLUE_AMBER_NOTE =
 export interface LevelEntry { id: string; name: string; raptor: string; available: boolean }
 export interface ChapterDef { id: string; title: string; levels: LevelEntry[] }
 
-/** The roster, grouped into chapters of three (docs/GDD.md section 9). Only Level 1 exists so far. */
+/** The roster, grouped into chapters of three (docs/GDD.md section 9). Level 1 is the tutorial (owner: the
+ * Caudipteryx level comes first, the Velociraptor hunt is Level 2); Level 3 is on hold (maybe Utahraptor). */
 export const CHAPTERS: ChapterDef[] = [
   {
     id: 'ch1',
     title: 'Chapter 1',
     levels: [
+      { id: 'jehol-forest', name: 'Jehol Forest', raptor: 'Caudipteryx', available: true },
       { id: 'flaming-cliffs', name: 'Flaming Cliffs', raptor: 'Velociraptor', available: true },
-      { id: 'floodplain', name: 'Floodplain Forest', raptor: 'Deinonychus', available: false },
       { id: 'cedar-mountain', name: 'Cedar Mountain', raptor: 'Utahraptor', available: false },
     ],
   },

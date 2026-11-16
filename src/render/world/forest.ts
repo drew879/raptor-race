@@ -20,7 +20,7 @@ const TRACK = CONFIG.world.trackHalfWidth;
 const TRACK_COLS = [-TRACK, -2.05, -1.45, -0.95, -0.55, -0.18, 0.18, 0.55, 0.95, 1.45, 2.05, TRACK];
 const SIDE_COLS = [TRACK, 3.1, 3.8, 4.7, 5.9, 7.4, 9.4, 12, 15.5, 20, 26, 34, 44, 57, 74, 96, 125];
 const STREAM_HALF = 1.25; // a stream is two track rows wide
-const WATER_Y = -0.34;
+const WATER_Y = -0.12; // brimming: lower water hides behind the near bank from the chase camera
 const BED_Y = -0.7;
 
 /** Ground height beside the trail: a low mossy berm, a gentle rise, then the valley walls; streams cut across. */
@@ -374,9 +374,25 @@ function streamRow(g: GeomBuilder, r: number, gr: number, tp: (ci: number, ri: n
     if (first) wall(near[c], near[c + 1], nb[c], nb[c + 1], new THREE.Vector3(0, 0, -1));
     if (last) wall(far[c], far[c + 1], fb[c], fb[c + 1], new THREE.Vector3(0, 0, 1));
   }
-  // Foam lines along the water, so it reads as running water.
-  if (first) for (let c = 1; c < n - 2; c += 3) {
-    const a = nb[c].clone().setY(WATER_Y + 0.01), b = nb[c + 1].clone().setY(WATER_Y + 0.01);
-    oquad(g, a, b, b.clone().add(new THREE.Vector3(0, 0, -0.12)), a.clone().add(new THREE.Vector3(0, 0, -0.12)), UP, col(F.foam));
+  // Foam along both banks and a streak down the middle, so it reads as running water from far up the trail.
+  const foam = (row: THREE.Vector3[], dz: number, w: number) => {
+    for (let c = 0; c < n - 1; c++) {
+      if ((c + gr) % 4 === 3) continue; // broken, not a painted line
+      const a = row[c].clone().setY(WATER_Y + 0.01), b = row[c + 1].clone().setY(WATER_Y + 0.01);
+      a.z += dz; b.z += dz;
+      oquad(g, a, b, b.clone().add(new THREE.Vector3(0, 0, -w)), a.clone().add(new THREE.Vector3(0, 0, -w)), UP, col(F.foam));
+    }
+  };
+  if (first) foam(nb, -0.02, 0.16);
+  if (last) foam(fb, 0.18, 0.16);
+  // Stones half in the water along the far bank (below the trail, never in the way).
+  if (last) for (let c = 0; c < n - 1; c += 2) {
+    const p = fb[c].clone().lerp(fb[c + 1], 0.5).setY(WATER_Y - 0.05).add(new THREE.Vector3(0, 0, 0.3));
+    const r = 0.13 + hash2(c, gr, 37) * 0.08;
+    for (let k = 0; k < 6; k++) {
+      const a0 = (k / 6) * Math.PI * 2, a1 = ((k + 1) / 6) * Math.PI * 2;
+      const q = (a: number) => p.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r * 0.8));
+      otri(g, p.clone().add(new THREE.Vector3(0, r * 0.7, 0)), q(a0), q(a1), UP, shade(mix(F.rock, F.rockMoss, 0.4), 0.9 + 0.2 * hash2(c, k, 39)));
+    }
   }
 }

@@ -165,7 +165,7 @@ root.innerHTML = `
     <ul id="rStars"></ul>
     <div class="perf" id="rPerf"></div>
     <button class="journal-new" id="btnNewPage" hidden></button>
-    <div class="buttons"><button class="btn-amber" id="btnAgain">Run again</button><button class="btn-paper" id="btnTitle">Title</button></div>
+    <div class="buttons"><button class="btn-amber" id="btnNextLevel" hidden>Next level</button><button class="btn-amber" id="btnAgain">Run again</button><button class="btn-paper" id="btnTitle">Title</button></div>
   </div>
 </section>
 <div class="debug" id="debug" hidden></div>
@@ -346,9 +346,10 @@ function renderJournal(fresh: number[] = []) {
     ch.levels.forEach((lv, li) => {
       const unlocked = lv.available && levelUnlocked(save, ci, li);
       const st = save.stars[lv.id] ?? [false, false, false];
-      parts.push(`<div class="lvl ${unlocked ? 'open' : 'locked'}"><div class="lvl-n">${li + 1}</div><div class="lvl-main"><b>${lv.name}</b><span>${lv.raptor}</span>${
+      const n = levelNumber(lv.id);
+      parts.push(`<div class="lvl ${unlocked ? 'open' : 'locked'}"><div class="lvl-n">${n}</div><div class="lvl-main"><b>${lv.name}</b><span>${lv.raptor}</span>${
         unlocked ? `<span class="lvl-stars">${stars3(st)}${save.best[lv.id] ? ` · best ${save.best[lv.id].toLocaleString('en-US')}` : ''}</span>` : `<span class="lock-note">🔒 ${lv.available ? lockReason(save, ci, li) : levelUnlocked(save, ci, li) ? 'Coming soon' : lockReason(save, ci, li)}</span>`
-      }</div></div>`);
+      }</div>${unlocked ? `<button class="lvl-play ${lv.id === LEVEL.id ? 'here' : ''}" data-level="${lv.id}">${lv.id === LEVEL.id ? 'Run' : 'Play'}</button>` : ''}</div>`);
       // The open level's spread: its inclusion pages and plumages.
       const pages = INCLUSION_PAGES[lv.id];
       if (!unlocked || !pages) return;
@@ -404,6 +405,30 @@ function syncJournalBadge() {
   $('btnJournal').innerHTML = n ? `Field Journal <span class="badge">${n} new</span>` : 'Field Journal';
 }
 $('btnJournal').addEventListener('click', () => openJournal('title'));
+// Picking a level in the journal: this one goes to its pre-run card; another reloads the page on that level.
+$('journalBody').addEventListener('click', (ev) => {
+  const id = (ev.target as HTMLElement).closest<HTMLElement>('[data-level]')?.dataset.level;
+  if (!id) return;
+  if (id === LEVEL.id) { renderObjectives(); renderPlumagePick(); setApp('prerun'); }
+  else goToLevel(id);
+});
+function goToLevel(id: string) {
+  save.lastLevel = id;
+  writeSave(save);
+  location.href = `${location.pathname}?level=${encodeURIComponent(id)}`;
+}
+$('btnNextLevel').addEventListener('click', () => { const n = nextLevel(); if (n) goToLevel(n); });
+/** The next level in the roster, if it exists and is open. */
+function nextLevel() {
+  for (let ci = 0; ci < CHAPTERS.length; ci++) {
+    const li = CHAPTERS[ci].levels.findIndex((l) => l.id === LEVEL.id);
+    if (li < 0) continue;
+    const [nci, nli] = li + 1 < CHAPTERS[ci].levels.length ? [ci, li + 1] : [ci + 1, 0];
+    const lv = CHAPTERS[nci]?.levels[nli];
+    return lv && lv.available && levelUnlocked(save, nci, nli) ? lv.id : null;
+  }
+  return null;
+}
 $('btnNewPage').addEventListener('click', () => openJournal('results'));
 $('btnJournalBack').addEventListener('click', () => { if (journalFrom === 'title') { syncJournalBadge(); } setApp(journalFrom); });
 $('btnBack').addEventListener('click', () => setApp('title'));
@@ -663,6 +688,10 @@ function showResults() {
   $('rBest').hidden = !isBest;
   const labels = [COPY.caught, `Amber inclusions: ${session.eggs.filter(Boolean).length} of 3`, `Score ${LEVEL.parScore.toLocaleString('en-US')}`];
   $('rStars').innerHTML = labels.map((l, i) => `<li>${star(st[i], st[i], 300 + i * 220)} ${l}</li>`).join('');
+  const next = nextLevel();
+  $('btnNextLevel').hidden = !next;
+  if (next) $('btnNextLevel').textContent = `Next: Level ${levelNumber(next)}`;
+  $('btnAgain').className = next ? 'btn-paper' : 'btn-amber';
   $('rPerf').textContent = hitches.length ? `Smoothness: ${hitches.length} hitch${hitches.length > 1 ? 'es' : ''}, worst ${Math.max(...hitches)} ms` : 'Smoothness: no hitches';
   setApp('results');
   const t0 = performance.now();

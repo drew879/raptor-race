@@ -8,7 +8,7 @@ import { GLIDE_SECONDS } from '../src/game/session';
 import { Bot } from '../src/game/bot';
 import { HUMANLIKE, PERFECT, playLevel } from '../src/game/bot';
 
-describe('level 1 data', () => {
+describe('Flaming Cliffs (Level 2) data', () => {
   it('has exactly three eggs and two checkpoints', () => {
     expect(FLAMING_CLIFFS.pickups.filter((p) => p.kind === 'egg')).toHaveLength(3);
     expect(FLAMING_CLIFFS.checkpoints).toHaveLength(2);
@@ -159,7 +159,7 @@ describe('music sync', () => {
   });
 });
 
-describe('level 1 playthrough', () => {
+describe('Flaming Cliffs (Level 2) playthrough', () => {
   it('a perfect player finishes cleanly and finds all three eggs', () => {
     const res = playLevel(new Session(FLAMING_CLIFFS), PERFECT);
     console.log('perfect run', res);
@@ -170,7 +170,7 @@ describe('level 1 playthrough', () => {
     expect(res.stumbles).toBe(0);
     expect(res.eggs).toBe(3);
   });
-  it('is fairly easy: a human-like player usually finishes without being caught twice', () => {
+  it('is fair but harder than the tutorial: a human-like player usually finishes without being caught twice', () => {
     const N = 120;
     let clean = 0, withRevive = 0, total = 0, neverLost = 0;
     for (let i = 0; i < N; i++) {
@@ -183,6 +183,6 @@ describe('level 1 playthrough', () => {
     }
     console.log(`human-like: clean ${((clean / N) * 100).toFixed(0)}%, within one revive ${((withRevive / N) * 100).toFixed(0)}%, never lost the prey ${((neverLost / N) * 100).toFixed(0)}%, avg score ${Math.round(total / N)}`);
     expect(neverLost / N).toBeGreaterThanOrEqual(0.8);
-    expect(withRevive / N).toBeGreaterThanOrEqual(0.85);
+    expect(withRevive / N).toBeGreaterThanOrEqual(0.78); // was 0.85 as Level 1; it's Level 2 now and a little harder (owner)
   });
 });

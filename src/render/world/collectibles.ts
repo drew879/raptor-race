@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GeomBuilder } from '../geom';
 import { GOBI, col, mix, shade } from '../palette';
-import { BEND_KNEE, MATS, worldUniforms } from '../materials';
+import { BEND_KNEE, HILL_GLSL, MATS, hillUniforms, worldUniforms } from '../materials';
 import { Rng } from '../../core/rng';
 
 const INK_SCALE = new THREE.Matrix4().makeScale(1.16, 1.12, 1.16);
@@ -89,9 +89,10 @@ export class HaloField {
     this.geo.setAttribute('aAlpha', new THREE.BufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage));
     this.geo.setAttribute('aColor', new THREE.BufferAttribute(this.color, 3).setUsage(THREE.DynamicDrawUsage));
     const mat = new THREE.ShaderMaterial({
-      uniforms: { uCurve: worldUniforms.uCurve, uBend: worldUniforms.uBend, uScale: { value: 800 }, uFogNear: { value: fog.near }, uFogFar: { value: fog.far } },
+      uniforms: { uCurve: worldUniforms.uCurve, uBend: worldUniforms.uBend, ...hillUniforms(), uScale: { value: 800 }, uFogNear: { value: fog.near }, uFogFar: { value: fog.far } },
       vertexShader: /* glsl */ `
         uniform float uCurve, uBend, uScale, uFogNear, uFogFar;
+        ${HILL_GLSL}
         attribute float aSize, aAlpha; attribute vec3 aColor;
         varying float vAlpha; varying vec3 vColor;
         void main() {
@@ -99,8 +100,10 @@ export class HaloField {
           float dist = -mv.z;
           vAlpha = aAlpha * (1.0 - smoothstep(uFogNear, uFogFar, dist));
           vColor = aColor;
+          vec3 hv = rrHillWarp(mv.xyz);
           mv.y -= uCurve * mv.z * mv.z;
           mv.x += uBend * mv.z * mv.z / (1.0 + abs(mv.z) / ${BEND_KNEE.toFixed(1)});
+          mv.xyz += hv - (modelViewMatrix * vec4(position, 1.0)).xyz;
           gl_Position = projectionMatrix * mv;
           gl_PointSize = aSize * uScale / max(dist, 0.1);
         }`,

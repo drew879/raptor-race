@@ -86,7 +86,7 @@ export const LEVEL_COPY: Record<string, LevelCopy> = {
       magnet: 'Amber Sense pulls nearby amber to you',
     },
     crash: {
-      boulder: ['Ouch', 'Ran into a tree', 'Trees and mossy rocks can\'t be jumped. Swipe left or right to go around.'],
+      boulder: ['Ouch', 'Ran into a tree', 'Tree trunks can\'t be jumped. Swipe left or right to go around them.'],
       ledge: ['Ouch', 'Tripped on a log', 'Swipe up to jump fallen logs.'],
       gully: ['Splash', 'Fell in the stream', 'Swipe up to jump the streams that cross the trail.'],
       arch: ['Ouch', 'Bumped the old trunk', 'Swipe down to slide through the hollow at its base.'],

@@ -6,12 +6,18 @@ import { FLAMING_CLIFFS } from '../src/game/flaming-cliffs';
 const fresh = (): SaveData => ({ v: 1, best: {}, stars: {}, eggs: {}, amberBank: 0, sound: true, music: true, runs: 0 });
 
 describe('chapter gates', () => {
-  it('Level 1 is always open; the next level opens when you catch the prey', () => {
+  it('Level 1 (Jehol Forest) is always open; the next level opens when you catch the prey', () => {
     const s = fresh();
+    expect(CHAPTERS[0].levels[0].id).toBe('jehol-forest');
     expect(levelUnlocked(s, 0, 0)).toBe(true);
     expect(levelUnlocked(s, 0, 1)).toBe(false);
-    expect(lockReason(s, 0, 1)).toBe('Catch the prey in Flaming Cliffs');
-    s.stars['flaming-cliffs'] = [true, false, false];
+    expect(lockReason(s, 0, 1)).toBe('Catch the prey in Jehol Forest');
+    s.stars['jehol-forest'] = [true, false, false];
+    expect(levelUnlocked(s, 0, 1)).toBe(true);
+  });
+  it('a level you have already played stays open when a new level is added ahead of it', () => {
+    const s = fresh();
+    s.best['flaming-cliffs'] = 9000; // played it back when it was Level 1
     expect(levelUnlocked(s, 0, 1)).toBe(true);
   });
   it('the next chapter needs 8 of the chapter\'s 9 inclusions, and found inclusions count from any level', () => {

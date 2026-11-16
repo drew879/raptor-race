@@ -19,6 +19,19 @@ export const worldUniforms = {
   uSlopeTo: { value: 1e6 },
 };
 
+/** GLSL for the hill profile (declarations and functions), shared by every shader that draws into the world. */
+export const HILL_GLSL = `
+  uniform float uSlope, uSlopeFrom, uSlopeTo;
+  float rrSoftplus(float x) { return max(x, 0.0) + 8.0 * log(1.0 + exp(-abs(x) / 8.0)); }
+  float rrHill(float d) { return -uSlope * (rrSoftplus(d - uSlopeFrom) - rrSoftplus(d - uSlopeTo)); }
+  /** Raise or drop a view-space position by the hill's height there relative to the camera's. */
+  vec3 rrHillWarp(vec3 mv) {
+    if (uSlope == 0.0) return mv;
+    vec3 wpos = transpose(mat3(viewMatrix)) * (mv - viewMatrix[3].xyz);
+    return mv + (viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz * (rrHill(-wpos.z) - rrHill(-cameraPosition.z));
+  }`;
+export const hillUniforms = () => ({ uSlope: worldUniforms.uSlope, uSlopeFrom: worldUniforms.uSlopeFrom, uSlopeTo: worldUniforms.uSlopeTo });
+
 /** The hill profile's height at course distance d (matches the shader). */
 const softplus = (x: number) => Math.max(x, 0) + 8 * Math.log(1 + Math.exp(-Math.abs(x) / 8));
 export const hillHeight = (d: number) => -worldUniforms.uSlope.value * (softplus(d - worldUniforms.uSlopeFrom.value) - softplus(d - worldUniforms.uSlopeTo.value));
@@ -48,18 +61,13 @@ export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; be
     if (bend) {
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', `#include <common>
-          uniform float uCurve, uBend, uSlope, uSlopeFrom, uSlopeTo;
-          float rrSoftplus(float x) { return max(x, 0.0) + 8.0 * log(1.0 + exp(-abs(x) / 8.0)); }
-          float rrHill(float d) { return -uSlope * (rrSoftplus(d - uSlopeFrom) - rrSoftplus(d - uSlopeTo)); }`)
+          uniform float uCurve, uBend;
+          ${HILL_GLSL}`)
         .replace(
           '#include <project_vertex>',
           `#include <project_vertex>
           { vec4 bentPos = mvPosition; float zz = bentPos.z * bentPos.z; bentPos.y -= uCurve * zz;
-            if (uSlope != 0.0) {
-              // The hill's height here relative to the camera's, applied along world up in view space.
-              vec3 wpos = transpose(mat3(viewMatrix)) * (mvPosition.xyz - viewMatrix[3].xyz);
-              bentPos.xyz += (viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz * (rrHill(-wpos.z) - rrHill(-cameraPosition.z));
-            }
+            bentPos.xyz += rrHillWarp(mvPosition.xyz) - mvPosition.xyz; // the hill, measured where the vertex really is
             bentPos.x += uBend * zz / (1.0 + abs(bentPos.z) / ${BEND_KNEE.toFixed(1)}); gl_Position = projectionMatrix * bentPos; }`,
         );
     }

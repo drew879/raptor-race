@@ -148,6 +148,9 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; backgrou
 .journal .lvl-main b { font-family: var(--display); font-size: 17px; }
 .journal .lvl-stars { display: flex; align-items: center; gap: 2px; font-weight: 700; font-size: 13px; }
 .journal .lvl-stars svg.star { width: 17px; height: 17px; }
+.journal .lvl-play { margin-left: auto; padding: 8px 14px; border: 2px solid var(--ink); border-radius: 999px; background: var(--amber, #FFB21E);
+  font-family: var(--display); font-weight: 900; font-size: 15px; color: var(--ink); box-shadow: 0 2px 0 var(--ink); }
+.journal .lvl-play.here { background: rgba(255,255,255,.6); }
 .journal .pages { display: grid; gap: 10px; margin: 10px 0 6px; }
 .journal .page { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: 8px; border: 1.5px solid rgba(58,42,30,.3); background: #FBF4E4; }
 .journal .page.missing { background: transparent; }

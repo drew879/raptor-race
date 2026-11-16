@@ -27,6 +27,24 @@ const CREATURES: Record<string, string> = {
     <ellipse cx="84" cy="80" rx="13" ry="9" fill="#5A3B28" stroke="${INK}" stroke-width="2"/>
     <path d="M33 74 q -8 -10 -4 -18 M 35 73 q -2 -12 4 -16" stroke="${INK}" stroke-width="1.6" fill="none" stroke-linecap="round"/>
     ${[52, 60, 68].map((x, k) => `<path d="M${x} 81 l ${-6 + k * 4} 14 M ${x} 81 l ${4 + k * 2} 13" stroke="${INK}" stroke-width="1.6" stroke-linecap="round"/>`).join('')}`,
+  // An orb web, a little lopsided, with a fly caught in it and glue droplets on the threads.
+  web: `${[0, 1, 2, 3, 4, 5, 6, 7].map((k) => { const a = (k / 8) * Math.PI * 2 + 0.2; return `<path d="M60 80 L ${(60 + Math.cos(a) * 36).toFixed(1)} ${(80 + Math.sin(a) * 30).toFixed(1)}" stroke="${INK}" stroke-width="1.2" opacity=".8"/>`; }).join('')}
+    ${[10, 19, 28].map((r) => `<polygon points="${[0, 1, 2, 3, 4, 5, 6, 7].map((k) => { const a = (k / 8) * Math.PI * 2 + 0.2; return `${(60 + Math.cos(a) * r * 1.2).toFixed(1)},${(80 + Math.sin(a) * r).toFixed(1)}`; }).join(' ')}" fill="none" stroke="${INK}" stroke-width="1.1" opacity=".75"/>`).join('')}
+    ${[[48, 70], [74, 88], [66, 64], [44, 92]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6" fill="#FFFFFF" stroke="${INK}" stroke-width=".6"/>`).join('')}
+    <ellipse cx="76" cy="72" rx="5" ry="3.4" fill="#4A3426" stroke="${INK}" stroke-width="1.4"/>
+    <path d="M73 69 q -3 -6 2 -7 M 79 69 q 3 -6 -2 -7" stroke="${INK}" stroke-width="1.1" fill="#E8F6FA" opacity=".9"/>`,
+  // A hatchling bird curled up: round head, beak, a wing with its first flight feathers, tiny clawed feet.
+  bird: `<ellipse cx="62" cy="84" rx="20" ry="14" fill="#7A5A40" stroke="${INK}" stroke-width="2.2"/>
+    <circle cx="42" cy="72" r="10" fill="#8A6A4E" stroke="${INK}" stroke-width="2.2"/>
+    <path d="M33 72 l -8 3 l 8 2" fill="#E0A04A" stroke="${INK}" stroke-width="1.4" stroke-linejoin="round"/>
+    <circle cx="40" cy="70" r="2.2" fill="${INK}"/>
+    <path d="M56 78 C 66 72, 78 74, 84 82 C 76 84, 66 86, 58 84 Z" fill="#5E4330" stroke="${INK}" stroke-width="1.6"/>
+    ${[0, 1, 2, 3].map((k) => `<path d="M${64 + k * 5} 80 l ${6 + k} 6" stroke="${INK}" stroke-width="1.1"/>`).join('')}
+    <path d="M58 97 l -3 6 M 58 97 l 2 6 M 66 97 l -2 6 M 66 97 l 3 6" stroke="${INK}" stroke-width="1.4" stroke-linecap="round"/>`,
+  // A short run of tail bones with feathers fanning off both sides.
+  tail: `<path d="M30 92 C 46 84, 66 80, 92 62" stroke="${INK}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M30 92 C 46 84, 66 80, 92 62" stroke="#8E6A48" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-dasharray="5 2.5"/>
+    ${[0, 1, 2, 3, 4, 5, 6].map((i) => { const t = i / 6, x = 34 + t * 56, y = 90 - t * 26 - t * t * 4; return `<path d="M${x.toFixed(1)} ${y.toFixed(1)} q -4 -14 4 -22" stroke="${INK}" stroke-width="1.3" fill="none" opacity=".85"/><path d="M${x.toFixed(1)} ${y.toFixed(1)} q 6 12 14 14" stroke="${INK}" stroke-width="1.3" fill="none" opacity=".85"/>`; }).join('')}`,
 };
 
 export function inclusionArt(kind: string, found: boolean) {

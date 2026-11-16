@@ -7,7 +7,7 @@ import { LevelBuilder, type LevelDef } from './level';
 // Authored in design meters at the original 10-14 m/s; K scales to world meters for 15-21 m/s so every
 // reaction window keeps the same duration (owner playtest: "too slow", deaths "felt fair").
 const K = 1.5;
-const B = new LevelBuilder({ start: 15, end: 21 }, 1100 * K, K);
+const B = new LevelBuilder({ start: 16, end: 22.5 }, 1100 * K, K);
 
 // Beat 1: dawn dunes, teaches lane changes (0-150).
 B.hint(10, 'lanes');
@@ -148,7 +148,8 @@ export const FLAMING_CLIFFS: LevelDef = B.build({
   name: 'Flaming Cliffs',
   biome: 'gobi',
   hero: 'velociraptor',
-  prey: { species: 'protoceratops', startGap: 24, finale: 90 },
+  // Level 2 is a little harder than it was as Level 1 (owner): faster, and stumbles let the prey further ahead.
+  prey: { species: 'protoceratops', startGap: 24, finale: 90, hunt: { stumbleGap: 10, lostGap: 42 } },
   checkpoints: [425 * K, 772 * K],
   stormRises: 772 * K,
   music: 'chase-strings',
