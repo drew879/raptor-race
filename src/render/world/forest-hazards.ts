@@ -23,13 +23,15 @@ function mossTop(g: GeomBuilder, a: THREE.Vector3, b: THREE.Vector3, r: number, 
   }
 }
 /** Curved roots running from a trunk's foot into the ground (version 3). */
-function roots(g: GeomBuilder, R: number, count: number, rot: number, rng: Rng, skip?: (a: number) => boolean) {
+/** Roots flaring out from a trunk's foot. A root at angle `a` runs out along (cos a, 0, sin a): x across the trail,
+ * z along it. `from` is where it leaves the trunk (a share of R) and `thick` its girth there. */
+function roots(g: GeomBuilder, R: number, count: number, rot: number, rng: Rng, skip?: (a: number) => boolean, from = 0.8, thick = 0.3) {
   for (let k = 0; k < count; k++) {
     const a = rot + (k / count) * Math.PI * 2 + rng.range(-0.2, 0.2);
     if (skip?.(a)) continue;
     const dir = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
-    const p0 = dir.clone().multiplyScalar(R * 0.8).setY(0.55), p1 = dir.clone().multiplyScalar(R * 1.25).setY(0.22), p2 = dir.clone().multiplyScalar(R * (1.7 + rng.range(0, 0.5))).setY(-0.04);
-    addTube(g, [p0, p1, p2], [R * 0.3, R * 0.2, 0.03], 6, () => col(F.bark));
+    const p0 = dir.clone().multiplyScalar(R * from).setY(0.55), p1 = dir.clone().multiplyScalar(R * 1.25).setY(0.22), p2 = dir.clone().multiplyScalar(R * (1.7 + rng.range(0, 0.5))).setY(-0.04);
+    addTube(g, [p0, p1, p2], [R * thick, R * thick * 0.67, 0.03], 6, () => col(F.bark));
   }
 }
 
@@ -169,8 +171,13 @@ function hollowTrunk(): THREE.BufferGeometry {
   const HW = 0.68; // half-width of the hollow
   const hole = (x: number) => 0.7 + 0.24 * Math.sqrt(Math.max(0, 1 - (x / HW) ** 2)); // its arched roof
   const p = (y: number, r: number, a: number) => new THREE.Vector3(Math.sin(a) * r, y, Math.cos(a) * r);
+  // The bark's columns, with an edge exactly at each side of the hollow (front and back), so no column of bark
+  // straddles the opening and juts into it (owner playtest 9: it looked too narrow to fit through).
+  const ah = Math.asin(HW / R);
+  const span = (a: number, b: number, m: number) => Array.from({ length: m }, (_, i) => a + ((b - a) * i) / m);
+  const cols = [...span(-ah, ah, 3), ...span(ah, Math.PI - ah, 5), ...span(Math.PI - ah, Math.PI + ah, 3), ...span(Math.PI + ah, 2 * Math.PI - ah, 5)];
   for (let k = 0; k < n; k++) {
-    const a0 = (k / n) * Math.PI * 2, a1 = ((k + 1) / n) * Math.PI * 2;
+    const a0 = cols[k], a1 = k + 1 < n ? cols[k + 1] : cols[0] + Math.PI * 2;
     const am = (a0 + a1) / 2;
     const out = new THREE.Vector3(Math.sin(am), 0, Math.cos(am));
     const inHole = Math.abs(Math.sin(am) * R) < HW;
@@ -195,8 +202,9 @@ function hollowTrunk(): THREE.BufferGeometry {
     const z = sz * L * 0.99;
     oquad(g, new THREE.Vector3(x0, hole(x0), z), new THREE.Vector3(x1, hole(x1), z), new THREE.Vector3(x1, hole(x1) + 0.09, z), new THREE.Vector3(x0, hole(x0) + 0.09, z), new THREE.Vector3(0, 0, sz), col(F.barkLight).lerp(col(0xe2c49a), 0.35));
   }
-  // Version 3: real roots at the corners, clear of the hollow; otherwise flat wedges.
-  if (RICH()) roots(g, R, 4, 0.9, rng, (a) => Math.abs(Math.sin(a)) * R * 1.6 < HW + 0.2);
+  // Version 3: real roots on the sides only, clear of the hollow (owner playtest 9: roots crossing the opening made
+  // it look too small to fit through); otherwise flat wedges. A root keeps its whole girth outside the hollow's walls.
+  if (RICH()) roots(g, R, 10, 0, rng, (a) => Math.abs(Math.cos(a)) * R * 0.98 - R * 0.22 < HW + 0.06, 0.98, 0.22);
   for (const a of RICH() ? [] : [0.9, 2.25, 4.05, 5.4]) {
     const out = new THREE.Vector3(Math.sin(a), 0, Math.cos(a));
     const side = new THREE.Vector3(out.z, 0, -out.x);

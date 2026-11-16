@@ -42,7 +42,7 @@ let DEBUG = params.has('debug');
 const save = loadSave();
 // The graphics version (three-version test): the URL wins, else the saved choice, else today's look.
 setLook(Number(params.get('look') ?? save.look ?? 3)); // the owner picked version 3 (playtest 8)
-DOWNHILL.v = params.get('hill') === '2' ? 2 : 1; // the downhill pass, behind ?hill=2 until the owner OKs it
+DOWNHILL.v = params.get('hill') === '1' ? 1 : 2; // the downhill pass (owner OK, playtest 9); ?hill=1 shows the steady grade from before
 applyLookMaterials(lookAt(2));
 /** The level is chosen when the page loads (the URL's ?level=, else the last one played); switching levels
  * reloads the page, so everything below is built for this one level. */
@@ -201,7 +201,7 @@ const haptic = (ms: number) => { try { navigator.vibrate?.(ms); } catch { /* uns
 const container = $('stage');
 const stage = new Stage(container, { preserveDrawingBuffer: SHOT, biome: BIOME });
 const streamer = new ChunkStreamer(stage.world, true, { gullies: LEVEL.hazards.filter((h) => h.type === 'gully').map((h) => h.d), sections: LEVEL.sections, biome: BIOME });
-// Before the downhill pass the hill was one steady grade of 0.17 (kept until the owner OKs the new one).
+// Before the downhill pass the hill was one steady grade of 0.17 (kept for comparison: ?hill=1).
 setHill(LEVEL.slope && !downhill2() ? { ...LEVEL.slope, grade: 0.17, pitches: [] } : LEVEL.slope);
 if (LEVEL.slope && downhill2()) stage.hill = hillHeight;
 worldUniforms.uRimColor.value.set(FORESTED ? FOREST.sunGlow : GOBI.sunGlow);
@@ -259,9 +259,13 @@ addEventListener('resize', resize);
 // Fill exactly the area the browser shows (a phone browser's toolbars come and go; the page's own height can lag
 // behind and leave a strip of background at the bottom).
 // On iPhone, the Home Screen app owns the whole screen, but iOS can report a viewport short by about the status
-// bar's height there (owner: a strip at the bottom in the Home Screen app only), so it sizes to the screen itself.
+// bar's height there (owner playtests 8-9: a strip at the bottom in the Home Screen app only), so it sizes to the
+// screen itself. Detected either way iOS reports it (the old flag, or the display mode a manifest asks for).
 const vv = window.visualViewport;
-const HOME_SCREEN_IOS = (navigator as { standalone?: boolean }).standalone === true;
+const IOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const HOME_SCREEN = (navigator as { standalone?: boolean }).standalone === true || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+const HOME_SCREEN_IOS = IOS && HOME_SCREEN;
+root.classList.toggle('home-screen', HOME_SCREEN_IOS);
 const fitViewport = () => {
   let h = vv ? vv.height : window.innerHeight;
   if (HOME_SCREEN_IOS) {
@@ -1218,6 +1222,17 @@ const hitches: number[] = [];
 syncJournalBadge();
 syncLevelArrows();
 $('build').textContent = `Build ${__BUILD__}`;
+// Tap the build number for the screen measurements (to diagnose a strip or a cut-off edge from a phone screenshot).
+$('build').addEventListener('click', () => {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;visibility:hidden;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)';
+  document.body.appendChild(probe);
+  const cs = getComputedStyle(probe), safe = `${parseFloat(cs.paddingTop)}/${parseFloat(cs.paddingBottom)}`;
+  probe.remove();
+  const mode = ['fullscreen', 'standalone', 'minimal-ui', 'browser'].find((m) => matchMedia(`(display-mode: ${m})`).matches) ?? '?';
+  const flag = (navigator as { standalone?: boolean }).standalone;
+  $('build').textContent = `Build ${__BUILD__}\nscreen ${screen.width}x${screen.height} · window ${innerWidth}x${innerHeight} · view ${Math.round(vv?.height ?? 0)} · game ${root.clientHeight}\nsafe ${safe} · ${mode} · standalone ${flag} · ios ${IOS} · fit ${HOME_SCREEN_IOS}`;
+});
 // A copy kept open on the phone (a Home Screen app resumes where it was) checks for a newer build whenever it comes
 // back, and reloads on the menus to pick it up (never mid-run).
 let newerBuild = '';

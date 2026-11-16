@@ -22,8 +22,11 @@ Newest first. Every session updates this before pushing.
   - The camera follows the hero down but tilts only 30% of the way to the trail ahead, so the trail falls away below
   - The drop side falls further (to ~50 m below), with a canopy of treetops all the way down (tops kept below the trail) and more, longer openings; the far ridges and valley floor rise toward you as you descend
 - [x] Home Screen app: a strip still showed at the bottom (browser fine). iOS reports a short viewport there; the game now sizes to the screen in the Home Screen app, and the page behind it is the ground's color
-- [ ] Owner: the before-and-after clip; flip `?hill=2` to the default on a yes
-- [ ] Next (owner): a brief for rebuilding Level 1 from scratch as a comparison
+- [x] Owner OK'd the downhill pass (playtest 9): it's the default now (`?hill=1` shows the steady grade)
+- [x] Playtest 9: hollow trunks looked too narrow to fit through. Two causes: the roots meant to stay clear of the opening were filtered on the wrong axis (they grew across it), and bark columns straddled its edges (dark blades). Roots now flare from the sides only and the bark columns meet the opening at its edges
+- [x] Playtest 9: the Home Screen strip stayed (now the ground's brown). Detection now also uses the display mode, and tapping the build number on the title shows the screen measurements (screen, window, viewport, game, safe areas, mode) for a screenshot if it persists. The top UI sits 30 px lower in the Home Screen app, clear of the status bar's blur
+- [ ] Owner: check the strip and the top blur on the phone (or send the build-number readout)
+- [ ] Next (owner): a brief for rebuilding Level 1 as a comparison (owner's answers in hand: new repo drew879/raptor-race-fable; tools and art its call; describe the look and mood conceptually and collaborate on concept art first; design rules only for the course; title, pause, results, journal, music and sound without details). Open: build it locally on the owner's MacBook or in the cloud
 
 ## Previous milestone: rework after owner playtest (fun 1-2/5, graphics 1-2/5)
 - [x] Speed: Level 1 runs 15-21 m/s (was 10-14), course scaled 1.5x so every reaction window keeps its duration; snappier lane change (0.14 s); lower, closer camera with speed FOV kick; edge streaks; near-track scenery
