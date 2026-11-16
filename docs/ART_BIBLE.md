@@ -79,6 +79,13 @@ Anatomy notes: long low skull with a slightly upturned snout; S-curved neck; arm
 ### Production note: raptor pipeline
 The hero raptor is built in code (lofted low-poly body, skinned, procedural animation). A Blender-built body (`scripts/blender/raptor.py`) lost two blind A/B reviews to it (decimation lost toes and opened holes; rounded forms fought the angular shape language). Blender is reserved for key art (app icon, store images). Chase-camera readability rule: tapered cream streaks along the back and a pale belly to the flank midline.
 
+## 6b. Polish pass notes (Level 1 wrap-up)
+- Sky: bands come from view elevation, never screen position: cream haze at the horizon, a rose-apricot band, lavender, dusty blue overhead. The storm pulls it toward ochre.
+- Grading: lights lean warm (#FFC98A key, sun ~22 degrees up, behind-right of the chase camera), shadows lean cool violet; distance fades into the low sky in a few soft layers.
+- Ink: contours fade to nothing by ~150 m; a contour must show at two scales, so thin slivers don't speckle.
+- Sand: short ripple hatching on flat ground near the camera; footprints mark the chase.
+- From behind (the chase view) every creature needs a readable silhouette: the raptor's tail is two continuous vanes, the Protoceratops' frill a dark scalloped crown.
+
 ## 7. Lighting
 - Key: warm directional `#FFD9A8`, intensity 2.9, ~31 degrees elevation, **behind and to the right of the chase camera** (~120 degrees from the run direction) so camera-facing surfaces are lit and shadows rake forward-left across the lanes. Hero and menu cameras may use a front-right sun.
 - Fill: hemisphere sky `#D6CCE0` (warm lavender keeps shadows warm, never olive) / ground bounce `#C58A55`, intensity 2.6.

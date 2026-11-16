@@ -36,7 +36,12 @@ Newest first. Every session updates this before pushing.
 - [x] B. Music engine takes the arrangement as data (src/audio/music-styles.ts); two darker candidates built and loudness-matched (War Drums: C# Phrygian, taiko, drone, horn, brass; Chase Strings: harmonic minor, spiccato strings, kit, violins); previews sent
 - [ ] B. Owner picks a direction; make it the default and polish it
 - [x] C. Nesting ground after fork 1: nests with eggs along the trail, Protoceratops resting in lanes (jump or go around), and one that gets up and walks across to another lane as you approach (the level's moving obstacle, settled ~1 s before you arrive). A pterosaur dives in from high ahead with a screech and swoops across all lanes at head height in the storm (slide). Pooled models, so nothing is built mid-run; tests cover the crossing and each new obstacle
-- [ ] A. Graphics polish: raptor, light and sky, ground, effects (critic before and after)
+- [x] A. Graphics polish, driven by an independent art review (baseline: no rubric item at the pass bar of 8; raptor appeal, lighting and polish at 4):
+  - Light and sky: sky bands by view elevation (cream haze, rose-apricot, lavender, dusty blue; ochre in the storm), aerial haze in soft layers, warm lights and cool violet shadows, sun lowered to ~22 degrees and warmed, warm rim on characters; ink fades with distance and a two-scale contour test removes speckle
+  - Raptor: continuous tail vanes with a teal tip band, folded wings with a ragged trailing edge, crest ridge on head and neck, broader skull, fuller thighs, springier run with tail counter-sway and a wing flick
+  - Ground: ripple hatching and crust on flat sand (world space, fades by 28 m), palette sand beside the track, footprints behind the raptor and the prey's trail ahead
+  - Effects: darker, bigger dust; sand kicked up on lane changes; bigger landings; sand streaming off dune crests; sheets of sand in the storm; a burst of sand on the pin
+  - Also: procedural canyon strata walls (scans broke into shards; canyon terrain 160k to 84k triangles), Protoceratops with a solid scalloped frill and tapered bent legs
 - Amber stays score only (owner). After the wrap-up: a new Level 1 with an Oviraptor chasing a runaway egg downhill; this level becomes Level 2 (owner, for Aidan)
 
 - [ ] Later: Level 2 (new raptor and prey); forks that split into two full three-lane paths
