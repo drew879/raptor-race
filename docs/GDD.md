@@ -67,7 +67,20 @@ Feel rules: 120 ms input buffer, 100 ms coyote time, hitboxes ~80% of visual siz
 - POC: **Amber Sense** (magnet, 8 s) and **Updraft** (glide over a section on spread wing feathers).
 - Later: **Raptor Sprint** (invulnerable dash), **Golden Feather** (2x score), **Pack Call** (packmate collects amber in another lane).
 
-## 8. Level 1: "Flaming Cliffs"
+## 8a. Level 1: "Jehol Forest" (the tutorial)
+Caudipteryx zoui, Yixian Formation, Liaoning, China, ~125 mya. Owner decisions (playtests 6 and 7): a new Level 1 for Aidan, with the Velociraptor hunt moving to Level 2; an oviraptorosaur chasing its egg downhill; a lush forest with a winding dirt trail, arched holes in trunks to slide under and streams to jump. Oviraptor lived among dry Gobi dunes, so the owner chose its forest-dwelling cousin Caudipteryx (peacock-sized, banded fans of feathers on its tail and hands, too short-armed to fly), with a journal note calling it Oviraptor's cousin.
+
+**Story (owner pick, scenario 3):** at the top of a hill, the egg in the nest is about to hatch. The chick kicks, the egg rocks, tips out and rolls off down the trail; you chase it. It can't break. At the bottom, in a mossy clearing, it slows and you scoop it up (swipe up, the same move as Level 2's pounce): Caudipteryx curls round it, it hatches, the chick peeks out wearing the cap of its shell, and the Field Journal plate tells how Oviraptor's family brooded their nests like birds and may have laid blue-green eggs.
+
+**Downhill:** the simulation stays level; the world is drawn on a hill profile (flat at the crest by the nest, a steady drop of 0.17 m per m, level again at the bottom), so the trail visibly falls away ahead and the trees stay upright. The camera aims down the slope.
+
+**Obstacles (same rules and collision as Level 2, forest dress):** tree trunks block a lane; fallen logs and brimming streams are jumps; giant trunks with an arched hollow at the base (one lane) and big trunks propped across the trail at head height (all lanes) are slides; a fallen giant tree down the middle lane, root plate first, is the fork. No updraft (Caudipteryx couldn't fly).
+
+**Course (world meters, 13-18 m/s, ~68 s):** lanes (0-170), jumps (170-330), slides (330-480, inclusion 1 in the left hollow), checkpoint, the fork (530-586, inclusion 2 on the rough left side, the egg takes the right), Amber Sense, mixed patterns, checkpoint, everything together (745-1010, inclusion 3 over the log in the right lane), the clearing and the scoop. At least ~1.4 s between decisions outside the fork; ten alternating bends. Inclusions: a spider web with prey (Spain, ~110 mya), Belone the baby bird (Myanmar, ~99 mya), a feathered dinosaur tail (Myanmar, ~99 mya).
+
+**Difficulty (tutorial):** human-like bot within one revive 95% of the time, never loses the egg; perfect run 10,620 (par 9,500).
+
+## 8. Level 2: "Flaming Cliffs"
 Velociraptor mongoliensis, Gobi Desert, Mongolia, ~75 mya. The first Velociraptor fossil was found at the Flaming Cliffs (Bayanzag) in 1923.
 
 Story: get home to the nest before a sandstorm buries you (a nod to how many Gobi fossils were likely preserved under collapsing dunes). The **sandstorm is the chaser**: it creeps in from the screen edges when you stumble.
@@ -88,14 +101,17 @@ Length ~1.1 km, speed 10 to 14 m/s (~92 s), 2 checkpoints.
 
 **Added at the Level 1 wrap-up:** the nesting ground (resting Protoceratops on nests are a low jump; one walks across the lanes as you approach, the level's moving obstacle) and a swooping pterosaur in the storm (slide). Science note: giant azhdarchid pterosaur neck bones are known from Mongolia's Nemegt Formation (Tsuihiji et al. 2017), somewhat younger than the Flaming Cliffs rocks, and Mongolian pterosaur fossils are rare, so ours is a small liberty; it's a modest 6 m across.
 
-Difficulty target ("fairly easy"): a bot with ~300 ms reactions and occasional input errors clears it at least 85% of the time.
+Difficulty target ("fairly easy"): a bot with ~300 ms reactions and occasional input errors clears it at least 85% of the time. **As Level 2 (owner: a little harder now that the tutorial moved):** 16-22.5 m/s (was 15-21) and stumbles let the prey 10 m ahead (was 8): human-like within one revive 83% (was 86%), clean runs 43% (was 52%).
 
 ## 9. Roster
-| # | Raptor | Setting | Twist |
+Chapters of three; catching the prey opens the next level, 8 of a chapter's 9 inclusions open the next chapter. A level you've already played stays open when one is added ahead of it.
+
+| # | Hero | Setting | Twist |
 |---|---|---|---|
-| 1 | Velociraptor | Gobi dunes, Mongolia (~75 mya) | Nimble baseline; sandstorm chase |
-| 2 | Deinonychus | Floodplain forests, Montana (~110 mya) | Pounce: higher, longer jump; Tenontosaurus herds as moving obstacles |
-| 3 | Utahraptor | Utah (~135 mya) | Heavyweight: smashes small obstacles, slower lane changes; quicksand (nod to the real fossil block where several were likely trapped) |
+| 1 | Caudipteryx | Jehol Forest, China (~125 mya) | The tutorial: a runaway egg downhill |
+| 2 | Velociraptor | Gobi dunes, Mongolia (~75 mya) | The hunt; sandstorm chase |
+| 3 | On hold (owner: maybe Utahraptor) | Utah (~135 mya) | Heavyweight: smashes small obstacles, slower lane changes; quicksand (nod to the real fossil block where several were likely trapped) |
+| later | Deinonychus | Floodplain forests, Montana (~110 mya) | Pounce: higher, longer jump; Tenontosaurus herds as moving obstacles |
 | 4 | Microraptor | Forest canopy, China (~120 mya) | Four-winged glider: long glide sections |
 | 5 | Acheroraptor | Hell Creek, Montana (~66 mya) | Finale: T. rex chase as the asteroid lights up the sky |
 

@@ -2,7 +2,17 @@
 
 Newest first. Every session updates this before pushing.
 
-## Current milestone: rework after owner playtest (fun 1-2/5, graphics 1-2/5)
+## Current milestone: new Level 1, Jehol Forest (owner playtests 6-7)
+- [x] Music: Chase Strings is the default (owner's pick) with a string bed from bar 1 and a swell on the pounce window; a proper ending (held fifth through the leap, landing on C# major ringing over the plate) replaces the abrupt stop and the off-key jingle; pterosaur screech fixed
+- [x] Levels carry biome, hero, prey, hunt tuning, music, hill and copy; the page builds one level at load (`?level=`, else the last played); pick a level in the Field Journal, the results card offers the next
+- [x] Caudipteryx (Oviraptor's cousin, owner pick for a forest): same skeleton and animations as the raptor, its own body, banded tail and hand fans, a brood pose; 1.2x scale; plumages Forest Fan and Sunrise
+- [x] The egg: rolls, wobbles and bounces as the chick kicks (drawn 1.4x while rolling), twitches and rocks in its nest for the opening, hatches when caught (the chick wears the cap)
+- [x] Jehol Forest: dirt trail with ragged mossy verges, conifers, ginkgos, tree ferns, ferns, horsetails, brimming streams, a misty valley backdrop with a volcano; forest dress for every obstacle (trees, logs, hollow trunks, propped trunks, a fallen giant); a hill profile (crest at the nest, level at the bottom)
+- [x] Opening: it walks up to the nest, the egg twitches, rocks and rolls off downhill; ending: the scoop, the hatch, "Hatching Day" plate
+- [x] The tutorial course, three new inclusion pages, tests (spacing, beat grid, bots: within one revive 95%); Level 2 a little harder (16-22.5 m/s, within one revive 83%)
+- [ ] Owner playtest of the new Level 1
+
+## Previous milestone: rework after owner playtest (fun 1-2/5, graphics 1-2/5)
 - [x] Speed: Level 1 runs 15-21 m/s (was 10-14), course scaled 1.5x so every reaction window keeps its duration; snappier lane change (0.14 s); lower, closer camera with speed FOV kick; edge streaks; near-track scenery
 - [x] Fixes: swipe down no longer cancels the updraft; crash screen names the real cause; stumbles flash, shake and thicken the storm; hitches logged on the results screen
 - [x] Stutters: terrain for the whole level is pregenerated on the menus (chunks cost 10-27 ms each on desktop), shaders precompiled, per-frame allocations removed

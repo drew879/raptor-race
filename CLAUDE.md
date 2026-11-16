@@ -24,10 +24,11 @@ Portrait-mode 3D runner for mobile, built with TypeScript + Three.js + Vite. Own
 - `npm run typecheck`
 - `node scripts/play-shots.mjs <dir>` bot plays Level 1 in the real page and captures phone screenshots
 - `node scripts/audio-check.mjs` renders every SFX and the music offline and checks levels
-- `node scripts/music-preview.mjs <out.wav>` renders a listenable music preview (low, then full intensity, with amber chains)
-- `node scripts/smoke.mjs` drives the real page into crashes (including a fork's fin) and checks every crash reaches the crash screen
-- `node scripts/hunt-shots.mjs <dir>` captures the opening shot, pounce and freeze-frame plate
-- `node scripts/scenery-tour.mjs <dir> [marks]` warps the real page through each landmark stretch and captures it without banners
+- `node scripts/music-preview.mjs <out.wav> [--style=<id>] [--ending]` renders a listenable music preview (low, then full intensity, with amber chains; or the end of a level)
+- `node scripts/smoke.mjs` drives the real page into crashes (including a fork's fin) on every level and checks every crash reaches the crash screen with that level's text
+- `node scripts/hunt-shots.mjs <dir> [--level=<id>]` captures the opening shot, pounce and freeze-frame plate
+- `node scripts/scenery-tour.mjs <dir> [marks] [--level=<id>]` warps the real page through each landmark stretch and captures it without banners
+- Levels: `jehol-forest` (Level 1) and `flaming-cliffs` (Level 2); open one with `?level=<id>`; the asset lab shows Caudipteryx and the egg (`lab.html?species=caud&pose=brood`, `?subject=egg`)
 - Deploys: every push runs `.github/workflows/pages.yml` (typecheck, test, build, publish to https://drew879.github.io/raptor-race/). The owner plays there; the Claude artifact link is retired.
 - `node scripts/make-icons.mjs` renders `public/icon.svg` into the home-screen PNGs
 - `node scripts/package-artifact.mjs <page> <name> "<Title>"` single-file build for publishing (retired for playtests; kept for one-off pages)

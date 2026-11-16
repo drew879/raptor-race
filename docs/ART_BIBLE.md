@@ -86,6 +86,14 @@ The hero raptor is built in code (lofted low-poly body, skinned, procedural anim
 - Sand: short ripple hatching on flat ground near the camera; footprints mark the chase.
 - From behind (the chase view) every creature needs a readable silhouette: the raptor's tail is two continuous vanes, the Protoceratops' frill a dark scalloped crown.
 
+## 6c. Level 1: "Jehol Forest" (early morning)
+Palette (`FOREST` in `palette.ts`): misty blue-green air (horizon #DBE3C9, fog #CDD8C0), soft blue sky (#7FA9C8), warm low sun (#FFD9A0); a dirt trail (#A87C56, worn #7A5538) with ragged verges of moss (#587638) and leaf litter (#8E6038); conifers (#2F5A3C, lit #4F8048, shade #1D3A2A), ginkgo gold-green (#A8B84A / #D4D164), ferns (#5E9A3E / #8FC057), horsetails by the water, bark (#6A4632), mossy rock (#7C7E70), brimming streams (#8AD6E6 with white foam). The post pass's sky bands and haze switch to the forest's misty morning.
+- **Plants of the time:** conifers, ginkgos, tree ferns, ferns and horsetails. No grass (it hadn't spread yet), no flowers to speak of. The valley walls far out are painted as canopy seen from above. Backdrop: a misty valley far below with a lake and a distant volcano trailing a soft plume (the Jehol fossils were preserved by eruptions).
+- **Downhill reads on screen:** the trail drops over a lip ahead into lower trees; trees stay upright.
+- **Caudipteryx ("Forest Fan"):** dark brown (#4B3A31) with a dark crown and mask, pale cheeks and throat, a short orange beak (#E07A2C), a big dark eye in a yellow ring, black-and-white banded fans on the tail and hands. The tail fan is held up ~60 degrees so the chase camera sees a striped half-disc (from behind it's the hero's signature). Drawn 1.2x life size. Unlock: "Sunrise" (rust with teal fan tips).
+- **The egg:** long and narrow, blue-green (#86C9B6) with dark speckles and a cool pale rim, drawn 1.4x while it rolls so it reads 10-20 m ahead; it eases back to life size when caught. The chick: pale down, big dark eyes, a little orange beak, wearing the shell's cap.
+- **Obstacle readability:** the propped trunk's underside is ~1 m up and its top well above any jump (never looks hoppable); the hollow trunk's opening has a pale wood rim and a dark inside; streams brim so the water isn't hidden behind the near bank.
+
 ## 7. Lighting
 - Key: warm directional `#FFD9A8`, intensity 2.9, ~31 degrees elevation, **behind and to the right of the chase camera** (~120 degrees from the run direction) so camera-facing surfaces are lit and shadows rake forward-left across the lanes. Hero and menu cameras may use a front-right sun.
 - Fill: hemisphere sky `#D6CCE0` (warm lavender keeps shadows warm, never olive) / ground bounce `#C58A55`, intensity 2.6.
