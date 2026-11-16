@@ -146,9 +146,10 @@ export function createBackdrop() {
 /**
  * Jehol Forest backdrop: from the hilltop you look out over a misty valley far below (the trail runs down into
  * it): layered blue-green ridges, a lake catching the light, and a distant volcano with a soft plume (eruptions
- * like it buried and preserved the Jehol fossils). Soft clouds. Follows the camera (no parallax).
+ * like it buried and preserved the Jehol fossils). Soft clouds. Follows the camera (no parallax). `deep`: the
+ * downhill pass, a valley floor further below (the stage raises the backdrop toward you as you descend).
  */
-export function createForestBackdrop() {
+export function createForestBackdrop(deep = false) {
   const g = new GeomBuilder(false);
   const rng = new Rng(125);
   const F = FOREST;
@@ -165,7 +166,7 @@ export function createForestBackdrop() {
     }
   };
   // The valley floor far below, misty, with a lake: a broad disc under the horizon line.
-  const floorY = -70;
+  const floorY = deep ? -95 : -70;
   const floorC = mix(F.ridgeNear, F.horizon, 0.55), lakeC = mix(F.water, F.horizon, 0.45);
   const R0 = 160, R1 = 470;
   for (let k = 0; k < 64; k++) {

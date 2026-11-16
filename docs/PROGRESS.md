@@ -17,7 +17,13 @@ Newest first. Every session updates this before pushing.
 - [x] Owner picked version 3 (all three smooth on the phone); it's the default now. Lane strips help; obstacles better; heroes subtly better
 - [x] Home Screen copies went stale (the icon opened an old build). Now: the build number on the title, and an update check whenever the app opens or comes back (it reloads on the menus to a fresh URL, once per build). Title ‹ › arrows switch between open levels
 - [x] Playtest 8 fixes: "Run again" brought back a hatched egg (now whole again); the chick rebuilt (rounder, smooth, pale down, crest, egg tooth, glossy eyes); the opening shows hatching (cracks spread in three stages with taps from inside and chips of shell, a beak pokes through as it rocks, "It's hatching!"); trees standing in the trail have crowns (they looked like bare poles); the game fills the visible screen in a phone browser (a strip showed at the bottom in Chrome)
-- [ ] Downhill still only reads "a little" (owner): options with the owner
+- [x] Downhill still only read "a little" (owner); owner left the pick to me (steeper pitches, valley views, camera tilt). Built behind `?hill=2` for a before-and-after check:
+  - Steeper pitches: a 0.10 grade with five 0.35 pitches, each in an open stretch, tipping over just past one obstacle and levelling out just before the next (you look down onto it). A test checks no obstacle hides behind a crest (the least warning is 3.15 s, a stream at 310 m, against 3.27 s on the steady grade)
+  - The camera follows the hero down but tilts only 30% of the way to the trail ahead, so the trail falls away below
+  - The drop side falls further (to ~50 m below), with a canopy of treetops all the way down (tops kept below the trail) and more, longer openings; the far ridges and valley floor rise toward you as you descend
+- [x] Home Screen app: a strip still showed at the bottom (browser fine). iOS reports a short viewport there; the game now sizes to the screen in the Home Screen app, and the page behind it is the ground's color
+- [ ] Owner: the before-and-after clip; flip `?hill=2` to the default on a yes
+- [ ] Next (owner): a brief for rebuilding Level 1 from scratch as a comparison
 
 ## Previous milestone: rework after owner playtest (fun 1-2/5, graphics 1-2/5)
 - [x] Speed: Level 1 runs 15-21 m/s (was 10-14), course scaled 1.5x so every reaction window keeps its duration; snappier lane change (0.14 s); lower, closer camera with speed FOV kick; edge streaks; near-track scenery

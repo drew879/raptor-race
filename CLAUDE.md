@@ -28,6 +28,7 @@ Portrait-mode 3D runner for mobile, built with TypeScript + Three.js + Vite. Own
 - `node scripts/smoke.mjs` drives the real page into crashes (including a fork's fin) on every level and checks every crash reaches the crash screen with that level's text
 - `node scripts/hunt-shots.mjs <dir> [--level=<id>]` captures the opening shot, pounce and freeze-frame plate
 - `node scripts/scenery-tour.mjs <dir> [marks] [--level=<id>] [--look=1|2|3]` warps the real page through each landmark stretch and captures it without banners
+- `node scripts/downhill-compare.mjs <dir> [--stills-only]` the downhill pass before and after (`?hill=1` vs `?hill=2`): matching stills, clips of two pitches, and a side-by-side clip
 - `node scripts/look-compare.mjs <dir> [--looks=1,2,3] [--stills-only]` the graphics test: matching stills and frame-by-frame clips of the same Level 1 stretch per graphics version, plus a side-by-side clip (graphics version: `?look=N` or the pause menu)
 - Levels: `jehol-forest` (Level 1) and `flaming-cliffs` (Level 2); open one with `?level=<id>`; the asset lab shows Caudipteryx and the egg (`lab.html?species=caud&pose=brood`, `?subject=egg`)
 - Deploys: every push runs `.github/workflows/pages.yml` (typecheck, test, build, publish to https://drew879.github.io/raptor-race/). The owner plays there; the Claude artifact link is retired.

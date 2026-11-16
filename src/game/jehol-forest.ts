@@ -106,8 +106,11 @@ export const JEHOL_FOREST: LevelDef = B.build({
   name: 'Jehol Forest',
   biome: 'forest',
   hero: 'caudipteryx',
-  // Downhill from the crest by the nest to the clearing at the bottom (visual; the simulation stays level).
-  slope: { grade: 0.17, from: 8, to: 1035 },
+  // Downhill from the crest by the nest to the clearing at the bottom (visual; the simulation stays level): a
+  // steady grade, with steeper pitches through the open stretches between obstacles. Each pitch tips over just past
+  // an obstacle and levels out just before the next, so you look down onto what's coming and nothing hides behind
+  // the crest (tests/jehol-forest.test.ts checks every obstacle stays in view as long as on the steady grade).
+  slope: { grade: 0.1, from: 8, to: 1035, pitches: [[14, 46], [158, 192], [322, 354], [472, 522], [716, 757]].map(([from, to]) => ({ from, to, extra: 0.25 })) },
   prey: { species: 'egg', startGap: 11, finale: 80, hunt: { minGap: 6.5, lostGap: 34, warnGap: 22, stumbleGap: 6, pinHeight: 0, pinOffset: 0.79, pounceArc: 0.35, pounceTime: 0.5 } },
   checkpoints: [488, 745],
   stormRises: 2000, // no storm in the forest

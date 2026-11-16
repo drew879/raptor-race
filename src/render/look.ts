@@ -11,3 +11,8 @@ export const lookAt = (n: LookLevel) => LOOK.level >= n;
 export function setLook(n: number) {
   LOOK.level = (n >= 3 ? 3 : n >= 2 ? 2 : 1) as LookLevel;
 }
+
+/** The downhill pass (owner picked steeper pitches, valley views and a camera that tilts less): 2 = on. Behind
+ * `?hill=2` until the owner has seen it, then the default. 1 = the steady grade from before. */
+export const DOWNHILL = { v: 1 };
+export const downhill2 = () => DOWNHILL.v >= 2;

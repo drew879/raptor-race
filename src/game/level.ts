@@ -42,7 +42,11 @@ export interface LevelDef {
   prey: PreyDef;
   /** Visual downhill (the simulation stays level): the trail drops `grade` meters per meter from the crest at
    * `from` to the bottom at `to` (course meters). Leave out for level ground. */
-  slope?: { grade: number; from: number; to: number };
+  slope?: {
+    grade: number; from: number; to: number;
+    /** Steeper stretches on top of the grade: `extra` grade from `from` to `to`, bending over `soft` meters (default 5). */
+    pitches?: { from: number; to: number; extra: number; soft?: number }[];
+  };
   length: number;
   speed: { start: number; end: number };
   checkpoints: number[];

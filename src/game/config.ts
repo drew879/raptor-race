@@ -32,7 +32,12 @@ export const CONFIG = {
   intro: { graze: 1.6, alert: 0.55, swing: 1.35, preyLead: 7, camAz: 0.6, camDist: 2.9, camHeight: 0.8, crane: 2.2 },
   /** The pinned finale, framed from ahead and to the side of the prey (prey-relative; +z is behind it). */
   endingCam: { side: 1.8, height: 1.2, ahead: 3.0, lookHeight: 0.95, lookBack: 0.25 },
-  camera: { height: 2.65, back: 3.7, lookAhead: 7.0, lookHeight: 0.15, laneFollow: 0.75, fov: 64, speedFovKick: 1.1 },
+  camera: {
+    height: 2.65, back: 3.7, lookAhead: 7.0, lookHeight: 0.15, laneFollow: 0.75, fov: 64, speedFovKick: 1.1,
+    /** Downhill: the camera follows the hero down the hill but tilts only this share of the way down to the trail
+     * ahead, so the trail visibly falls away below (owner: the steady downhill read as flat). */
+    downhillAim: 0.3,
+  },
 } as const;
 
 export const laneX = (lane: number) => lane * CONFIG.lanes.spacing;

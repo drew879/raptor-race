@@ -7,7 +7,7 @@ import { Rng, hash2 } from '../../core/rng';
 import { smoothstep } from '../../core/math';
 import { CONFIG } from '../../game/config';
 import { addRock, addTube } from './props';
-import { lookAt } from '../look';
+import { downhill2, lookAt } from '../look';
 import { sectionAt, type Chunk, type TerrainLayout } from './terrain';
 
 /**
@@ -29,8 +29,9 @@ const BED_Y = -0.7;
 export const uphillSide = (d: number) => Math.tanh(Math.sin(d / 110 + 0.9) * 3);
 /** Version 3: how much of the hillside there is at course distance d (none at the crest or in the clearing). */
 const hillsideAmount = (d: number) => smoothstep(18, 60, d) * (1 - smoothstep(985, 1030, d));
-/** Version 3: stretches where the drop side opens onto the valley (few trees there). */
-const openingAt = (d: number) => smoothstep(0.3, 0.75, Math.sin(d / 47 + 2.0));
+/** Version 3: stretches where the drop side opens onto the valley (few trees there). The downhill pass opens more
+ * of them, for longer. */
+const openingAt = (d: number) => (downhill2() ? smoothstep(0.05, 0.45, Math.sin(d / 40 + 2.0)) : smoothstep(0.3, 0.75, Math.sin(d / 47 + 2.0)));
 
 /** Ground height beside the trail before streams cut it. Versions 1-2: a low berm, a gentle rise, then valley
  * walls on both sides. Version 3: a hillside: a bank on the uphill side, a long drop on the other. */
@@ -46,7 +47,8 @@ function forestBase(x: number, z: number): number {
   const d = -z;
   const k = 0.5 + 0.5 * uphillSide(d) * Math.sign(x); // 1 on the uphill side, 0 on the drop side
   const up = smoothstep(TRACK + 0.5, TRACK + 3.2, ax) * (1.6 + 0.5 * noise.get(x * 0.2, z * 0.15)) + smoothstep(TRACK + 3, 28, ax) * 10 + smoothstep(28, 90, ax) * 14;
-  const down = -(smoothstep(TRACK + 1.6, 13, ax) * 4.5 + smoothstep(13, 60, ax) * 26);
+  // The downhill pass: a deeper drop, so the valley and the treetops on it sit well below you.
+  const down = downhill2() ? -(smoothstep(TRACK + 1.6, 12, ax) * 5 + smoothstep(12, 70, ax) * 46) : -(smoothstep(TRACK + 1.6, 13, ax) * 4.5 + smoothstep(13, 60, ax) * 26);
   const hill = up * k + down * (1 - k);
   return berm + mounds + valley + (hill - valley) * hillsideAmount(d);
 }
@@ -436,10 +438,36 @@ function plantClusters(g: GeomBuilder, rng: Rng, kind: string, z0: number, L: nu
       if (t === 'ginkgo') addGinkgo(g, at(x, z), rng.range(7, 12), rng);
       else addConifer(g, at(x, z), rng.range(12, 22), rng);
     }
+    // The downhill pass: a forest all the way down the drop side, its treetops below you.
+    if (downhill2()) valleyCanopy(g, rng, z0, L, sgn, dropSide, at);
     // A few small ferns at the trail edge between clusters, so the verge isn't bare.
     for (let dd = rng.range(0, 4); dd < L; dd += rng.range(3.5, 7)) {
       const x = sgn * rng.range(2.9, 3.6), z = z0 - dd;
       if (ok(x, z, 1.8)) addFern(g, at(x, z), rng.range(0.45, 0.8), rng);
+    }
+  }
+}
+
+/**
+ * The downhill pass: the forest on the slope below the trail, seen from above as a canopy of conifer tops (cheap
+ * cones, no trunks: only their tops ever show), denser and taller further down, with a few ginkgos for color.
+ */
+function valleyCanopy(g: GeomBuilder, rng: Rng, z0: number, L: number, sgn: number, dropSide: (z: number) => boolean, at: (x: number, z: number) => THREE.Vector3) {
+  const dark = col(F.coniferDark), mid = col(F.conifer), light = col(F.coniferLight), gold = col(F.ginkgo);
+  const under = shade(dark, 0.7);
+  for (let x0 = 24; x0 < 118; x0 += 6.5) {
+    for (let dd = rng.range(0, 6); dd < L; dd += rng.range(5, 8)) {
+      const z = z0 - dd, x = sgn * (x0 + rng.range(-2.5, 2.5));
+      if (!dropSide(z)) continue;
+      const ground = at(x, z);
+      // Keep every top at least 3 m below the trail, so the canopy always reads as down the hill.
+      const h = Math.min(rng.range(9, 16) * (0.8 + x0 / 160), (-ground.y - 3) / 1.1);
+      if (h < 4) continue;
+      const r = h * rng.range(0.24, 0.3);
+      const base = ground.add(new THREE.Vector3(0, h * 0.25, 0));
+      const ginkgo = rng.chance(0.12);
+      const top = ginkgo ? gold : mid.clone().lerp(light, rng.range(0, 0.5));
+      skirt(g, base, r, h * (ginkgo ? 0.55 : 0.85), 6, rng, top, ginkgo ? shade(gold, 0.75) : dark, under);
     }
   }
 }

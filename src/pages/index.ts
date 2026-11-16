@@ -20,11 +20,11 @@ import { inclusionArt, plumageSwatch } from '../ui/journal-art';
 import { Session, type GameEvent } from '../game/session';
 import { CONFIG } from '../game/config';
 import { levelNumber, pickLevel } from '../game/levels';
-import { LOOK, lookAt, setLook } from '../render/look';
+import { DOWNHILL, LOOK, downhill2, lookAt, setLook } from '../render/look';
 import { LEVEL_COPY } from '../game/level-copy';
 import { curvatureAt, timeAt } from '../game/level';
 import { crashCopy } from '../game/copy';
-import { applyLookMaterials, hillGrade, worldUniforms } from '../render/materials';
+import { applyLookMaterials, hillGrade, hillHeight, setHill, worldUniforms } from '../render/materials';
 import { Input } from '../core/input';
 import { AudioEngine } from '../audio/sfx';
 import { loadSave, writeSave } from '../game/save';
@@ -42,6 +42,7 @@ let DEBUG = params.has('debug');
 const save = loadSave();
 // The graphics version (three-version test): the URL wins, else the saved choice, else today's look.
 setLook(Number(params.get('look') ?? save.look ?? 3)); // the owner picked version 3 (playtest 8)
+DOWNHILL.v = params.get('hill') === '2' ? 2 : 1; // the downhill pass, behind ?hill=2 until the owner OKs it
 applyLookMaterials(lookAt(2));
 /** The level is chosen when the page loads (the URL's ?level=, else the last one played); switching levels
  * reloads the page, so everything below is built for this one level. */
@@ -200,11 +201,9 @@ const haptic = (ms: number) => { try { navigator.vibrate?.(ms); } catch { /* uns
 const container = $('stage');
 const stage = new Stage(container, { preserveDrawingBuffer: SHOT, biome: BIOME });
 const streamer = new ChunkStreamer(stage.world, true, { gullies: LEVEL.hazards.filter((h) => h.type === 'gully').map((h) => h.d), sections: LEVEL.sections, biome: BIOME });
-if (LEVEL.slope) {
-  worldUniforms.uSlope.value = LEVEL.slope.grade;
-  worldUniforms.uSlopeFrom.value = LEVEL.slope.from;
-  worldUniforms.uSlopeTo.value = LEVEL.slope.to;
-}
+// Before the downhill pass the hill was one steady grade of 0.17 (kept until the owner OKs the new one).
+setHill(LEVEL.slope && !downhill2() ? { ...LEVEL.slope, grade: 0.17, pitches: [] } : LEVEL.slope);
+if (LEVEL.slope && downhill2()) stage.hill = hillHeight;
 worldUniforms.uRimColor.value.set(FORESTED ? FOREST.sunGlow : GOBI.sunGlow);
 worldUniforms.uDapple.value = FORESTED && lookAt(3) ? 1 : 0; // dappled canopy light: the forest, version 3
 const items = new CollectibleField(400, FOG);
@@ -259,12 +258,26 @@ const resize = () => {
 addEventListener('resize', resize);
 // Fill exactly the area the browser shows (a phone browser's toolbars come and go; the page's own height can lag
 // behind and leave a strip of background at the bottom).
+// On iPhone, the Home Screen app owns the whole screen, but iOS can report a viewport short by about the status
+// bar's height there (owner: a strip at the bottom in the Home Screen app only), so it sizes to the screen itself.
 const vv = window.visualViewport;
-const fitViewport = () => { if (vv) root.style.height = `${Math.round(vv.height)}px`; resize(); };
+const HOME_SCREEN_IOS = (navigator as { standalone?: boolean }).standalone === true;
+const fitViewport = () => {
+  let h = vv ? vv.height : window.innerHeight;
+  if (HOME_SCREEN_IOS) {
+    const portrait = window.innerHeight >= window.innerWidth;
+    h = Math.max(h, portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height));
+  }
+  root.style.height = `${Math.round(h)}px`;
+  resize();
+};
 vv?.addEventListener('resize', fitViewport);
+window.addEventListener('resize', fitViewport);
 fitViewport();
 resize();
 
+// Behind the game, the color of the ground at the bottom of the screen, so a sliver of page never shows as a band.
+document.documentElement.style.background = document.body.style.background = `#${col(FORESTED ? FOREST.trackDark : GOBI.sandMid).getHexString()}`;
 const fogColor = col(FORESTED ? FOREST.fog : GOBI.horizon);
 look.setSky(BIOME);
 const stormFog = mix(GOBI.horizon, GOBI.sandMid, 0.55);
@@ -1253,6 +1266,13 @@ window.__rr = {
   forkNose: (n: number) => (LEVEL.hazards.filter((h) => h.type === 'spine')[n]?.d ?? 0) / (LEVEL.length / 1100),
   /** Test hook: set a shared world uniform (e.g. uDapple) on this page's own materials. */
   uniform: (name: keyof typeof worldUniforms, v: number) => { (worldUniforms[name] as { value: number }).value = v; },
+  /** Test hook: draw one frame from a free camera, offset from the runner (the next step puts the chase camera back). */
+  peek: (dx: number, dy: number, dz: number, lx: number, ly: number, lz: number) => {
+    const z = -session.distance;
+    stage.camera.position.set(dx, dy, z + dz);
+    stage.camera.lookAt(lx, ly, z + lz);
+    draw();
+  },
   stats: () => { const c = streamer.stats(); return { chunks: c.chunks, cached: c.cached, chunkTris: c.tris, calls: stage.renderer.info.render.calls, tris: stage.renderer.info.render.triangles }; },
 };
 if (!SHOT) requestAnimationFrame(frame);

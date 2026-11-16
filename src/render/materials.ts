@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { GOBI } from './palette';
+import { type HillDef, gradeAt, hillAt } from '../game/hill';
+
+/** How many steeper pitches a level's hill can have (shader uniform slots). */
+export const MAX_PITCHES = 6;
 
 /**
  * Shared uniforms for the whole world. The curved-world bend is applied to gl_Position only,
@@ -21,29 +25,48 @@ export const worldUniforms = {
   uSlope: { value: 0 },
   uSlopeFrom: { value: 0 },
   uSlopeTo: { value: 1e6 },
+  /** Steeper pitches on top of that grade: (from, to, extra grade, bend softness in meters); unused slots are 0. */
+  uPitch: { value: Array.from({ length: MAX_PITCHES }, () => new THREE.Vector4()) },
 };
 
 /** GLSL for the hill profile (declarations and functions), shared by every shader that draws into the world. */
 export const HILL_GLSL = `
   uniform float uSlope, uSlopeFrom, uSlopeTo;
-  float rrSoftplus(float x) { return max(x, 0.0) + 8.0 * log(1.0 + exp(-abs(x) / 8.0)); }
-  float rrHill(float d) { return -uSlope * (rrSoftplus(d - uSlopeFrom) - rrSoftplus(d - uSlopeTo)); }
+  uniform vec4 uPitch[${MAX_PITCHES}];
+  float rrSoftplus(float x, float w) { return max(x, 0.0) + w * log(1.0 + exp(-abs(x) / w)); }
+  float rrHill(float d) {
+    float h = -uSlope * (rrSoftplus(d - uSlopeFrom, 8.0) - rrSoftplus(d - uSlopeTo, 8.0));
+    for (int i = 0; i < ${MAX_PITCHES}; i++) {
+      vec4 p = uPitch[i];
+      if (p.z != 0.0) h -= p.z * (rrSoftplus(d - p.x, p.w) - rrSoftplus(d - p.y, p.w));
+    }
+    return h;
+  }
   /** Raise or drop a view-space position by the hill's height there relative to the camera's. */
   vec3 rrHillWarp(vec3 mv) {
     if (uSlope == 0.0) return mv;
     vec3 wpos = transpose(mat3(viewMatrix)) * (mv - viewMatrix[3].xyz);
     return mv + (viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz * (rrHill(-wpos.z) - rrHill(-cameraPosition.z));
   }`;
-export const hillUniforms = () => ({ uSlope: worldUniforms.uSlope, uSlopeFrom: worldUniforms.uSlopeFrom, uSlopeTo: worldUniforms.uSlopeTo });
+export const hillUniforms = () => ({ uSlope: worldUniforms.uSlope, uSlopeFrom: worldUniforms.uSlopeFrom, uSlopeTo: worldUniforms.uSlopeTo, uPitch: worldUniforms.uPitch });
 
-/** The hill profile's height at course distance d (matches the shader). */
-const softplus = (x: number) => Math.max(x, 0) + 8 * Math.log(1 + Math.exp(-Math.abs(x) / 8));
-export const hillHeight = (d: number) => -worldUniforms.uSlope.value * (softplus(d - worldUniforms.uSlopeFrom.value) - softplus(d - worldUniforms.uSlopeTo.value));
+let hill: HillDef | undefined;
+/** The hill's height at course distance d (game/hill.ts, which the shader matches). */
+export const hillHeight = (d: number) => hillAt(hill, d);
 /** The hill's local grade at course distance d (0 on the flats). */
-export const hillGrade = (d: number) => {
-  const sig = (x: number) => 1 / (1 + Math.exp(-x / 8));
-  return worldUniforms.uSlope.value * (sig(d - worldUniforms.uSlopeFrom.value) - sig(d - worldUniforms.uSlopeTo.value));
-};
+export const hillGrade = (d: number) => gradeAt(hill, d);
+/** Set the level's hill (grade from the crest to the bottom, plus any steeper pitches). */
+export function setHill(def: HillDef | undefined) {
+  hill = def;
+  const u = worldUniforms;
+  u.uSlope.value = def?.grade ?? 0;
+  u.uSlopeFrom.value = def?.from ?? 0;
+  u.uSlopeTo.value = def?.to ?? 1e6;
+  u.uPitch.value.forEach((v, i) => {
+    const p = def?.pitches?.[i];
+    v.set(p?.from ?? 0, p?.to ?? 0, p?.extra ?? 0, p?.soft ?? 5);
+  });
+}
 
 /** Bends grow with distance squared, softening past this many meters so the far terrain never swings off its edge. */
 export const BEND_KNEE = 90;
@@ -61,6 +84,7 @@ export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; be
     shader.uniforms.uSlope = worldUniforms.uSlope;
     shader.uniforms.uSlopeFrom = worldUniforms.uSlopeFrom;
     shader.uniforms.uSlopeTo = worldUniforms.uSlopeTo;
+    shader.uniforms.uPitch = worldUniforms.uPitch;
     shader.uniforms.uRimColor = rimCol ? { value: rimCol } : worldUniforms.uRimColor;
     if (bend) {
       shader.vertexShader = shader.vertexShader

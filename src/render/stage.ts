@@ -3,11 +3,13 @@ import { FOREST, GOBI, col } from './palette';
 import { createBackdrop, createForestBackdrop, createSky } from './sky';
 import { CONFIG } from '../game/config';
 import { damp } from '../core/math';
-import { lookAt } from './look';
+import { downhill2, lookAt } from './look';
 
 /** Low golden-hour sun (~22° up) behind and to the right of the chase camera: long shadows, warm light. */
 export const SUN_DIR = new THREE.Vector3(0.802, 0.375, 0.465).normalize();
 export const FOG = { near: 42, far: 235 };
+/** Downhill: how much of the descent the backdrop rises by. */
+const BACKDROP_RISE = 0.3;
 
 /** Renderer, scene, lights, sky and the chase camera. */
 export class Stage {
@@ -25,6 +27,9 @@ export class Stage {
   baseFov: number = CONFIG.camera.fov;
   /** The level's visual downhill (see materials.ts uSlope): the chase camera aims lower to follow the ground. */
   slope = 0;
+  /** The downhill pass: the hill's height along the course (materials.ts hillHeight). With it, the camera keeps the
+   * hero framed as before but tilts only part of the way down to the trail ahead (CONFIG.camera.downhillAim). */
+  hill: ((d: number) => number) | null = null;
   private camY = 0;
   onResize: (w: number, h: number) => void = () => {};
 
@@ -55,7 +60,7 @@ export class Stage {
     this.camera = new THREE.PerspectiveCamera(CONFIG.camera.fov, 1, 0.1, 900);
     if (forest) this.sunDir.set(0.62, 0.55, 0.56).normalize(); // a higher morning sun, behind and to the right
     this.sky = createSky(this.sunDir, forest ? FOREST : GOBI);
-    this.backdrop = forest ? createForestBackdrop() : createBackdrop();
+    this.backdrop = forest ? createForestBackdrop(downhill2()) : createBackdrop();
     this.scene.add(this.sky, this.backdrop, this.world);
     this.resize(container.clientWidth, container.clientHeight);
   }
@@ -77,7 +82,11 @@ export class Stage {
     this.camX = snap ? tx : damp(this.camX, tx, 9, dt);
     this.camY = snap ? y : damp(this.camY, y, 6, dt);
     this.camera.position.set(this.camX, c.height + this.camY * 0.45, z + c.back);
-    this.camera.lookAt(this.camX * 0.85, c.lookHeight + this.camY * 0.5 - this.slope * (c.back + c.lookAhead) * 0.8, z - c.lookAhead);
+    const d = -z, hill = this.hill;
+    const drop = hill
+      ? hill(d - c.back) - hill(d) + c.downhillAim * (hill(d) - hill(d + c.lookAhead))
+      : this.slope * (c.back + c.lookAhead) * 0.8;
+    this.camera.lookAt(this.camX * 0.85, c.lookHeight + this.camY * 0.5 - drop, z - c.lookAhead);
     this.follow(this.camX, z);
   }
 
@@ -87,7 +96,10 @@ export class Stage {
     this.sun.target.position.copy(focus);
     this.sun.position.copy(focus).addScaledVector(this.sunDir, 40);
     this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);
-    this.backdrop.position.set(this.camera.position.x, 0, this.camera.position.z);
+    // Downhill: the far ridges and the valley floor rise toward you as you descend (a share of the real drop, since
+    // the backdrop stands in for country much further away than it's drawn).
+    const rise = this.hill ? -this.hill(-this.camera.position.z) * BACKDROP_RISE : 0;
+    this.backdrop.position.set(this.camera.position.x, rise, this.camera.position.z);
   }
 
   syncSun() {

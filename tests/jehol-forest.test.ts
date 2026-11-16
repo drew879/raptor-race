@@ -6,6 +6,7 @@ import { hazardBox } from '../src/game/collision';
 import { BEAT, timeAt } from '../src/game/level';
 import { LEVEL_COPY } from '../src/game/level-copy';
 import { HUMANLIKE, PERFECT, playLevel } from '../src/game/bot';
+import { hillAt, type HillDef } from '../src/game/hill';
 
 describe('Jehol Forest (Level 1, the tutorial) data', () => {
   it('has three inclusions, two checkpoints, one fork and every lesson hint in order', () => {
@@ -62,6 +63,39 @@ describe('Jehol Forest (Level 1, the tutorial) data', () => {
   it('is shorter and slower than the Velociraptor hunt', () => {
     expect(timeAt(LV, LV.length)).toBeLessThan(timeAt(FLAMING_CLIFFS, FLAMING_CLIFFS.length));
     expect(LV.speed.end).toBeLessThan(FLAMING_CLIFFS.speed.end);
+  });
+});
+
+describe('the hill', () => {
+  // The chase camera (graphics version 2+): 3.35 m behind the hero, 2.45 m up; the world also curves away by
+  // 0.0007 m per meter squared (materials.ts uCurve). Obstacle heights are the visible tops; a stream is at ground level.
+  const BACK = 3.35, EYE = 2.45, CURVE = 0.0007;
+  const TOP: Record<string, number> = { ledge: 0.7, gully: 0, arch: 2.6, ribArch: 2.0, boulder: 3.0, spine: 1.5 };
+  /** Seconds before reaching each obstacle that it comes into view and stays there, on a given hill. */
+  function warning(hill: HillDef) {
+    const y = (x: number, c: number) => hillAt(hill, x) - CURVE * (x - c) ** 2;
+    const seen = (p: number, d: number, top: number) => {
+      const c = p - BACK, yE = hillAt(hill, c) + EYE, yT = y(d, c) + top;
+      for (let x = c + 1; x < d - 0.5; x += 0.5) if (y(x, c) > yE + ((yT - yE) * (x - c)) / (d - c)) return false;
+      return true;
+    };
+    return [...new Map(LV.hazards.map((h) => [h.d, h])).values()].map((h) => {
+      let first = h.d;
+      for (let p = h.d - 2; p > h.d - 95; p -= 0.5) { if (!seen(p, h.d, TOP[h.type] ?? 0)) break; first = p; }
+      return { d: h.d, type: h.type, s: timeAt(LV, h.d) - timeAt(LV, first) };
+    });
+  }
+  it('has steeper pitches, each in an open stretch between obstacles', () => {
+    const pitches = LV.slope!.pitches!;
+    expect(pitches.length).toBeGreaterThanOrEqual(4);
+    for (const p of pitches) expect(LV.hazards.filter((h) => h.d > p.from - 4 && h.d < p.to + 4), `${p.from}-${p.to}`).toEqual([]);
+  });
+  it('hides nothing behind a crest: every obstacle is in view as long before you reach it as on the steady grade', () => {
+    const steady = warning({ ...LV.slope!, grade: 0.17, pitches: [] });
+    const now = warning(LV.slope!);
+    const worstSteady = Math.min(...steady.map((w) => w.s));
+    console.log('hill: least warning', now.slice().sort((a, b) => a.s - b.s).slice(0, 3).map((w) => `${w.type}@${w.d} ${w.s.toFixed(2)} s`).join(', '));
+    expect(now.filter((w) => w.s < Math.min(3, worstSteady - 0.1)).map((w) => `${w.type}@${w.d} ${w.s.toFixed(2)} s`)).toEqual([]);
   });
 });
 
