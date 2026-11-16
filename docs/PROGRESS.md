@@ -33,7 +33,8 @@ Newest first. Every session updates this before pushing.
 - [x] GitHub Pages: workflow deploys every push to https://drew879.github.io/raptor-race/ after typecheck and tests; Add to Home Screen support (manifest, iPhone web-app tags, icon drawn in code); verified the build runs from the /raptor-race/ sub-path. The Claude artifact link is retired (owner)
 ## Level 1 wrap-up (owner approved A-D, playtest 5; I stage it)
 - [x] D. Journal discoverability: results screen offers "N new journal pages", the title's Field Journal button shows a "new" badge, the journal opens at the new pages with a New tag
-- [ ] B. Music v3: two previews (war drums vs chase strings) for the owner to pick, then the final
+- [x] B. Music engine takes the arrangement as data (src/audio/music-styles.ts); two darker candidates built and loudness-matched (War Drums: C# Phrygian, taiko, drone, horn, brass; Chase Strings: harmonic minor, spiccato strings, kit, violins); previews sent
+- [ ] B. Owner picks a direction; make it the default and polish it
 - [ ] C. Nesting ground (resting and wandering Protoceratops) and a swooping pterosaur in the storm
 - [ ] A. Graphics polish: raptor, light and sky, ground, effects (critic before and after)
 - Amber stays score only (owner). After the wrap-up: a new Level 1 with an Oviraptor chasing a runaway egg downhill; this level becomes Level 2 (owner, for Aidan)

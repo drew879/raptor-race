@@ -1,5 +1,6 @@
 import { MUSIC_LEVEL, Sfx, type SfxName } from '../audio/sfx';
 import { Music } from '../audio/music';
+import { MUSIC_STYLES } from '../audio/music-styles';
 
 // Renders each SFX offline and reports peak/RMS/duration (used by scripts/audio-check.mjs).
 const NAMES: SfxName[] = ['amber', 'lane', 'jump', 'land', 'slide', 'stumble', 'egg', 'powerup', 'checkpoint', 'finish'];
@@ -23,13 +24,13 @@ async function measure(name: SfxName) {
   return { name, peakDb: +(20 * Math.log10(peak + 1e-9)).toFixed(1), rmsDb: +(20 * Math.log10(rms + 1e-9)).toFixed(1), durMs: Math.round(dur * 1000) };
 }
 /** Ten seconds of music at a given intensity, through the music bus level, measured like the SFX. */
-async function measureMusic(intensity: number, storm: number) {
+async function measureMusic(intensity: number, storm: number, styleId = 'journal') {
   const sr = 44100;
   const ctx = new OfflineAudioContext(2, sr * 10, sr);
   const bus = ctx.createGain();
   bus.gain.value = MUSIC_LEVEL;
   bus.connect(ctx.destination);
-  const m = new Music(ctx, bus);
+  const m = new Music(ctx, bus, MUSIC_STYLES[styleId]);
   m.intensity = intensity;
   m.storm = storm;
   m.start(0);
@@ -41,18 +42,18 @@ async function measureMusic(intensity: number, storm: number) {
     for (let i = 0; i < d.length; i++) { const a = Math.abs(d[i]); if (a > peak) peak = a; sum += d[i] * d[i]; }
   }
   const rms = Math.sqrt(sum / (2 * buf.length));
-  return { name: `music@${intensity}`, peakDb: +(20 * Math.log10(peak + 1e-9)).toFixed(1), rmsDb: +(20 * Math.log10(rms + 1e-9)).toFixed(1), durMs: 10000 };
+  return { name: `music:${styleId}@${intensity}`, peakDb: +(20 * Math.log10(peak + 1e-9)).toFixed(1), rmsDb: +(20 * Math.log10(rms + 1e-9)).toFixed(1), durMs: 10000 };
 }
-(window as unknown as { __audio: Promise<unknown> }).__audio = Promise.all([...NAMES.map(measure), measureMusic(0.25, 0), measureMusic(1, 0.6)]);
+(window as unknown as { __audio: Promise<unknown> }).__audio = Promise.all([...NAMES.map(measure), ...Object.keys(MUSIC_STYLES).flatMap((id) => [measureMusic(0.25, 0, id), measureMusic(1, 0.6, id)])]);
 
 /** Renders a music preview (scripts/music-preview.mjs): low intensity, then full, with on-beat amber chains. */
-(window as unknown as { __renderPreview: () => Promise<number[][]> }).__renderPreview = async () => {
+(window as unknown as { __renderPreview: (styleId?: string) => Promise<number[][]> }).__renderPreview = async (styleId = 'journal') => {
   const sr = 44100, secs = 34;
   const ctx = new OfflineAudioContext(2, sr * secs, sr);
   const bus = ctx.createGain();
   bus.gain.value = MUSIC_LEVEL;
   bus.connect(ctx.destination);
-  const m = new Music(ctx, bus);
+  const m = new Music(ctx, bus, MUSIC_STYLES[styleId]);
   m.start(0);
   for (let s = 0; s < secs - 1; s += 0.05) {
     m.intensity = s < 16 ? 0.25 : 0.9;

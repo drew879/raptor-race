@@ -3,6 +3,7 @@
  * Works with an online AudioContext or an OfflineAudioContext (for automated loudness checks).
  */
 import { Music } from './music';
+import { DEFAULT_STYLE } from './music-styles';
 
 /** Music bus level relative to SFX: keeps music peaks about 8 dB under SFX peaks (AUDIO_BIBLE mix targets). */
 export const MUSIC_LEVEL = 0.26;
@@ -179,7 +180,7 @@ export class AudioEngine {
     this.musicBus = this.ctx.createGain();
     this.musicBus.gain.value = this.musicOn ? MUSIC_LEVEL : 0;
     this.musicBus.connect(this.master);
-    this.music = new Music(this.ctx, this.musicBus);
+    this.music = new Music(this.ctx, this.musicBus, DEFAULT_STYLE);
   }
   /** Amber pickup: with the music playing, a chord tone snapped onto the beat; otherwise the plain chime. */
   amber(song: number, rate: number) {
