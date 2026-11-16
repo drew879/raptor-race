@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { GeomBuilder } from '../geom';
 import { col, mix, shade, type RaptorPlumage } from '../palette';
 import { B, BONE_DEFS, feather, limbTube, ringFrame, skinOf, skinned, type BoneName, type RaptorBuild } from '../raptor/model';
+import { MATS } from '../materials';
+import { lookAt } from '../look';
 
 /**
  * Caudipteryx: a peacock-sized oviraptorosaur (Oviraptor's cousin). Short deep skull with a stubby beak, a long
@@ -62,13 +64,23 @@ const BODY: Ring[] = [
 const BEAK_TIP = new THREE.Vector3(0, 1.012, -0.58);
 const TAIL_TIP = new THREE.Vector3(0, 0.636, 0.6);
 
+const BACK = new THREE.Vector3(0, 1, 1).normalize();
+function backFrame(t: THREE.Vector3) {
+  const side = new THREE.Vector3().crossVectors(BACK, t).normalize();
+  const up = new THREE.Vector3().crossVectors(t, side).normalize();
+  return { side, up };
+}
+
 /** A long feather as a strip of bands (dark, light, dark, light tip): the banded fans read from far away. */
 function bandedFeather(g: GeomBuilder, base: THREE.Vector3, dir: THREE.Vector3, normal: THREE.Vector3, len: number, width: number, dark: THREE.Color, light: THREE.Color, skin: number[]) {
   const d = dir.clone().normalize();
   const s = new THREE.Vector3().crossVectors(d, normal).normalize();
   const p = (along: number, across: number) => base.clone().addScaledVector(d, len * along).addScaledVector(s, width * across);
   const stops = [0, 0.32, 0.5, 0.68, 0.84, 1];
-  const half = (u: number) => (u < 0.2 ? 0.25 + u * 1.5 : u > 0.85 ? (1 - u) * 3 : 0.5);
+  // Version 2: broader, with a rounded tip.
+  const half = lookAt(2)
+    ? (u: number) => (u < 0.2 ? 0.3 + u * 1.8 : u > 0.8 ? 0.62 * Math.sqrt(Math.max(0, 1 - ((u - 0.8) / 0.2) ** 2)) : 0.62)
+    : (u: number) => (u < 0.2 ? 0.25 + u * 1.5 : u > 0.85 ? (1 - u) * 3 : 0.5);
   const sk: [number[], number[], number[]] = [skin, skin, skin];
   for (let k = 0; k < stops.length - 1; k++) {
     const u0 = stops[k], u1 = stops[k + 1];
@@ -97,7 +109,9 @@ export function buildCaudipteryx(pl: RaptorPlumage): RaptorBuild {
     const prev = i === 0 ? BEAK_TIP : centers[i - 1];
     const next = i === BODY.length - 1 ? TAIL_TIP : centers[i + 1];
     const t = new THREE.Vector3().subVectors(next, prev).normalize();
-    const { side, up } = ringFrame(t);
+    // Version 2: a frame whose "back" faces up-and-back, so on the near-vertical neck the dark nape faces the
+    // chase camera (version 1's frame flipped there and showed the pale throat from behind).
+    const { side, up } = lookAt(2) ? backFrame(t) : ringFrame(t);
     const ring: THREE.Vector3[] = [];
     for (let j = 0; j < N; j++) {
       const th = (j / N) * Math.PI * 2;
@@ -182,17 +196,24 @@ export function buildCaudipteryx(pl: RaptorPlumage): RaptorBuild {
     const base = new THREE.Vector3(sx * 0.06, 0.79 - Math.floor(k / 2) * 0.03, z);
     feather(g, base, new THREE.Vector3(sx * 0.45, -0.06, 1).normalize(), new THREE.Vector3(sx * 0.3, 1, 0).normalize(), 0.18, 0.08, C.base, C.baseDark, skinOf(k < 4 ? B.chest : B.pelvis));
   }
-  // The tail fan: a half-circle of long banded feathers at the tip (its name means "tail feather"), held up at
-  // ~60 degrees, like a display, so the chase camera behind sees a striped half-disc rather than a sliver.
-  const FAN = 11, LIFT = 1.05;
-  const fanUp = new THREE.Vector3(0, Math.cos(LIFT), -Math.sin(LIFT));
+  // The tail fan: a half-circle of long banded feathers at the tip (its name means "tail feather"), built flat on
+  // its own pivot at the tail tip; the view lifts it (held up ~60 degrees in version 1 so the chase camera sees a
+  // striped half-disc; in version 2 it rides low while running and opens on jumps, turns and the brood).
+  const fg = new GeomBuilder(false);
+  const FAN = 11;
   for (let k = 0; k < FAN; k++) {
     const a = (k / (FAN - 1) - 0.5) * 2.1; // across the fan, radians
     const len = 0.3 + 0.08 * Math.cos(a * 1.4);
-    const base = new THREE.Vector3(Math.sin(a) * 0.02, 0.645, 0.5 + Math.abs(a) * 0.02);
-    const dir = new THREE.Vector3(Math.sin(a), Math.cos(a) * Math.sin(LIFT), Math.cos(a) * Math.cos(LIFT)).normalize();
-    bandedFeather(g, base, dir, fanUp, len, 0.075, C.dark, C.light, skinOf(B.tail4));
+    const base = new THREE.Vector3(Math.sin(a) * 0.02, 0, Math.abs(a) * 0.02);
+    bandedFeather(fg, base, new THREE.Vector3(Math.sin(a), 0, Math.cos(a)), new THREE.Vector3(0, 1, 0), len, 0.075, C.dark, C.light, []);
   }
+  const fan = new THREE.Group();
+  const fanMesh = new THREE.Mesh(fg.build(), MATS.character);
+  fanMesh.castShadow = true;
+  fanMesh.frustumCulled = false;
+  fan.add(fanMesh);
+  fan.position.copy(new THREE.Vector3(0, 0.645, 0.5).sub(caudRest('tail4'))); // in the tail tip bone's space
+  fan.rotation.x = -1.05;
   // Thigh trousers.
   for (const side of ['L', 'R'] as const) {
     const H = caudRest(`thigh${side}`), K = caudRest(`shin${side}`);
@@ -242,5 +263,7 @@ export function buildCaudipteryx(pl: RaptorPlumage): RaptorBuild {
     }
   }
 
-  return skinned(g.build(), caudRest, 'caudipteryx');
+  const build = skinned(g.build(lookAt(2) ? { smooth: 55 } : {}), caudRest, 'caudipteryx');
+  build.bones[B.tail4].add(fan);
+  return { ...build, fan };
 }

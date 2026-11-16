@@ -6,11 +6,15 @@ import { CAUD_FOREST, CAUD_SUNRISE, RAPTOR_DUSK, RAPTOR_GOBI_STREAK, GOBI } from
 import { buildCaudipteryx, caudRest } from '../render/caudipteryx/model';
 import { Protoceratops, type ProtoPose } from '../render/prey/protoceratops';
 import { CONFIG } from '../game/config';
+import { lookAt, setLook } from '../render/look';
+import { applyLookMaterials } from '../render/materials';
 import { Herd } from '../render/prey/herd';
 import { EggView, buildNest } from '../render/prey/egg';
 
 // Asset lab: ?pose=run|idle|slide|air|land&t=0.3&view=side|back|front|three&speed=12
 const q = new URLSearchParams(location.search);
+setLook(Number(q.get('look') ?? 1));
+applyLookMaterials(lookAt(2));
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);

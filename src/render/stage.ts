@@ -3,6 +3,7 @@ import { FOREST, GOBI, col } from './palette';
 import { createBackdrop, createForestBackdrop, createSky } from './sky';
 import { CONFIG } from '../game/config';
 import { damp } from '../core/math';
+import { lookAt } from './look';
 
 /** Low golden-hour sun (~22° up) behind and to the right of the chase camera: long shadows, warm light. */
 export const SUN_DIR = new THREE.Vector3(0.802, 0.375, 0.465).normalize();
@@ -70,7 +71,8 @@ export class Stage {
 
   /** Chase camera behind the runner. */
   chase(x: number, y: number, z: number, dt: number, snap = false) {
-    const c = CONFIG.camera;
+    // Version 2: a little closer and lower, so the hero reads bigger (look-ahead unchanged).
+    const c = lookAt(2) ? { ...CONFIG.camera, back: 3.35, height: 2.45 } : CONFIG.camera;
     const tx = x * c.laneFollow;
     this.camX = snap ? tx : damp(this.camX, tx, 9, dt);
     this.camY = snap ? y : damp(this.camY, y, 6, dt);

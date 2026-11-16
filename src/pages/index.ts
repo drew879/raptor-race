@@ -20,10 +20,11 @@ import { inclusionArt, plumageSwatch } from '../ui/journal-art';
 import { Session, type GameEvent } from '../game/session';
 import { CONFIG } from '../game/config';
 import { levelNumber, pickLevel } from '../game/levels';
+import { LOOK, lookAt, setLook } from '../render/look';
 import { LEVEL_COPY } from '../game/level-copy';
 import { curvatureAt, timeAt } from '../game/level';
 import { crashCopy } from '../game/copy';
-import { hillGrade, worldUniforms } from '../render/materials';
+import { applyLookMaterials, hillGrade, worldUniforms } from '../render/materials';
 import { Input } from '../core/input';
 import { AudioEngine } from '../audio/sfx';
 import { loadSave, writeSave } from '../game/save';
@@ -39,6 +40,9 @@ const params = new URLSearchParams(location.search);
 const SHOT = params.has('shot');
 let DEBUG = params.has('debug');
 const save = loadSave();
+// The graphics version (three-version test): the URL wins, else the saved choice, else today's look.
+setLook(Number(params.get('look') ?? save.look ?? 1));
+applyLookMaterials(lookAt(2));
 /** The level is chosen when the page loads (the URL's ?level=, else the last one played); switching levels
  * reloads the page, so everything below is built for this one level. */
 const LEVEL = pickLevel(params.get('level'), save.lastLevel);
@@ -126,6 +130,7 @@ root.innerHTML = `
       <button class="btn-paper" id="btnSound2">Sound: on</button>
       <button class="btn-paper" id="btnMusic">Music: on</button>
       <button class="btn-paper" id="btnFps">Frame rate: hidden</button>
+      <button class="btn-paper" id="btnLook">Graphics: version ${LOOK.level}</button>
       <button class="btn-paper" id="btnQuit">Quit to title</button>
     </div>
   </div>
@@ -436,6 +441,12 @@ $('btnGo').addEventListener('click', startRun);
 $('btnSound').addEventListener('click', toggleSound);
 $('btnSound2').addEventListener('click', toggleSound);
 $('btnMusic').addEventListener('click', () => { save.music = !save.music; audio.setMusic(save.music); writeSave(save); syncSoundLabels(); });
+// Graphics test: cycle 1 -> 2 -> 3 and reload on the same level (everything is built for one version).
+$('btnLook').addEventListener('click', () => {
+  save.look = (LOOK.level % 3) + 1;
+  writeSave(save);
+  location.href = `${location.pathname}?level=${encodeURIComponent(LEVEL.id)}&look=${save.look}`;
+});
 $('btnFps').addEventListener('click', () => {
   DEBUG = !DEBUG;
   $('debug').hidden = !DEBUG;

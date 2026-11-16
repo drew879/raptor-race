@@ -112,7 +112,9 @@ export class GeomBuilder {
     return this.pos.length / 3;
   }
 
-  build(): THREE.BufferGeometry {
+  /** `smooth` (degrees): give faces that meet at less than this angle a shared, smooth normal (rounded bodies),
+   * keeping sharper folds crisp (beaks, claws, feather tips). 0 = faceted. Colors stay per face either way. */
+  build(opts: { smooth?: number } = {}): THREE.BufferGeometry {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(this.colors, 3));
@@ -120,11 +122,51 @@ export class GeomBuilder {
       g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(this.skinIdx, 4));
       g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(this.skinW, 4));
     }
-    g.computeVertexNormals();
+    if (opts.smooth) g.setAttribute('normal', new THREE.Float32BufferAttribute(smoothNormals(this.pos, opts.smooth), 3));
+    else g.computeVertexNormals();
     g.computeBoundingSphere();
     g.computeBoundingBox();
     return g;
   }
+}
+
+/** Crease-angle smooth normals for non-indexed triangles: each corner averages the (area-weighted) normals of the
+ * faces touching that point whose direction is within `creaseDeg` of its own face's. */
+export function smoothNormals(pos: number[], creaseDeg: number): Float32Array {
+  const nTri = pos.length / 9;
+  const fn = new Float32Array(nTri * 3); // area-weighted face normals
+  const unit = new Float32Array(nTri * 3);
+  for (let t = 0; t < nTri; t++) {
+    const o = t * 9;
+    const ax = pos[o + 3] - pos[o], ay = pos[o + 4] - pos[o + 1], az = pos[o + 5] - pos[o + 2];
+    const bx = pos[o + 6] - pos[o], by = pos[o + 7] - pos[o + 1], bz = pos[o + 8] - pos[o + 2];
+    const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+    fn[t * 3] = nx; fn[t * 3 + 1] = ny; fn[t * 3 + 2] = nz;
+    const l = Math.hypot(nx, ny, nz) || 1;
+    unit[t * 3] = nx / l; unit[t * 3 + 1] = ny / l; unit[t * 3 + 2] = nz / l;
+  }
+  const key = (i: number) => `${Math.round(pos[i] * 1e4)},${Math.round(pos[i + 1] * 1e4)},${Math.round(pos[i + 2] * 1e4)}`;
+  const groups = new Map<string, number[]>(); // point -> triangles touching it
+  for (let v = 0; v < nTri * 3; v++) {
+    const k = key(v * 3);
+    let list = groups.get(k);
+    if (!list) groups.set(k, (list = []));
+    list.push(Math.floor(v / 3));
+  }
+  const cos = Math.cos((creaseDeg * Math.PI) / 180);
+  const out = new Float32Array(nTri * 9);
+  for (let v = 0; v < nTri * 3; v++) {
+    const t = Math.floor(v / 3);
+    let sx = 0, sy = 0, sz = 0;
+    for (const u of groups.get(key(v * 3))!) {
+      const d = unit[t * 3] * unit[u * 3] + unit[t * 3 + 1] * unit[u * 3 + 1] + unit[t * 3 + 2] * unit[u * 3 + 2];
+      if (d < cos) continue;
+      sx += fn[u * 3]; sy += fn[u * 3 + 1]; sz += fn[u * 3 + 2];
+    }
+    const l = Math.hypot(sx, sy, sz) || 1;
+    out[v * 3] = sx / l; out[v * 3 + 1] = sy / l; out[v * 3 + 2] = sz / l;
+  }
+  return out;
 }
 
 /** Jitter the vertices of a geometry deterministically (shared positions move together). */

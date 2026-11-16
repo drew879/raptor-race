@@ -3,6 +3,7 @@ import { GeomBuilder } from '../geom';
 import { MATS, litMaterial, patchWorld } from '../materials';
 import { col, mix, shade } from '../palette';
 import type { ProtoPose } from './protoceratops';
+import { lookAt } from '../look';
 
 /**
  * The runaway egg: long and narrow like oviraptorosaur eggs, blue-green (a 2017 study found the pigments of
@@ -13,7 +14,12 @@ import type { ProtoPose } from './protoceratops';
 export const EGG = { length: 0.46, radius: 0.135, crackAt: 0.68 };
 const P = { shell: 0x86c9b6, light: 0xbfe8d9, speck: 0x4f8f80, inside: 0xf4efe2, down: 0xe6d9bf, downDark: 0xbca684, beak: 0xf0a640, eye: 0x1a1412 };
 
-const EGG_MAT = patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color(0x163a34), side: THREE.DoubleSide }), { rim: 0.8, rimColor: 0xeafff7 });
+/** Version 1: faceted with a glow and a strong pale rim. Version 2: smooth and matte; the shape, speckles,
+ * contact shadow and wobble say "egg". Built on first use (after the graphics version is set). */
+let eggMat: THREE.Material | null = null;
+const EGG_MAT = () => (eggMat ??= lookAt(2)
+  ? patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: false, emissive: new THREE.Color(0x061210), side: THREE.DoubleSide }), { rim: 0.22, rimColor: 0xeafff7 })
+  : patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color(0x163a34), side: THREE.DoubleSide }), { rim: 0.8, rimColor: 0xeafff7 }));
 
 const NEST_MAT = litMaterial({ rim: 0.15, side: THREE.DoubleSide });
 const hash = (a: number, b: number) => { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); };
@@ -23,7 +29,7 @@ const profile = (u: number) => EGG.radius * Math.sqrt(Math.max(0, 1 - (2 * u - 1
 /** The shell from u0 to u1, centered on the egg's middle; `jag` gives the crack ring its zigzag. */
 function shell(u0: number, u1: number, jagAt: number | null): THREE.BufferGeometry {
   const g = new GeomBuilder(false);
-  const S = 14, rows = 12;
+  const S = lookAt(2) ? 20 : 14, rows = lookAt(2) ? 16 : 12;
   const us: number[] = [];
   for (let i = 0; i <= rows; i++) { const u = i / rows; if (u > u0 + 1e-6 && u < u1 - 1e-6) us.push(u); }
   us.unshift(u0); us.push(u1);
@@ -37,6 +43,12 @@ function shell(u0: number, u1: number, jagAt: number | null): THREE.BufferGeomet
     for (let k = 0; k < S; k++) {
       const a = ring(us[i], k), b = ring(us[i], k + 1), c = ring(us[i + 1], k + 1), d = ring(us[i + 1], k);
       const h = hash(i + u0 * 40, k);
+      if (lookAt(2)) {
+        // Matte shell, smooth: a calm blue-green with small, scattered dark speckles.
+        const base = h > 0.9 ? col(P.speck) : shade(col(P.shell), 0.97 + h * 0.05);
+        g.quad(a, d, c, b, base, h > 0.95 ? col(P.speck) : base);
+        continue;
+      }
       const base = h > 0.86 ? col(P.speck) : us[i] > 0.55 && (k + i) % 3 === 0 ? mix(P.shell, P.light, 0.5) : shade(col(P.shell), 0.94 + h * 0.1);
       g.quad(a, d, c, b, base, h > 0.93 ? col(P.speck) : shade(base, 0.97));
     }
@@ -45,7 +57,7 @@ function shell(u0: number, u1: number, jagAt: number | null): THREE.BufferGeomet
   const tip = (u: number) => new THREE.Vector3(0, (u - 0.5) * EGG.length, 0);
   if (u0 === 0) for (let k = 0; k < S; k++) g.tri(ring(0.0001, k), ring(0.0001, k + 1), tip(0), col(P.shell));
   if (u1 === 1) for (let k = 0; k < S; k++) g.tri(ring(0.9999, k + 1), ring(0.9999, k), tip(1), col(P.light));
-  return g.build();
+  return g.build(lookAt(2) ? { smooth: 60 } : {});
 }
 
 function chick(): THREE.Group {
@@ -107,13 +119,25 @@ export class EggView {
   private kick = 0;
   private kickTimer = 1.4;
   private upright = 0;
+  private contact: THREE.Mesh | null = null;
   /** Drawn larger while it rolls away (so it reads from far behind), back to life size once caught. */
   rollScale = 1.4;
   private scale = 1.4;
 
   constructor() {
-    const lower = new THREE.Mesh(shell(0, EGG.crackAt, EGG.crackAt), EGG_MAT);
-    const top = new THREE.Mesh(shell(EGG.crackAt, 1, EGG.crackAt), EGG_MAT);
+    const lower = new THREE.Mesh(shell(0, EGG.crackAt, EGG.crackAt), EGG_MAT());
+    const top = new THREE.Mesh(shell(EGG.crackAt, 1, EGG.crackAt), EGG_MAT());
+    if (lookAt(2)) {
+      // A soft contact shadow, so it sits on the trail (it fades as the egg hops).
+      const sg = new THREE.CircleGeometry(EGG.radius * 1.5, 20);
+      sg.rotateX(-Math.PI / 2);
+      this.contact = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ color: 0x2a1c12, transparent: true, opacity: 0.32, depthWrite: false }));
+      patchWorld(this.contact.material as THREE.MeshBasicMaterial, {});
+      this.contact.position.y = 0.015;
+      this.contact.scale.set(1.5, 1, 1);
+      this.contact.renderOrder = 1;
+      this.root.add(this.contact);
+    }
     // The cap pivots at the middle of the crack (it rides up on the chick's head like a hat when it hatches).
     const crackY = (EGG.crackAt - 0.5) * EGG.length;
     this.cap.position.set(0, crackY, 0);
@@ -177,6 +201,12 @@ export class EggView {
     this.root.scale.setScalar(this.scale);
     this.body.position.set(0, y, 0);
     this.body.rotation.set(rx, ry, rz, 'YXZ');
+    if (this.contact) {
+      const lift = Math.max(0, y - R);
+      (this.contact.material as THREE.MeshBasicMaterial).opacity = 0.32 * Math.max(0.15, 1 - lift * 2.2);
+      this.contact.rotation.y = ry;
+      this.contact.scale.set(this.pose === 'pinned' ? 1 : 1.5, 1, 1);
+    }
   }
 }
 

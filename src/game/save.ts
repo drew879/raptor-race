@@ -18,6 +18,8 @@ export interface SaveData {
   plumage?: Record<string, string>;
   /** The level played last (the title screen opens on it). */
   lastLevel?: string;
+  /** Graphics version for the three-version test (1 today's, 2 shading, 3 shading + forest). */
+  look?: number;
 }
 const KEY = 'raptor-race-save-v1';
 const fresh = (): SaveData => ({ v: 1, best: {}, stars: {}, eggs: {}, amberBank: 0, sound: true, music: true, runs: 0 });

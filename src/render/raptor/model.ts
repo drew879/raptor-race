@@ -3,6 +3,7 @@ import { GeomBuilder } from '../geom';
 import { MATS } from '../materials';
 import { col, mix, shade, type RaptorPlumage } from '../palette';
 import type { RrmBody } from './rrm';
+import { lookAt } from '../look';
 
 /** Bone table. Rest positions in model space (meters). Raptor faces -Z, +X is its right side. */
 export const BONE_DEFS = [
@@ -127,8 +128,20 @@ export function feather(
   const d = dir.clone().normalize();
   const s = new THREE.Vector3().crossVectors(d, normal).normalize();
   const p = (along: number, across: number) => base.clone().addScaledVector(d, len * along).addScaledVector(s, width * across);
-  const lw = p(0.3, 0.5), rw = p(0.3, -0.5), ln = p(0.72, 0.3), rn = p(0.72, -0.3), tip = p(1, 0);
   const sk: [number[], number[], number[]] = [skin, skin, skin];
+  if (lookAt(2)) {
+    // A broad paddle with a rounded tip (graphics version 2): overlapping soft feather groups, not shards.
+    const w = 0.62;
+    const lw = p(0.28, w), rw = p(0.28, -w), lm = p(0.66, w * 0.92), rm = p(0.66, -w * 0.92), ln = p(0.86, w * 0.6), rn = p(0.86, -w * 0.6), tip = p(1, 0);
+    g.tri(base, lw, rw, cBase, sk);
+    g.tri(lw, lm, rm, cBase, sk);
+    g.tri(lw, rm, rw, cBase, sk);
+    g.tri(lm, ln, rn, cTip, sk);
+    g.tri(lm, rn, rm, cTip, sk);
+    g.tri(ln, tip, rn, cTip, sk);
+    return;
+  }
+  const lw = p(0.3, 0.5), rw = p(0.3, -0.5), ln = p(0.72, 0.3), rn = p(0.72, -0.3), tip = p(1, 0);
   g.tri(base, lw, rw, cBase, sk);
   g.tri(lw, ln, rn, cBase, sk);
   g.tri(lw, rn, rw, shade(cBase, 0.92), sk);
@@ -138,6 +151,8 @@ export function feather(
 export interface RaptorBuild {
   mesh: THREE.SkinnedMesh;
   bones: THREE.Bone[];
+  /** Caudipteryx: the tail fan on its own pivot at the tail tip (rotation.x lifts it). */
+  fan?: THREE.Group;
 }
 
 /**
@@ -386,7 +401,7 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     }
   }
 
-  const geometry = g.build();
+  const geometry = g.build(lookAt(2) ? { smooth: 55 } : {});
 
   return skinned(geometry, (name) => restPos(name), 'raptor');
 }

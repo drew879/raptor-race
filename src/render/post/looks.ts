@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { lookAt } from '../look';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
@@ -190,6 +191,8 @@ const HYBRID_FAST = /* glsl */ `
   uniform vec2 res;
   uniform float cNear, cFar, dpr, uStorm;
   uniform vec3 uSkyGlow, uSkyHaze, uSkyBand, uSkyMid, uSkyTop, uHazeCol;
+  // Strength of the treatment (graphics test: version 1 is today's, version 2 gentler).
+  uniform float uBandPull, uBandSoft, uWobble, uInner, uInkNear, uInkFar;
   uniform mat4 uInvProj;
   uniform mat3 uCamRot;
   varying vec2 vUv;
@@ -204,14 +207,16 @@ const HYBRID_FAST = /* glsl */ `
     vec2 px = uv * res / dpr;                       // CSS-pixel coordinates, so the look is resolution independent
     vec4 nz = texture2D(tNoise, px / 512.0);         // R grain, G medium wash, B large wash, A wobble
     vec4 nf = texture2D(tNoise, px / 96.0);
-    vec2 wob = (vec2(nz.a, nf.a) - 0.5) * 1.6 * dpr / res;
+    vec2 wob = (vec2(nz.a, nf.a) - 0.5) * uWobble * dpr / res;
     vec3 c = texture2D(tDiffuse, uv + wob).rgb;
     float d0 = texture2D(tDepth, uv).x;
     float sky = step(0.9999, d0);
     vec3 h = rgb2hsv(c);
     float v = h.z;
-    float vb = v < 0.45 ? 0.36 : v < 0.75 ? 0.68 : 0.92;
-    h.z = mix(v, vb, 0.8);
+    float vbHard = v < 0.45 ? 0.36 : v < 0.75 ? 0.68 : 0.92;
+    // Soft bands: the same three values, blended across each step so rounded surfaces still look rounded.
+    float vbSoft = mix(mix(0.36, 0.68, smoothstep(0.36, 0.54, v)), 0.92, smoothstep(0.68, 0.86, v));
+    h.z = mix(v, mix(vbHard, vbSoft, uBandSoft), uBandPull);
     h.y = min(h.y * 1.05, 0.85);
     vec3 col = hsv2rgb(h);
     // Golden hour: lights lean warm, shadows lean cool violet (instead of plain darker browns).
@@ -247,13 +252,13 @@ const HYBRID_FAST = /* glsl */ `
     // The same test at twice the distance: real contours pass both; one-pixel slivers (speckle) only pass one.
     float lx2 = abs(viewZ(uv + vec2(2.0 * o.x, 0.0)) + viewZ(uv - vec2(2.0 * o.x, 0.0)) - 2.0 * z);
     float ly2 = abs(viewZ(uv + vec2(0.0, 2.0 * o.y)) + viewZ(uv - vec2(0.0, 2.0 * o.y)) - 2.0 * z);
-    float inkFade = 1.0 - smoothstep(45.0, 150.0, z); // far landmarks stay soft washes instead of pale scribbles
+    float inkFade = 1.0 - smoothstep(uInkNear, uInkFar, z); // far landmarks stay soft washes instead of pale scribbles
     float e = min(smoothstep(0.02, 0.04, max(lx, ly) / max(z, 0.5)), smoothstep(0.03, 0.06, max(lx2, ly2) / max(z, 0.5))) * inkFade;
     float gx = luma(texture2D(tDiffuse, uv + vec2(o.x, 0.0)).rgb) - luma(texture2D(tDiffuse, uv - vec2(o.x, 0.0)).rgb);
     float gy = luma(texture2D(tDiffuse, uv + vec2(0.0, o.y)).rgb) - luma(texture2D(tDiffuse, uv - vec2(0.0, o.y)).rgb);
     float inner = smoothstep(0.14, 0.26, length(vec2(gx, gy))) * (1.0 - sky) * inkFade;
     float broken = smoothstep(0.3, 0.6, texture2D(tNoise, px / 40.0).a + 0.3);
-    col = mix(col, vec3(0.19, 0.13, 0.1), clamp(e * 0.95 + inner * 0.35 * broken, 0.0, 1.0));
+    col = mix(col, vec3(0.19, 0.13, 0.1), clamp(e * 0.95 + inner * uInner * broken, 0.0, 1.0));
     gl_FragColor = vec4(col, 1.0);
   }`;
 
@@ -289,6 +294,10 @@ export class LookPipeline {
         tNoise: { value: look === 'game' ? bakeNoiseTexture() : null },
         uInvProj: { value: new THREE.Matrix4() }, uCamRot: { value: new THREE.Matrix3() }, uStorm: { value: 0 },
         ...skyUniforms(SKY_BANDS.gobi),
+        // Version 1 (today's): hard bands pulled 80%, full wobble and interior ink, ink fading 45-150 m.
+        // Version 2: softer, blended bands, a little wobble, light interior ink, ink fading 30-100 m.
+        uBandPull: { value: lookAt(2) ? 0.45 : 0.8 }, uBandSoft: { value: lookAt(2) ? 1 : 0 }, uWobble: { value: lookAt(2) ? 0.5 : 1.6 },
+        uInner: { value: lookAt(2) ? 0.12 : 0.35 }, uInkNear: { value: lookAt(2) ? 30 : 45 }, uInkFar: { value: lookAt(2) ? 100 : 150 },
       };
       this.pass = new ShaderPass(new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: frag }));
       this.composer.addPass(this.pass);

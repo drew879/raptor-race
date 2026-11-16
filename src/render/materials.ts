@@ -126,6 +126,13 @@ export function unlitMaterial(opts: { fog?: boolean; bend?: boolean; transparent
   return patchWorld(m, { bend: opts.bend });
 }
 
+/** Graphics version 2+: characters are smooth-shaded (their geometry carries crease-angle normals). Call once,
+ * after the look is set and before the first frame. */
+export function applyLookMaterials(smooth: boolean) {
+  MATS.character.flatShading = !smooth;
+  MATS.character.needsUpdate = true;
+}
+
 /** Shared material instances (one program each). */
 export const MATS = {
   world: litMaterial({ rim: 0.12, sand: true }),
