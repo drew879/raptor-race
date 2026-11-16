@@ -3,7 +3,7 @@ import { Music } from '../audio/music';
 import { MUSIC_STYLES } from '../audio/music-styles';
 
 // Renders each SFX offline and reports peak/RMS/duration (used by scripts/audio-check.mjs).
-const NAMES: SfxName[] = ['amber', 'lane', 'jump', 'land', 'slide', 'stumble', 'egg', 'powerup', 'checkpoint', 'finish', 'screech'];
+const NAMES: SfxName[] = ['amber', 'lane', 'jump', 'land', 'slide', 'stumble', 'egg', 'powerup', 'checkpoint', 'finish', 'screech', 'peck'];
 async function measure(name: SfxName) {
   const sr = 44100;
   const ctx = new OfflineAudioContext(2, sr * 2, sr);

@@ -113,13 +113,18 @@ export function addConifer(g: GeomBuilder, pos: THREE.Vector3, h: number, rng: R
   const lean = new THREE.Vector3(rng.range(-0.02, 0.02), 0, rng.range(-0.02, 0.02));
   const r0 = h * rng.range(0.022, 0.03);
   const top = trunk(g, pos.clone().add(new THREE.Vector3(0, -0.2, 0)), h * 0.92, r0, r0 * 0.35, lean, rng, col(F.bark));
+  addCrown(g, pos, top, h, rng, rng.range(0.32, 0.45));
+}
+
+/** A conifer's crown: tiers of needles from `start` (a fraction of the way up the trunk) to the top. Also used for
+ * the trees that stand in the trail (owner playtest 8: without crowns they looked like bare poles). */
+export function addCrown(g: GeomBuilder, base: THREE.Vector3, top: THREE.Vector3, h: number, rng: Rng, start: number, widen = 1) {
   const tiers = rng.int(4, 6);
-  const start = rng.range(0.32, 0.45);
   const dark = col(F.coniferDark), mid = col(F.conifer), light = col(F.coniferLight);
   for (let i = 0; i < tiers; i++) {
     const u = start + ((1 - start) * i) / tiers;
-    const c = pos.clone().lerp(top, u);
-    const r = h * 0.2 * (1 - u * 0.8) * rng.range(0.85, 1.1);
+    const c = base.clone().lerp(top, u);
+    const r = h * 0.2 * (1 - u * 0.8) * rng.range(0.85, 1.1) * widen;
     skirt(g, c, r, h * (1 - start) / tiers * 1.7, 8, rng, i === tiers - 1 ? light : mid.clone().lerp(light, i / tiers * 0.6), dark, shade(dark, 0.7));
   }
 }

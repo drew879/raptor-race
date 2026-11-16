@@ -41,7 +41,7 @@ const SHOT = params.has('shot');
 let DEBUG = params.has('debug');
 const save = loadSave();
 // The graphics version (three-version test): the URL wins, else the saved choice, else today's look.
-setLook(Number(params.get('look') ?? save.look ?? 1));
+setLook(Number(params.get('look') ?? save.look ?? 3)); // the owner picked version 3 (playtest 8)
 applyLookMaterials(lookAt(2));
 /** The level is chosen when the page loads (the URL's ?level=, else the last one played); switching levels
  * reloads the page, so everything below is built for this one level. */
@@ -91,13 +91,14 @@ root.innerHTML = `
 <section class="screen title" id="scrTitle">
   ${logoSVG()}
   <div class="actions">
-    <div class="sub">Level ${LEVEL_N} · ${esc(LEVEL.name)}</div>
+    <div class="level-pick"><button class="lvl-arrow" id="btnLvlPrev" aria-label="Previous level" hidden>‹</button><div class="sub">Level ${LEVEL_N} · ${esc(LEVEL.name)}</div><button class="lvl-arrow" id="btnLvlNext" aria-label="Next level" hidden>›</button></div>
     <button class="btn-amber" id="btnRun">Run</button>
     <div class="row">
       <button class="btn-paper" id="btnJournal">Field Journal</button>
       <button class="btn-paper icon-btn" id="btnSound" aria-label="Sound">♪</button>
     </div>
     <div class="best" id="best" hidden></div>
+    <div class="build" id="build"></div>
   </div>
 </section>
 
@@ -256,6 +257,12 @@ const resize = () => {
   for (const f of [items.halos, dust.field, sparks.field]) f.setScale(stage.renderer.domElement.height, stage.camera.fov);
 };
 addEventListener('resize', resize);
+// Fill exactly the area the browser shows (a phone browser's toolbars come and go; the page's own height can lag
+// behind and leave a strip of background at the bottom).
+const vv = window.visualViewport;
+const fitViewport = () => { if (vv) root.style.height = `${Math.round(vv.height)}px`; resize(); };
+vv?.addEventListener('resize', fitViewport);
+fitViewport();
 resize();
 
 const fogColor = col(FORESTED ? FOREST.fog : GOBI.horizon);
@@ -300,6 +307,7 @@ function newSession() {
   missesRecorded = false;
   session = new Session(LEVEL);
   if (bot) bot = new Bot(session, PERFECT);
+  if (prey instanceof EggView) prey.reset(); // a whole egg again (it hatched at the end of the last run)
   resetWorld();
   renderEggs();
 }
@@ -424,6 +432,16 @@ function goToLevel(id: string) {
   location.href = `${location.pathname}?level=${encodeURIComponent(id)}`;
 }
 $('btnNextLevel').addEventListener('click', () => { const n = nextLevel(); if (n) goToLevel(n); });
+/** The levels you can play, in roster order. */
+const openLevels = () => CHAPTERS.flatMap((ch, ci) => ch.levels.map((lv, li) => (lv.available && levelUnlocked(save, ci, li) ? lv.id : ''))).filter(Boolean);
+// The title's level arrows: step through the open levels.
+function syncLevelArrows() {
+  const open = openLevels(), i = open.indexOf(LEVEL.id);
+  $('btnLvlPrev').hidden = i <= 0;
+  $('btnLvlNext').hidden = i < 0 || i >= open.length - 1;
+}
+$('btnLvlPrev').addEventListener('click', () => { const open = openLevels(), i = open.indexOf(LEVEL.id); if (i > 0) goToLevel(open[i - 1]); });
+$('btnLvlNext').addEventListener('click', () => { const open = openLevels(), i = open.indexOf(LEVEL.id); if (i >= 0 && i < open.length - 1) goToLevel(open[i + 1]); });
 /** The next level in the roster, if it exists and is open. */
 function nextLevel() {
   for (let ci = 0; ci < CHAPTERS.length; ci++) {
@@ -504,6 +522,7 @@ function introPreySpeed() {
 }
 root.addEventListener('pointerdown', () => { if (app === 'intro' && introT > 0.3) introT = introEnd; });
 function toTitle() {
+  if (newerBuild) { reloadFresh(); } // a newer build came out while you played
   syncJournalBadge();
   newSession();
   camBlend = 0;
@@ -899,6 +918,7 @@ function syncWorld(dt: number) {
     prey.pose = 'run';
     if (app === 'finishing') preySpeed = 4;
   }
+  if (prey instanceof EggView) hatchingCues(prey, inNest, pz);
   prey.update(app === 'paused' ? 0 : dt, preySpeed, clamp(pvx / 8, -1, 1), hop);
 
   // Storm: stumble pressure plus the story beat building toward the end.
@@ -911,6 +931,22 @@ function syncWorld(dt: number) {
   fog.far = lerp(FOG.far, 120, ambient * 2.2);
   fog.near = lerp(FOG.near, 22, ambient * 2.2);
 }
+/** The opening tells why the egg rolls (owner playtest 8: it looked like it just hopped out): it's hatching. Cracks
+ * spread, each with a tap from inside and a few chips of shell; a beak pokes through as it rocks; "It's hatching!" */
+let crackStage = 0, hatchBanner = false, peckTimer = 0;
+function hatchingCues(egg: EggView, inNest: boolean, pz: number) {
+  if (inNest) { egg.crack = 0; crackStage = 0; hatchBanner = false; return; }
+  if (app !== 'intro') { egg.crack = Math.max(egg.crack, 1); return; } // it rolls off cracked
+  egg.crack = clamp((introT - INTRO.walk) / (INTRO.graze + INTRO.alert - INTRO.walk - 0.3), 0, 1);
+  const stage = [0.2, 0.55, 0.85].filter((s) => egg.crack >= s).length;
+  const chips = (n: number) => dust.emit(0, 0.25, -pz, n, { spread: 0.5, up: 1.4, back: 0, size: 0.07, grow: -0.3, life: 0.6, alpha: 0.95, color: EGG_CHIP, gravity: 6, drag: 1, rand });
+  if (stage > crackStage) { crackStage = stage; audio.play('peck'); chips(4 + stage * 2); }
+  // Between cracks: more taps from inside while it twitches and rocks.
+  peckTimer -= 1 / 60;
+  if (introT > INTRO.walk && introT < INTRO.graze + INTRO.alert && peckTimer <= 0) { peckTimer = introT > INTRO.graze ? 0.35 : 0.7; audio.play('peck'); }
+  if (!hatchBanner && introT >= INTRO.graze) { hatchBanner = true; floatText('It\'s hatching!', 'big', 30); }
+}
+const EGG_CHIP = col(0xd6efe6);
 let footAcc = 0;
 let setbackT = 0;
 let warnedFar = false;
@@ -1167,6 +1203,30 @@ const hitches: number[] = [];
 
 // Boot.
 syncJournalBadge();
+syncLevelArrows();
+$('build').textContent = `Build ${__BUILD__}`;
+// A copy kept open on the phone (a Home Screen app resumes where it was) checks for a newer build whenever it comes
+// back, and reloads on the menus to pick it up (never mid-run).
+let newerBuild = '';
+/** Load the newer build: a fresh URL (so a cached copy of the page can't come back), at most once per build. */
+function reloadFresh() {
+  const q = new URLSearchParams(location.search);
+  if (!newerBuild || q.get('v') === newerBuild) return;
+  q.set('v', newerBuild);
+  q.set('level', LEVEL.id);
+  location.replace(`${location.pathname}?${q}`);
+}
+async function checkForUpdate() {
+  try {
+    const r = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) return;
+    const { build } = (await r.json()) as { build: string };
+    newerBuild = build && build !== __BUILD__ && !__BUILD__.startsWith('dev') ? build : '';
+    if (newerBuild && (app === 'title' || app === 'results' || app === 'journal')) reloadFresh();
+  } catch { /* offline: carry on with this copy */ }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) void checkForUpdate(); });
+if (!SHOT && location.protocol.startsWith('http') && location.hostname !== 'localhost') void checkForUpdate();
 renderEggs();
 renderObjectives();
 setApp('title');

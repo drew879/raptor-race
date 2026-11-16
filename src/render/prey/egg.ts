@@ -63,47 +63,93 @@ function shell(u0: number, u1: number, jagAt: number | null): THREE.BufferGeomet
 function chick(): THREE.Group {
   const grp = new THREE.Group();
   const g = new GeomBuilder(false);
-  // A round fluffy head on a short neck, damp down, big eyes, a little beak with an egg tooth.
-  const head = new THREE.Vector3(0, 0.1, 0), R = 0.08;
-  const rings = 6, S = 10;
+  // A round fluffy head on a short neck: pale damp down (it reads against its dark parent), a darker crown and a
+  // little crest, big glossy eyes, a short orange beak with the white egg tooth it used to crack the shell.
+  const head = new THREE.Vector3(0, 0.1, 0), R = 0.082;
+  const rings = 12, S = 18;
   const pt = (i: number, k: number) => {
     const ph = (i / rings) * Math.PI, th = (k / S) * Math.PI * 2;
-    return head.clone().add(new THREE.Vector3(Math.sin(ph) * Math.cos(th) * R, Math.cos(ph) * R * 0.95, Math.sin(ph) * Math.sin(th) * R * 1.05));
+    const fluff = 1 + 0.035 * Math.sin(th * 5 + i * 1.7) * Math.sin(ph); // a little uneven, like down
+    return head.clone().add(new THREE.Vector3(Math.sin(ph) * Math.cos(th) * R * fluff, Math.cos(ph) * R * 0.95, Math.sin(ph) * Math.sin(th) * R * 1.06 * fluff));
   };
   for (let i = 0; i < rings; i++) for (let k = 0; k < S; k++) {
-    const c = i < 2 ? col(P.downDark) : shade(col(P.down), 0.95 + hash(i, k) * 0.1);
+    const c = i < 3 ? mix(P.downDark, P.down, i / 3 * 0.5) : shade(col(P.down), 0.96 + hash(i, k) * 0.06);
     g.quad(pt(i, k), pt(i, k + 1), pt(i + 1, k + 1), pt(i + 1, k), c);
   }
   // Neck down into the shell.
-  for (let k = 0; k < S; k++) {
-    const th0 = (k / S) * Math.PI * 2, th1 = ((k + 1) / S) * Math.PI * 2;
-    const r0 = 0.034, y0 = 0.05, y1 = -0.08;
-    g.quad(new THREE.Vector3(Math.cos(th0) * r0, y0, Math.sin(th0) * r0), new THREE.Vector3(Math.cos(th0) * r0, y1, Math.sin(th0) * r0), new THREE.Vector3(Math.cos(th1) * r0, y1, Math.sin(th1) * r0), new THREE.Vector3(Math.cos(th1) * r0, y0, Math.sin(th1) * r0), col(P.down));
+  const NS = 14;
+  for (let k = 0; k < NS; k++) {
+    const th0 = (k / NS) * Math.PI * 2, th1 = ((k + 1) / NS) * Math.PI * 2;
+    const r0 = 0.04, r1 = 0.046, y0 = 0.04, y1 = -0.09;
+    g.quad(new THREE.Vector3(Math.cos(th0) * r0, y0, Math.sin(th0) * r0), new THREE.Vector3(Math.cos(th0) * r1, y1, Math.sin(th0) * r1), new THREE.Vector3(Math.cos(th1) * r1, y1, Math.sin(th1) * r1), new THREE.Vector3(Math.cos(th1) * r0, y0, Math.sin(th1) * r0), col(P.down));
   }
-  // Beak (forward is -Z) and the egg tooth.
-  const b0 = head.clone().add(new THREE.Vector3(0, -0.012, -0.07)), tip = head.clone().add(new THREE.Vector3(0, -0.024, -0.115));
-  g.tri(b0.clone().add(new THREE.Vector3(-0.02, 0.012, 0)), b0.clone().add(new THREE.Vector3(0.02, 0.012, 0)), tip, col(P.beak));
-  g.tri(b0.clone().add(new THREE.Vector3(0.02, 0.012, 0)), b0.clone().add(new THREE.Vector3(0, -0.016, 0)), tip, shade(col(P.beak), 0.85));
-  g.tri(b0.clone().add(new THREE.Vector3(0, -0.016, 0)), b0.clone().add(new THREE.Vector3(-0.02, 0.012, 0)), tip, shade(col(P.beak), 0.9));
-  // Eyes: big and dark with a catchlight.
+  // A fluffy crest: a few soft tufts sticking up.
+  for (const [x, z, h, lean] of [[0, 0.01, 0.05, -0.2], [-0.02, 0.03, 0.04, -0.6], [0.02, 0.03, 0.04, 0.6], [0, 0.04, 0.035, 0]] as const) {
+    const b = head.clone().add(new THREE.Vector3(x, R * 0.88, z)), tip = b.clone().add(new THREE.Vector3(lean * 0.02, h, 0.015));
+    g.tri(b.clone().add(new THREE.Vector3(-0.012, 0, 0)), b.clone().add(new THREE.Vector3(0.012, 0, 0)), tip, col(P.downDark));
+    g.tri(b.clone().add(new THREE.Vector3(0.012, 0, 0)), b.clone().add(new THREE.Vector3(-0.012, 0, 0)), tip, mix(P.downDark, P.down, 0.4));
+  }
+  // Beak: a short cone (forward is -Z), and the white egg tooth on top near the tip.
+  const BS = 8, bBase = head.clone().add(new THREE.Vector3(0, -0.014, -0.072)), bTip = head.clone().add(new THREE.Vector3(0, -0.026, -0.118));
+  for (let k = 0; k < BS; k++) {
+    const a0 = (k / BS) * Math.PI * 2, a1 = ((k + 1) / BS) * Math.PI * 2;
+    const q = (a: number) => bBase.clone().add(new THREE.Vector3(Math.cos(a) * 0.022, Math.sin(a) * 0.016, 0));
+    g.tri(q(a1), q(a0), bTip, shade(col(P.beak), 0.88 + 0.12 * Math.max(0, Math.sin((a0 + a1) / 2))));
+  }
+  const tooth = bTip.clone().add(new THREE.Vector3(0, 0.012, 0.012));
+  g.tri(tooth.clone().add(new THREE.Vector3(-0.004, 0, 0.004)), tooth.clone().add(new THREE.Vector3(0.004, 0, 0.004)), tooth.clone().add(new THREE.Vector3(0, 0.006, -0.002)), col(0xfffaf0));
+  // Eyes: big, dark and glossy, with two catchlights.
   for (const sx of [-1, 1]) {
-    const c = head.clone().add(new THREE.Vector3(sx * 0.055, 0.016, -0.042));
-    const n = new THREE.Vector3(sx, 0.1, -0.5).normalize();
+    const c = head.clone().add(new THREE.Vector3(sx * 0.057, 0.018, -0.044));
+    const n = new THREE.Vector3(sx, 0.12, -0.55).normalize();
     const side = new THREE.Vector3().crossVectors(n, new THREE.Vector3(0, 1, 0)).normalize();
     const up = new THREE.Vector3().crossVectors(side, n).normalize();
-    const E = 8;
+    const E = 14;
+    const ctr = c.clone().addScaledVector(n, 0.006);
     for (let k = 0; k < E; k++) {
       const a0 = (k / E) * Math.PI * 2, a1 = ((k + 1) / E) * Math.PI * 2;
-      const p0 = c.clone().addScaledVector(side, Math.cos(a0) * 0.024).addScaledVector(up, Math.sin(a0) * 0.024);
-      const p1 = c.clone().addScaledVector(side, Math.cos(a1) * 0.024).addScaledVector(up, Math.sin(a1) * 0.024);
-      const ctr = c.clone().addScaledVector(n, 0.004);
+      const p0 = c.clone().addScaledVector(side, Math.cos(a0) * 0.026).addScaledVector(up, Math.sin(a0) * 0.028);
+      const p1 = c.clone().addScaledVector(side, Math.cos(a1) * 0.026).addScaledVector(up, Math.sin(a1) * 0.028);
       g.tri(sx > 0 ? p0 : p1, sx > 0 ? p1 : p0, ctr, col(P.eye));
     }
-    const gl = c.clone().addScaledVector(n, 0.006).addScaledVector(up, 0.006).addScaledVector(side, -0.004);
-    g.tri(gl, gl.clone().addScaledVector(up, 0.007), gl.clone().addScaledVector(side, sx * 0.007), col(0xffffff));
+    for (const [dx, dy, r] of [[-0.007, 0.009, 0.007], [0.008, -0.008, 0.0035]] as const) {
+      const gl = c.clone().addScaledVector(n, 0.008).addScaledVector(up, dy).addScaledVector(side, dx * sx);
+      g.tri(gl.clone().addScaledVector(up, r), gl.clone().addScaledVector(side, sx * r), gl.clone().addScaledVector(side, -sx * r), col(0xffffff));
+    }
   }
-  grp.add(new THREE.Mesh(g.build(), MATS.character));
+  grp.add(new THREE.Mesh(g.build(lookAt(2) ? { smooth: 70 } : {}), MATS.character));
   return grp;
+}
+
+/** Hatching cracks along the shell's crack line (the ring where the cap will come off), in three stages: a short
+ * crack, a longer one with branches, then all the way round. Thin dark strips just outside the shell. */
+function crackStages(S: number): THREE.BufferGeometry[] {
+  const out = 0.004, w = 0.0065;
+  const at = (u: number, k: number) => {
+    const uu = u + (k % 2 ? 0.035 : -0.035);
+    const r = profile(Math.min(1, Math.max(0, uu))) + out, th = (k / S) * Math.PI * 2;
+    return new THREE.Vector3(Math.cos(th) * r, (uu - 0.5) * EGG.length, Math.sin(th) * r);
+  };
+  const strip = (g: GeomBuilder, a: THREE.Vector3, b: THREE.Vector3) => {
+    const d = new THREE.Vector3().subVectors(b, a);
+    const n = a.clone().setY(0).normalize();
+    const s = new THREE.Vector3().crossVectors(d, n).normalize().multiplyScalar(w);
+    g.quad(a.clone().add(s), b.clone().add(s), b.clone().sub(s), a.clone().sub(s), col(0x2a1c12));
+  };
+  const span = (from: number, to: number, branches: number[]) => {
+    const g = new GeomBuilder(false);
+    for (let k = from; k < to; k++) strip(g, at(EGG.crackAt, k), at(EGG.crackAt, k + 1));
+    // Branches: short cracks running off the line toward the top.
+    for (const k of branches) {
+      const a = at(EGG.crackAt, k), b = a.clone().add(new THREE.Vector3(0, 0.05, 0)).multiply(new THREE.Vector3(0.95, 1, 0.95));
+      const c = b.clone().add(new THREE.Vector3(0, 0.03, 0)).multiply(new THREE.Vector3(0.9, 1, 0.9)).add(new THREE.Vector3(0.01, 0, 0.01));
+      strip(g, a, b);
+      strip(g, b, c);
+    }
+    return g.build();
+  };
+  const q = Math.round(S / 4);
+  return [span(0, q, [1]), span(0, Math.round(S * 0.6), [1, q + 1, q + 3]), span(0, S, [1, q + 1, q + 3, S - 3])];
 }
 
 export class EggView {
@@ -120,6 +166,11 @@ export class EggView {
   private kickTimer = 1.4;
   private upright = 0;
   private contact: THREE.Mesh | null = null;
+  /** 0..1: how far hatching has cracked the shell (the opening drives it; the egg rolls off cracked). */
+  crack = 0;
+  private cracks: THREE.Mesh[] = [];
+  private beakTip: THREE.Mesh;
+  private yaw = Math.PI - 0.25;
   /** Drawn larger while it rolls away (so it reads from far behind), back to life size once caught. */
   rollScale = 1.4;
   private scale = 1.4;
@@ -145,9 +196,34 @@ export class EggView {
     this.cap.add(top);
     this.chick.position.set(0, crackY - 0.08, 0);
     this.chick.visible = false;
-    this.body.add(lower, this.cap, this.chick);
+    // Hatching cracks along the cap's line, shown in stages; and the tip of a beak that pokes through the top.
+    const crackMat = patchWorld(new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, side: THREE.DoubleSide }), {});
+    this.cracks = crackStages(lookAt(2) ? 20 : 14).map((geo) => { const m = new THREE.Mesh(geo, crackMat); m.visible = false; return m; });
+    const bg = new THREE.ConeGeometry(0.026, 0.065, 8);
+    bg.translate(0, 0.0325, 0);
+    this.beakTip = new THREE.Mesh(bg, new THREE.MeshLambertMaterial({ color: P.beak }));
+    patchWorld(this.beakTip.material as THREE.MeshLambertMaterial, {});
+    this.beakTip.visible = false;
+    this.body.add(lower, this.cap, this.chick, ...this.cracks, this.beakTip);
     this.root.add(this.body);
     this.root.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+  }
+
+  /** Back to a whole egg in its nest (a new run after it hatched). */
+  reset() {
+    this.hatchT = 0;
+    this.crack = 0;
+    this.yaw = Math.PI - 0.25;
+    this.upright = 0;
+    this.spin = 0;
+    this.kick = 0;
+    this.kickTimer = 1.4;
+    this.pose = 'graze';
+    this.chick.visible = false;
+    this.chick.position.y = (EGG.crackAt - 0.5) * EGG.length - 0.08;
+    this.cap.position.set(0, (EGG.crackAt - 0.5) * EGG.length, 0);
+    this.cap.rotation.set(0, 0, 0);
+    this.scale = this.rollScale;
   }
 
   /** `speed` m/s along the trail, `turn` -1..1 as it swerves, `hop` 0..1 over an obstacle. */
@@ -183,13 +259,16 @@ export class EggView {
       const twitch = hard ? Math.sin(t * 9) * 0.32 : (Math.sin(t * 17) * 0.06) * Math.max(0, Math.sin(t * 2.3));
       rx = twitch;
       y = R + (hard ? Math.abs(Math.sin(t * 9)) * 0.03 : 0);
-      ry = 0.2;
+      // In the nest its top end turns toward the camera, so the cracks and the poking beak are in view.
+      this.yaw += (Math.PI - 0.25 - this.yaw) * Math.min(1, dt * 6);
+      ry = this.yaw;
     } else {
       // Rolling on its side about its long axis, the long axis swinging as it wobbles; the chick kicks now and
       // then and it bounces.
       this.spin -= (speed / R) * dt * 0.45;
       rx = this.spin;
-      ry = 0.32 * Math.sin(t * 3.1) + turn * 0.5;
+      this.yaw += (0.32 * Math.sin(t * 3.1) + turn * 0.5 - this.yaw) * Math.min(1, dt * 5); // turns as it tumbles out
+      ry = this.yaw;
       this.kickTimer -= dt;
       if (this.kickTimer <= 0 && speed > 1) { this.kick = 1; this.kickTimer = 1.6 + ((t * 7.31) % 1.3); }
       this.kick = Math.max(0, this.kick - dt * 2.6);
@@ -201,6 +280,15 @@ export class EggView {
     this.root.scale.setScalar(this.scale);
     this.body.position.set(0, y, 0);
     this.body.rotation.set(rx, ry, rz, 'YXZ');
+    // Cracks spread as it hatches (gone once the cap comes off at the end).
+    const stages = [0.2, 0.55, 0.85];
+    const stage = stages.filter((s) => this.crack >= s).length - 1; // each stage's mesh includes the ones before
+    this.cracks.forEach((m, i) => { m.visible = i === stage && this.hatchT < 0.6; });
+    // While it rocks hard in the nest, the tip of a beak pokes out of the top, again and again.
+    const rocking = this.pose === 'alert';
+    const poke = 0.5 + 0.5 * Math.sin(t * 6);
+    this.beakTip.visible = rocking;
+    this.beakTip.position.set(0, EGG.length / 2 - 0.03 + 0.045 * poke, 0);
     if (this.contact) {
       const lift = Math.max(0, y - R);
       (this.contact.material as THREE.MeshBasicMaterial).opacity = 0.32 * Math.max(0.15, 1 - lift * 2.2);

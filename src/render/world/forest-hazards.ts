@@ -5,6 +5,7 @@ import { Rng } from '../../core/rng';
 import type { HazardType } from '../../game/types';
 import { lookAt } from '../look';
 import { addTube } from './props';
+import { addCrown } from './forest';
 
 /** Graphics version 3: richer bark (ridges, moss, real roots), smooth-shaded with crisp folds. */
 const RICH = () => lookAt(3);
@@ -108,6 +109,8 @@ function blocker(variant: number): THREE.BufferGeometry {
       oquad(g, p(y0, r0, a0, k), p(y0, r0, a1, k + 1), p(y1, r1, a1, k + 1), p(y1, r1, a0, k), out, mossy ? shade(mix(F.moss, F.mossDark, 0.4 + 0.3 * (k % 2)), s === 0 ? 1 : 0.9) : bark(out, k));
     }
   }
+  // Its crown, high above the trail: tiers of needles from ~5.5 m up.
+  addCrown(g, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, H, 0), H, rng, 0.34);
   if (RICH()) {
     roots(g, R, 6, rot, rng);
     // Two broken branch stubs, high up.
@@ -202,6 +205,8 @@ function hollowTrunk(): THREE.BufferGeometry {
     otri(g, base.clone().addScaledVector(side, -0.2), top, tip, side.clone().negate(), bark(side.clone().negate(), 2));
   }
   void rng;
+  // Its crown: a broad old tree, tiers of needles from ~7 m up.
+  addCrown(g, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, H, 0), H, rng, 0.38, 1.25);
   return built(g);
 }
 

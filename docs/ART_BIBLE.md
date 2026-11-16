@@ -92,6 +92,8 @@ Palette (`FOREST` in `palette.ts`): misty blue-green air (horizon #DBE3C9, fog #
 - **Downhill reads on screen:** the trail drops over a lip ahead into lower trees; trees stay upright.
 - **Caudipteryx ("Forest Fan"):** dark brown (#4B3A31) with a dark crown and mask, pale cheeks and throat, a short orange beak (#E07A2C), a big dark eye in a yellow ring, black-and-white banded fans on the tail and hands. The tail fan is held up ~60 degrees so the chase camera sees a striped half-disc (from behind it's the hero's signature). Drawn 1.2x life size. Unlock: "Sunrise" (rust with teal fan tips).
 - **The egg:** long and narrow, blue-green (#86C9B6) with dark speckles and a cool pale rim, drawn 1.4x while it rolls so it reads 10-20 m ahead; it eases back to life size when caught. The chick: pale down, big dark eyes, a little orange beak, wearing the shell's cap.
+- **Hatching reads in the opening:** cracks spread across the shell in three stages (dark zigzag strips on the cap's crack line) with chips of shell, a beak tip pokes through the top while it rocks, and the egg rolls off cracked. The chick: pale down so it reads against its dark parent, a darker crown and crest, big glossy eyes, an orange beak with a white egg tooth.
+- **Trees standing in the trail have crowns** (tiers of needles from ~5.5 m; the hollow trunks a broad crown from ~7 m): bare trunks read as poles.
 - **Obstacle readability:** the propped trunk's underside is ~1 m up and its top well above any jump (never looks hoppable); the hollow trunk's opening has a pale wood rim and a dark inside; streams brim so the water isn't hidden behind the near bank.
 
 ## 6d. Graphics test (three versions, owner-approved plan)

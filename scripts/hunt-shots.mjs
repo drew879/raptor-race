@@ -36,5 +36,9 @@ await adv(0.5); await shot('07-pinned');
 await adv(0.8); await shot('08-pinned-later');
 
 await page.waitForFunction(() => !document.getElementById('plate').hidden, null, { timeout: 8000 }); await page.screenshot({ path: `${outDir}/09-plate.png` });
+// Run again: a fresh opening, the egg whole in its nest again.
+await page.waitForFunction(() => !document.getElementById('scrResults').hidden, null, { timeout: 15000 });
+await page.evaluate(() => window.__rr.click('btnAgain'));
+await adv(1.0); await shot('10-run-again');
 console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no page errors');
 await browser.close();

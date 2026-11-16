@@ -1,5 +1,15 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { resolve } from 'node:path';
+import { execSync } from 'node:child_process';
+
+/** The build's id: the commit it was built from (the deploy runs on a checkout), with the build date. */
+const commit = (() => { try { return execSync('git rev-parse --short HEAD').toString().trim(); } catch { return 'dev'; } })();
+const BUILD = `${commit}-${new Date().toISOString().slice(0, 10)}`;
+/** Writes version.json next to the page, so a copy kept open on a phone can check for a newer build. */
+const versionFile = (): Plugin => ({
+  name: 'rr-version',
+  generateBundle() { this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ build: BUILD }) }); },
+});
 
 // RR_PAGE=<name> builds a single page with no shared chunks (used for single-file publishing).
 const single = process.env.RR_PAGE;
@@ -21,4 +31,6 @@ export default defineConfig({
     },
   },
   server: { host: true },
+  define: { __BUILD__: JSON.stringify(BUILD) },
+  plugins: [versionFile()],
 });

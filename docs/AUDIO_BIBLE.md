@@ -24,6 +24,7 @@
 | Power-up | Rising shimmer | 400 ms |
 | Checkpoint | Soft wooden "tok" pair | 250 ms |
 | Finish | Short warm fanfare (marimba-like plucks + low drum) | 1.5 s |
+| Peck | A chick tapping at its shell from inside: two quick light knocks (the forest opening, as the egg cracks) | 125 ms |
 | Screech | Pterosaur cry: buzzy saw falling 1300 to 520 Hz through a narrow band, plus breath noise; plays once as it dives in | 340 ms |
 
 ## Music

@@ -8,7 +8,7 @@ import { DEFAULT_STYLE, MUSIC_STYLES } from './music-styles';
 /** Music bus level relative to SFX: keeps music peaks about 8 dB under SFX peaks (AUDIO_BIBLE mix targets). */
 export const MUSIC_LEVEL = 0.26;
 
-export type SfxName = 'amber' | 'lane' | 'jump' | 'land' | 'slide' | 'stumble' | 'egg' | 'powerup' | 'checkpoint' | 'finish' | 'screech';
+export type SfxName = 'amber' | 'lane' | 'jump' | 'land' | 'slide' | 'stumble' | 'egg' | 'powerup' | 'checkpoint' | 'finish' | 'screech' | 'peck';
 
 const PENTA = [0, 2, 4, 7, 9]; // major pentatonic, semitones
 const midiHz = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
@@ -162,6 +162,14 @@ export class Sfx {
         osc.start(t);
         osc.stop(t + 0.4);
         this.noiseBurst(t, 0.3, 0.06 * v.gain, { type: 'bandpass', f0: 3000, f1: 1500, q: 1.2 }, o, 0.02);
+        break;
+      }
+      case 'peck': {
+        // A chick tapping at its shell from inside: two quick, light knocks.
+        for (const dt of [0, 0.09]) {
+          this.tone(t + dt, 1900 * v.pitch, 'triangle', 0.1 * v.gain, 0.001, 0.035, o, 1450 * v.pitch);
+          this.noiseBurst(t + dt, 0.025, 0.12 * v.gain, { type: 'highpass', f0: 3200, q: 0.7 }, o, 0.001);
+        }
         break;
       }
       case 'finish': {
