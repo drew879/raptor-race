@@ -44,59 +44,103 @@ export function ledge(width: number): THREE.BufferGeometry {
   return g.build();
 }
 
-/** Eroded sandstone arch over one lane: tapered legs, banded strata, curved span. Slide under (clearance 0.66 m). */
+/**
+ * A tall sandstone overhang across one lane with a low, dark tunnel under it: slide (clearance 0.66 m). Owner
+ * playtest 5: the old arch's thin span looked like something you could hop over, so the rock now rises well
+ * above any jump and only the gap at the bottom is open.
+ */
 function arch(): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const rng = new Rng(23);
   const bands = [mix(GOBI.cliffRed, GOBI.hazardRock, 0.3), mix(GOBI.cliffLight, GOBI.hazardRockLight, 0.35), mix(GOBI.cliffRed, GOBI.hazardRock, 0.3), mix(GOBI.cliffRed, GOBI.cliffShadow, 0.5)];
-  const tone = (c: THREE.Vector3, n: THREE.Vector3) => {
-    const b = bands[Math.floor((c.y + 0.4) / 0.28) % bands.length];
-    return shade(n.y > 0.5 ? mix(GOBI.cliffLight, GOBI.cliffPale, 0.3) : b, (n.y < -0.3 ? 0.7 : 1) * drift(c));
-  };
-  // Legs stay inside this lane (|x| <= 1.0) so they never clip a raptor in the next lane.
-  for (const sx of [-1, 1]) {
-    const leg = jitterGeometry(new THREE.CylinderGeometry(0.19, 0.28, 1.1, 7, 4), 0.05, () => rng.next());
-    g.appendGeometry(leg, new THREE.Matrix4().makeTranslation(sx * 0.74, 0.55, 0), (_i, c, n) => tone(c, n));
+  const band = (y: number) => bands[Math.floor((y + 0.4) / 0.32) % bands.length];
+  const top = mix(GOBI.cliffLight, GOBI.cliffPale, 0.3);
+  const tunnel = shade(col(GOBI.cliffShadow), 0.55); // the open gap reads dark
+  // Slices across the lane (x): the rock reaches the ground at the edges (|x| <= 1.0 keeps it in its lane),
+  // and the underside arches from 0.68 m at the sides to 0.84 m in the middle.
+  const N = 10, W = 1.0, D = 0.4;
+  const xs = Array.from({ length: N + 1 }, (_, i) => -W + (2 * W * i) / N);
+  const under = (x: number) => (Math.abs(x) > 0.76 ? 0 : 0.68 + 0.16 * Math.cos((Math.PI * x) / 1.52));
+  const slices = xs.map((x) => {
+    const yb = under(x), yt = 2.3 + 0.18 * Math.sin(x * 2.7 + 1) + (rng.next() - 0.5) * 0.12;
+    const d = D * (1 + (rng.next() - 0.5) * 0.08);
+    return [new THREE.Vector3(x, yb, d), new THREE.Vector3(x, yt - 0.08, d * 0.9), new THREE.Vector3(x, yt, 0), new THREE.Vector3(x, yt - 0.08, -d * 0.9), new THREE.Vector3(x, yb, -d)];
+  });
+  for (let i = 0; i < N; i++) {
+    const a = slices[i], b = slices[i + 1];
+    // Front and back faces, split into strata bands.
+    for (const [j0, j1, out] of [[0, 1, 1], [3, 4, -1]] as const) {
+      const lv = [0, 0.66, 1.0, 1.35, 1.7, 2.05, 9];
+      for (let k = 0; k < lv.length - 1; k++) {
+        const clip = (p: THREE.Vector3, q: THREE.Vector3, y: number) => (q.y === p.y ? p.clone() : p.clone().lerp(q, Math.min(1, Math.max(0, (y - p.y) / (q.y - p.y)))));
+        const lo = Math.max(lv[k], Math.min(a[j0].y, b[j0].y)), hi = Math.min(lv[k + 1], Math.max(a[j1].y, b[j1].y));
+        if (hi <= lo) continue;
+        const p0 = clip(a[j0], a[j1], Math.max(lv[k], a[j0].y)), p1 = clip(b[j0], b[j1], Math.max(lv[k], b[j0].y));
+        const p2 = clip(b[j0], b[j1], Math.min(lv[k + 1], b[j1].y)), p3 = clip(a[j0], a[j1], Math.min(lv[k + 1], a[j1].y));
+        if (out > 0) face(g, p0, p1, p2, p3, new THREE.Vector3(0, 0, 1), shade(band((p0.y + p2.y) / 2), drift(p0)));
+        else face(g, p0, p1, p2, p3, new THREE.Vector3(0, 0, -1), shade(band((p0.y + p2.y) / 2), 0.85 * drift(p0)));
+      }
+    }
+    face(g, a[1], b[1], b[2], a[2], new THREE.Vector3(0, 1, 0.3), shade(top, drift(a[1])));
+    face(g, a[2], b[2], b[3], a[3], new THREE.Vector3(0, 1, -0.3), shade(top, 0.95 * drift(a[2])));
+    if (a[0].y > 0.01 || b[0].y > 0.01) face(g, a[0], b[0], b[4], a[4], new THREE.Vector3(0, -1, 0), tunnel);
   }
-  // Curved span: a bent tube from leg top to leg top, thick in the middle.
-  const span: THREE.Vector3[] = [];
-  const radii: number[] = [];
-  for (let k = 0; k <= 8; k++) {
-    const t = k / 8;
-    const x = (t - 0.5) * 1.62;
-    span.push(new THREE.Vector3(x, 0.94 + 0.14 * Math.sin(Math.PI * t) + (rng.next() - 0.5) * 0.03, (rng.next() - 0.5) * 0.06));
-    radii.push(0.28 + 0.05 * Math.sin(Math.PI * t));
+  // End caps.
+  for (const [sl, sx] of [[slices[0], -1], [slices[N], 1]] as const) {
+    const c = new THREE.Vector3(sl[0].x, 1.2, 0);
+    for (let j = 0; j < sl.length; j++) {
+      const p = sl[j], q = sl[(j + 1) % sl.length];
+      const n = new THREE.Vector3().crossVectors(new THREE.Vector3().subVectors(q, p), new THREE.Vector3().subVectors(c, p));
+      const colr = shade(band((p.y + q.y) / 2), 0.9);
+      if (n.x * sx >= 0) g.tri(p, q, c, colr); else g.tri(q, p, c, colr);
+    }
   }
-  const tmp = new GeomBuilder();
-  addTube(tmp, span, radii, 8, () => col(GOBI.cliffRed));
-  const tg = tmp.build();
-  g.appendGeometry(tg, new THREE.Matrix4(), (_i, c, n) => tone(c, n));
-  tg.dispose();
+  // Rubble at its feet.
+  for (let k = 0; k < 5; k++) {
+    const r = rng.range(0.08, 0.16);
+    const p = new THREE.Vector3(rng.chance(0.5) ? rng.range(-1.05, -0.8) : rng.range(0.8, 1.05), r * 0.4, rng.range(-0.55, 0.55));
+    g.appendGeometry(jitterGeometry(new THREE.IcosahedronGeometry(1, 0), 0.25, () => rng.next()), new THREE.Matrix4().compose(p, new THREE.Quaternion(), new THREE.Vector3(r, r * 0.7, r)), (_i, c, n) => rockTone(n, c));
+  }
   return g.build();
 }
 
-/** Giant fallen rib bones braced across all lanes at head height: slide. */
+/**
+ * A fallen giant's ribcage braced across all three lanes: a spine high overhead on two tall rocks, ribs hanging
+ * down to just above sliding height. Owner playtest 5: the old single bone at hip height looked jumpable.
+ */
 function ribArch(): THREE.BufferGeometry {
   const g = new GeomBuilder();
   const rng = new Rng(31);
   const bone = col(0xcdbb9a);
   const boneD = col(0x8f6650);
-  // Two support rocks.
+  // Two tall support rocks just off the trail.
   for (const sx of [-1, 1]) {
-    const r = jitterGeometry(new THREE.IcosahedronGeometry(1, 0), 0.3, () => rng.next());
-    g.appendGeometry(r, new THREE.Matrix4().compose(new THREE.Vector3(sx * 2.85, 0.45, 0), new THREE.Quaternion(), new THREE.Vector3(0.6, 0.6, 0.6)), (_i, c, n) => rockTone(n, c));
+    const r = jitterGeometry(new THREE.IcosahedronGeometry(1, 1), 0.18, () => rng.next());
+    g.appendGeometry(r, new THREE.Matrix4().compose(new THREE.Vector3(sx * 2.95, 1.15, 0), new THREE.Quaternion(), new THREE.Vector3(0.62, 1.35, 0.6)), (_i, c, n) => rockTone(n, c));
   }
-  // Main bone shaft with knobbed ends.
-  const y = 0.9;
-  addTube(g, [new THREE.Vector3(-3.0, y + 0.08, 0), new THREE.Vector3(-1.5, y - 0.02, 0.05), new THREE.Vector3(0, y - 0.05, 0), new THREE.Vector3(1.5, y - 0.02, -0.05), new THREE.Vector3(3.0, y + 0.08, 0)], [0.26, 0.21, 0.2, 0.21, 0.26], 7, (s) => (s % 2 ? bone : shade(bone, 0.95)));
-  // Darken downward-facing bone faces (shadowed underside).
+  // The spine: a thick bone beam with vertebra knobs, sagging slightly in the middle.
+  const Y = 2.35;
+  const beam = [-3.0, -1.5, 0, 1.5, 3.0].map((x) => new THREE.Vector3(x, Y - 0.12 * Math.cos((Math.PI * x) / 6), 0));
+  addTube(g, beam, [0.2, 0.17, 0.16, 0.17, 0.2], 8, (s2) => (s2 % 2 ? bone : shade(bone, 0.94)));
+  for (let x = -2.7; x <= 2.71; x += 0.45) {
+    const k = jitterGeometry(new THREE.IcosahedronGeometry(1, 0), 0.15, () => rng.next());
+    g.appendGeometry(k, new THREE.Matrix4().compose(new THREE.Vector3(x, Y + 0.12 - 0.12 * Math.cos((Math.PI * x) / 6), 0), new THREE.Quaternion(), new THREE.Vector3(0.13, 0.17, 0.13)), () => shade(bone, 1.03));
+  }
+  // Ribs hang down from the spine and curve back, ending just above sliding height (0.78 m).
+  for (let x = -2.45, i = 0; x <= 2.46; x += 0.49, i++) {
+    const top = new THREE.Vector3(x, Y - 0.12 * Math.cos((Math.PI * x) / 6) - 0.1, 0);
+    const z = (i % 2 ? 1 : -1) * 0.08;
+    const tip = 0.78 + (i % 3) * 0.05;
+    addTube(g, [top, new THREE.Vector3(x + 0.06, 1.75, z + 0.1), new THREE.Vector3(x + 0.1, 1.15, z + 0.14), new THREE.Vector3(x + 0.06, tip, z + 0.08)], [0.075, 0.06, 0.045, 0.025], 5, () => (i % 2 ? bone : shade(bone, 0.93)));
+  }
+  // Darken downward-facing bone faces (shadowed undersides).
   for (let i = 0; i < g.colors.length; i += 9) {
     const yA = g.pos[i + 1], yB = g.pos[i + 4], yC = g.pos[i + 7];
-    if (yA + yB + yC < (y - 0.08) * 3 && yA > 0.5) for (let k = 0; k < 9; k++) g.colors[i + k] *= 0.62;
+    if (yA > 2.2 && yA + yB + yC < (Y - 0.05) * 3) for (let k = 0; k < 9; k++) g.colors[i + k] *= 0.7;
   }
   for (const sx of [-1, 1]) {
     const knob = jitterGeometry(new THREE.IcosahedronGeometry(1, 0), 0.2, () => rng.next());
-    g.appendGeometry(knob, new THREE.Matrix4().compose(new THREE.Vector3(sx * 3.05, y + 0.1, 0), new THREE.Quaternion(), new THREE.Vector3(0.3, 0.26, 0.28)), () => shade(boneD, 1.1 + rng.next() * 0.1));
+    g.appendGeometry(knob, new THREE.Matrix4().compose(new THREE.Vector3(sx * 3.05, Y + 0.1, 0), new THREE.Quaternion(), new THREE.Vector3(0.3, 0.26, 0.28)), () => shade(boneD, 1.1 + rng.next() * 0.1));
   }
   return g.build();
 }

@@ -89,6 +89,10 @@ describe('collision', () => {
     expect(testHit({ ...base, y: 0.5, airborne: true }, 0, 0, HAZARD_BOXES.ledge)).toBe('none');
     expect(testHit(base, 0, 0, HAZARD_BOXES.ledge)).toBe('front');
   });
+  it('slide obstacles rise above any jump: even at the top of a jump you hit them (owner playtest 5)', () => {
+    expect(testHit({ ...base, y: 1.25, airborne: true }, 0, 0, HAZARD_BOXES.arch)).toBe('front');
+    expect(testHit({ ...base, y: 1.25, airborne: true }, 0, 0, HAZARD_BOXES.ribArch)).toBe('front');
+  });
   it('running into a gully is a fall, sliding does not help, and a jump clears it', () => {
     expect(testHit(base, 0, 0, HAZARD_BOXES.gully)).toBe('front');
     expect(testHit({ ...base, sliding: true }, 0, 0, HAZARD_BOXES.gully)).toBe('front');

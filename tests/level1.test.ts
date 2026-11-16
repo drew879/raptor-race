@@ -94,6 +94,13 @@ describe('setbacks and fork placement (owner playtest 4)', () => {
     expect(s.revive()).toBe(true);
     expect(s.runner.lane).not.toBe(0);
   });
+  it('nothing tall stands in an updraft glide (gliding height would hit a slide obstacle or a fin)', () => {
+    for (const p of LEVEL1.pickups.filter((q) => q.kind === 'updraft')) {
+      const end = p.d + speedAt(LEVEL1, p.d) * GLIDE_SECONDS + 10;
+      const tall = LEVEL1.hazards.filter((h) => (h.type === 'arch' || h.type === 'ribArch' || h.type === 'spine') && h.d + (h.len ?? 0) > p.d && h.d < end);
+      expect(tall.map((h) => `${h.type}@${h.d}`)).toEqual([]);
+    }
+  });
   it('no fork starts within 3 s of an updraft glide landing, and no checkpoint sits inside a fork', () => {
     for (const p of LEVEL1.pickups.filter((q) => q.kind === 'updraft')) {
       const landing = p.d + speedAt(LEVEL1, p.d) * GLIDE_SECONDS;
