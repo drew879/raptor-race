@@ -1,0 +1,149 @@
+diff --git a/src/build.d.ts b/src/build.d.ts
+new file mode 100644
+index 0000000..45889a0
+--- /dev/null
++++ b/src/build.d.ts
+@@ -0,0 +1,2 @@
++/** The build id (commit and date), set by vite.config.ts. */
++declare const __BUILD__: string;
+diff --git a/src/pages/index.ts b/src/pages/index.ts
+index fd4942e..f52a070 100644
+--- a/src/pages/index.ts
++++ b/src/pages/index.ts
+@@ -91,13 +91,14 @@ root.innerHTML = `
+ <section class="screen title" id="scrTitle">
+   ${logoSVG()}
+   <div class="actions">
+-    <div class="sub">Level ${LEVEL_N} · ${esc(LEVEL.name)}</div>
++    <div class="level-pick"><button class="lvl-arrow" id="btnLvlPrev" aria-label="Previous level" hidden>‹</button><div class="sub">Level ${LEVEL_N} · ${esc(LEVEL.name)}</div><button class="lvl-arrow" id="btnLvlNext" aria-label="Next level" hidden>›</button></div>
+     <button class="btn-amber" id="btnRun">Run</button>
+     <div class="row">
+       <button class="btn-paper" id="btnJournal">Field Journal</button>
+       <button class="btn-paper icon-btn" id="btnSound" aria-label="Sound">♪</button>
+     </div>
+     <div class="best" id="best" hidden></div>
++    <div class="build" id="build"></div>
+   </div>
+ </section>
+ 
+@@ -424,6 +425,16 @@ function goToLevel(id: string) {
+   location.href = `${location.pathname}?level=${encodeURIComponent(id)}`;
+ }
+ $('btnNextLevel').addEventListener('click', () => { const n = nextLevel(); if (n) goToLevel(n); });
++/** The levels you can play, in roster order. */
++const openLevels = () => CHAPTERS.flatMap((ch, ci) => ch.levels.map((lv, li) => (lv.available && levelUnlocked(save, ci, li) ? lv.id : ''))).filter(Boolean);
++// The title's level arrows: step through the open levels.
++function syncLevelArrows() {
++  const open = openLevels(), i = open.indexOf(LEVEL.id);
++  $('btnLvlPrev').hidden = i <= 0;
++  $('btnLvlNext').hidden = i < 0 || i >= open.length - 1;
++}
++$('btnLvlPrev').addEventListener('click', () => { const open = openLevels(), i = open.indexOf(LEVEL.id); if (i > 0) goToLevel(open[i - 1]); });
++$('btnLvlNext').addEventListener('click', () => { const open = openLevels(), i = open.indexOf(LEVEL.id); if (i >= 0 && i < open.length - 1) goToLevel(open[i + 1]); });
+ /** The next level in the roster, if it exists and is open. */
+ function nextLevel() {
+   for (let ci = 0; ci < CHAPTERS.length; ci++) {
+@@ -454,7 +465,11 @@ $('btnFps').addEventListener('click', () => {
+   $('btnFps').textContent = `Frame rate: ${DEBUG ? 'shown' : 'hidden'}`;
+ });
+ if (DEBUG) $('debug').hidden = false;
+-$('btnPause').addEventListener('click', () => { if (app === 'playing') setApp('paused'); });
++// Pause reacts the moment a finger touches it (not on the click iOS may hold back during a run), and a touch that
++// starts on it never counts as a swipe.
++const pauseNow = (e: Event) => { e.stopPropagation(); if (app === 'playing') setApp('paused'); };
++$('btnPause').addEventListener('pointerdown', pauseNow);
++$('btnPause').addEventListener('click', pauseNow);
+ $('btnResume').addEventListener('click', () => setApp('playing'));
+ $('btnRestart').addEventListener('click', () => { newSession(); startRun(); });
+ $('btnQuit').addEventListener('click', toTitle);
+@@ -504,6 +519,7 @@ function introPreySpeed() {
+ }
+ root.addEventListener('pointerdown', () => { if (app === 'intro' && introT > 0.3) introT = introEnd; });
+ function toTitle() {
++  if (newerBuild) { reloadFresh(); } // a newer build came out while you played
+   syncJournalBadge();
+   newSession();
+   camBlend = 0;
+@@ -1167,6 +1183,30 @@ const hitches: number[] = [];
+ 
+ // Boot.
+ syncJournalBadge();
++syncLevelArrows();
++$('build').textContent = `Build ${__BUILD__}`;
++// A copy kept open on the phone (a Home Screen app resumes where it was) checks for a newer build whenever it comes
++// back, and reloads on the menus to pick it up (never mid-run).
++let newerBuild = '';
++/** Load the newer build: a fresh URL (so a cached copy of the page can't come back), at most once per build. */
++function reloadFresh() {
++  const q = new URLSearchParams(location.search);
++  if (!newerBuild || q.get('v') === newerBuild) return;
++  q.set('v', newerBuild);
++  q.set('level', LEVEL.id);
++  location.replace(`${location.pathname}?${q}`);
++}
++async function checkForUpdate() {
++  try {
++    const r = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
++    if (!r.ok) return;
++    const { build } = (await r.json()) as { build: string };
++    newerBuild = build && build !== __BUILD__ && !__BUILD__.startsWith('dev') ? build : '';
++    if (newerBuild && (app === 'title' || app === 'results' || app === 'journal')) reloadFresh();
++  } catch { /* offline: carry on with this copy */ }
++}
++document.addEventListener('visibilitychange', () => { if (!document.hidden) void checkForUpdate(); });
++if (!SHOT && location.protocol.startsWith('http') && location.hostname !== 'localhost') void checkForUpdate();
+ renderEggs();
+ renderObjectives();
+ setApp('title');
+diff --git a/src/ui/game.css b/src/ui/game.css
+index 0c59ec0..0ebf1c4 100644
+--- a/src/ui/game.css
++++ b/src/ui/game.css
+@@ -23,7 +23,8 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; backgrou
+ .hud .combo { font-weight: 900; font-size: 16px; background: var(--amber); padding: 1px 9px 2px; }
+ .hud .eggs { display: flex; gap: 3px; }
+ .hud .eggs svg { width: 17px; height: 21px; }
+-.hud .pause { pointer-events: auto; width: 42px; height: 42px; border-radius: 50%; padding: 0; justify-content: center; }
++.hud .pause { pointer-events: auto; position: relative; width: 46px; height: 46px; border-radius: 50%; padding: 0; justify-content: center; touch-action: manipulation; }
++.hud .pause::before { content: ''; position: absolute; inset: -12px; } /* a bigger touch target than it looks */
+ .hud .pause i { display: block; width: 4px; height: 13px; background: var(--ink); border-radius: 2px; margin: 0 2px; }
+ .hud .power { font-weight: 900; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; background: var(--paper); }
+ .progress { position: relative; flex: 1; max-width: 150px; height: 18px; margin-top: 10px; }
+@@ -59,6 +60,9 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; backgrou
+ .screen.title > * { pointer-events: auto; }
+ .screen.title .rr-logo { width: min(88vw, 420px); height: auto; overflow: visible; margin-top: 8px; pointer-events: none; }
+ .screen.title .actions { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 8px; }
++.screen.title .level-pick { display: flex; align-items: center; gap: 10px; }
++.screen.title .lvl-arrow { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--ink); background: rgba(243, 230, 204, .92); font-family: var(--display); font-weight: 900; font-size: 24px; line-height: 1; color: var(--ink); padding: 0 0 3px; box-shadow: 0 2px 0 var(--ink); }
++.screen.title .build { font-size: 10px; letter-spacing: .06em; color: rgba(58, 42, 30, .55); }
+ .screen.title .sub { font-family: var(--display); font-weight: 700; font-size: 15px; background: rgba(243, 230, 204, .88); padding: 4px 12px; border-radius: 20px; border: 1.5px solid rgba(58,42,30,.35); }
+ .screen.title .row { display: flex; gap: 10px; }
+ .screen.title .best { font-weight: 800; font-size: 13px; letter-spacing: .06em; color: var(--ink); background: rgba(243, 230, 204, .8); padding: 3px 10px; border-radius: 8px; }
+diff --git a/vite.config.ts b/vite.config.ts
+index 590c4f0..b1c6780 100644
+--- a/vite.config.ts
++++ b/vite.config.ts
+@@ -1,5 +1,15 @@
+-import { defineConfig } from 'vite';
++import { defineConfig, type Plugin } from 'vite';
+ import { resolve } from 'node:path';
++import { execSync } from 'node:child_process';
++
++/** The build's id: the commit it was built from (the deploy runs on a checkout), with the build date. */
++const commit = (() => { try { return execSync('git rev-parse --short HEAD').toString().trim(); } catch { return 'dev'; } })();
++const BUILD = `${commit}-${new Date().toISOString().slice(0, 10)}`;
++/** Writes version.json next to the page, so a copy kept open on a phone can check for a newer build. */
++const versionFile = (): Plugin => ({
++  name: 'rr-version',
++  generateBundle() { this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ build: BUILD }) }); },
++});
+ 
+ // RR_PAGE=<name> builds a single page with no shared chunks (used for single-file publishing).
+ const single = process.env.RR_PAGE;
+@@ -21,4 +31,6 @@ export default defineConfig({
+     },
+   },
+   server: { host: true },
++  define: { __BUILD__: JSON.stringify(BUILD) },
++  plugins: [versionFile()],
+ });
