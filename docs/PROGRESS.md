@@ -30,6 +30,7 @@ Newest first. Every session updates this before pushing.
 - [x] Chapter gates (src/game/journal.ts, tested): chapters of 3 levels; catching the prey opens the next level; 8 of a chapter's 9 inclusions open the next chapter; Levels 2+ show as "Coming soon" until they exist
 - [x] Inclusions are now saved the moment you pick one up (before, only on finishing the level)
 - [x] Playtest 5: slide obstacles read as jumpable, so the arch is now a tall sandstone overhang with a low dark tunnel and the rib bones a fallen giant's ribcage hanging over the trail; collision tops raised above any jump (tests: a jump at its peak hits both; no tall obstacle inside a glide)
+- [x] GitHub Pages: workflow deploys every push to https://drew879.github.io/raptor-race/ after typecheck and tests; Add to Home Screen support (manifest, iPhone web-app tags, icon drawn in code); verified the build runs from the /raptor-race/ sub-path. The Claude artifact link is retired (owner)
 - [ ] Later: Level 2 (new raptor and prey); forks that split into two full three-lane paths
 - [x] Forks: a sandstone fin down the middle lane splits the trail into two routes (one rough and rich, one easy); swipes into the fin are refused with a soft bump; the prey takes the easy side; Level 1 has two (design 704-750 and 922-968)
 - [x] Automatic bends: a lateral view-space bend (sim stays straight), far scenery swings round, the camera banks; nine bends in Level 1

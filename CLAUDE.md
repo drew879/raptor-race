@@ -28,7 +28,9 @@ Portrait-mode 3D runner for mobile, built with TypeScript + Three.js + Vite. Own
 - `node scripts/smoke.mjs` drives the real page into crashes (including a fork's fin) and checks every crash reaches the crash screen
 - `node scripts/hunt-shots.mjs <dir>` captures the opening shot, pounce and freeze-frame plate
 - `node scripts/scenery-tour.mjs <dir> [marks]` warps the real page through each landmark stretch and captures it without banners
-- `node scripts/package-artifact.mjs <page> <name> "<Title>"` single-file build for publishing
+- Deploys: every push runs `.github/workflows/pages.yml` (typecheck, test, build, publish to https://drew879.github.io/raptor-race/). The owner plays there; the Claude artifact link is retired.
+- `node scripts/make-icons.mjs` renders `public/icon.svg` into the home-screen PNGs
+- `node scripts/package-artifact.mjs <page> <name> "<Title>"` single-file build for publishing (retired for playtests; kept for one-off pages)
 - `scripts/setup-blender.sh` installs headless Blender on demand (slow download; built models are committed)
 - `/opt/blender-venv/bin/python scripts/blender/raptor.py` rebuilds the raptor body into `src/assets/models/`
 

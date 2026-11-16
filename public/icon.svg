@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Raptor Race app icon: a Velociraptor head over the Flaming Cliffs at golden hour, with an amber gem.
+       Full-bleed square (iOS rounds the corners itself); key shapes sit inside the central 80% for maskable icons. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7D9A8"/>
+      <stop offset="0.55" stop-color="#F0A86A"/>
+      <stop offset="1" stop-color="#C9573C"/>
+    </linearGradient>
+    <radialGradient id="amber" cx="0.38" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#FFF3C4"/>
+      <stop offset="0.45" stop-color="#FFB21E"/>
+      <stop offset="1" stop-color="#C8620A"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <!-- Butte silhouettes -->
+  <path d="M0 360 L40 360 L52 318 L120 318 L132 360 L210 360 L222 300 L300 300 L314 360 L512 360 L512 512 L0 512 Z" fill="#A8452F" opacity=".55"/>
+  <path d="M0 400 C 120 380, 260 420, 512 392 L512 512 L0 512 Z" fill="#E4A46C"/>
+  <!-- Raptor head, facing right -->
+  <path d="M86 404 C 104 330, 150 262, 222 226 C 262 206, 312 200, 356 212 C 392 222, 426 238, 452 262 L 444 276 C 412 274, 384 276, 360 282 L 404 300 L 396 312 C 352 316, 304 318, 268 330 C 226 344, 196 372, 180 418 Z"
+        fill="#3A2A1E" stroke="#3A2A1E" stroke-width="10" stroke-linejoin="round"/>
+  <!-- Crest feathers -->
+  <path d="M150 268 L118 226 L170 250 Z M184 240 L162 194 L212 226 Z M222 222 L214 176 L252 212 Z" fill="#3A2A1E"/>
+  <!-- Teal eye patch and eye -->
+  <path d="M300 222 C 320 214, 346 216, 360 228 C 344 240, 318 242, 300 236 Z" fill="#2C8A8F"/>
+  <circle cx="334" cy="236" r="15" fill="#F2B33D" stroke="#1C1410" stroke-width="5"/>
+  <circle cx="337" cy="236" r="5" fill="#1C1410"/>
+  <!-- Teeth along the upper jaw -->
+  <path d="M300 284 l 7 13 l 7 -13 Z" fill="#F6EEDC"/><path d="M318 281 l 7 13 l 7 -13 Z" fill="#F6EEDC"/><path d="M336 279 l 7 13 l 7 -13 Z" fill="#F6EEDC"/><path d="M354 278 l 7 13 l 7 -13 Z" fill="#F6EEDC"/><path d="M372 278 l 7 13 l 7 -13 Z" fill="#F6EEDC"/><path d="M390 278 l 7 13 l 7 -13 Z" fill="#F6EEDC"/><path d="M408 277 l 7 13 l 7 -13 Z" fill="#F6EEDC"/><path d="M426 276 l 7 13 l 7 -13 Z" fill="#F6EEDC"/>
+  <!-- Pale streak along the jaw -->
+  <path d="M206 330 C 252 304, 312 292, 388 300" stroke="#E9DFC9" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <!-- Amber gem -->
+  <path d="M382 352 L420 392 L408 446 L362 470 L322 440 L330 386 Z" fill="url(#amber)" stroke="#3A2A1E" stroke-width="9" stroke-linejoin="round"/>
+  <path d="M382 352 L420 392 L372 404 Z" fill="#FFF3C4" opacity=".85"/>
+</svg>
