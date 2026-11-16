@@ -477,7 +477,7 @@ let introT = 0;
 /** The opening shot's timing and framing. The egg: the hero walks up to its nest (walk), the egg twitches (graze),
  * rocks hard (alert), then tips out and rolls off downhill as the camera swings behind (swing). */
 const INTRO = EGG_PREY
-  ? { ...CONFIG.intro, walk: 1.4, graze: 2.0, alert: 1.1, swing: 1.5, preyLead: LEVEL.prey.startGap - NEST_D, camAz: 0.95, camDist: 3.4, camHeight: 1.15, crane: 1.4 }
+  ? { ...CONFIG.intro, walk: 1.4, graze: 2.0, alert: 1.1, swing: 1.5, preyLead: LEVEL.prey.startGap - NEST_D, camAz: 0.62, camDist: 4.3, camHeight: 1.35, crane: 1.4 }
   : { ...CONFIG.intro, walk: 0 };
 const introEnd = INTRO.graze + INTRO.alert + INTRO.swing;
 /** The prey's distance along the course during the intro: grazing short of its start gap, then bolting up to it. */
@@ -981,7 +981,7 @@ function introCamera(dt: number) {
   const dist = lerp(I.camDist, I.camDist * 0.85, push);
   const headZ = -(LEVEL.prey.startGap - I.preyLead) - 0.4;
   introPos.set(px + Math.sin(I.camAz) * dist, I.camHeight, headZ - Math.cos(I.camAz) * dist);
-  if (EGG_PREY) introLook.set(0, 0.42, Math.max(pz, -NEST_D - 4) + 0.75); // the egg and its parent, then the egg as it goes
+  if (EGG_PREY) introLook.set(-0.15, 0.5, Math.max(pz, -NEST_D - 4) + 1.2); // the egg and its parent, then the egg as it goes
   else introLook.set(px, 0.55, pz - 0.25);
   stage.chase(r.x, r.y, z, dt, true);
   const k = smoothstep(0, 1, (introT - I.graze - I.alert) / I.swing);

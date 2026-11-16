@@ -247,6 +247,7 @@ export function buildForestChunk(index: number, layout?: TerrainLayout): Chunk {
 
   // ---------- Forest floor and valley walls ----------
   const rowStep = 2.5, rows = Math.round(L / rowStep);
+  const soft = sectionAt(layout, index * L + L / 2) === 'clearing'; // the mossy clearing at the bottom: soft and even
   for (const sgn of [-1, 1]) {
     const pt = (ci: number, ri: number) => {
       const gr = index * rows + ri;
@@ -264,7 +265,9 @@ export function buildForestChunk(index: number, layout?: TerrainLayout): Chunk {
         const n1 = noise.get(xm * 0.15 * sgn, zm * 0.15);
         // Near: moss and leaf litter. Far (the valley walls): forest canopy seen from above, mottled greens.
         const far = smoothstep(14, 30, xm);
-        let base = n1 > 0.15 ? mix(F.litter, F.litterDark, hash2(c, gr, 21) * 0.6) : mix(F.moss, F.mossLight, hash2(c * sgn, gr, 23) * 0.6);
+        let base = soft
+          ? mix(F.moss, n1 > 0.2 ? F.mossDark : F.mossLight, 0.25 + 0.2 * hash2(c * sgn, gr, 23))
+          : n1 > 0.15 ? mix(F.litter, F.litterDark, hash2(c, gr, 21) * 0.6) : mix(F.moss, F.mossLight, hash2(c * sgn, gr, 23) * 0.6);
         base = base.lerp(n1 > 0 ? col(F.conifer) : col(F.coniferDark), far);
         if (far > 0.5 && hash2(c * sgn, gr, 25) > 0.8) base = base.lerp(col(F.ginkgo), 0.45);
         const wet = 1 - Math.min(1, nearStream(zm) / 3);
@@ -309,7 +312,7 @@ export function buildForestChunk(index: number, layout?: TerrainLayout): Chunk {
     ginkgo: { conifer: 3, ginkgo: 6, treefern: 1, near: 0.9 },
     ferns: { conifer: 4, ginkgo: 1, treefern: 5, near: 1.3 },
     streamside: { conifer: 5, ginkgo: 2, treefern: 2, near: 1.1 },
-    clearing: { conifer: 2, ginkgo: 1, treefern: 1, near: 0.8 },
+    clearing: { conifer: 3, ginkgo: 2, treefern: 2, near: 2.2 },
   }[kind as 'hilltop'] ?? { conifer: 6, ginkgo: 2, treefern: 2, near: 1 };
   const ok = (x: number, z: number, clear = 2.6) => nearStream(z) > clear && Math.abs(x) > TRACK + 0.9;
   const at = (x: number, z: number) => new THREE.Vector3(x, forestHeight(x, z, streams), z);
