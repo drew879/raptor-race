@@ -146,7 +146,7 @@ export class Protoceratops {
     const back = (p: THREE.Vector3) => p.clone().add(new THREE.Vector3(0, -0.006, 0.012));
     for (let k = 0; k < F; k++) {
       const a0 = Math.PI * (-0.04 + (1.08 * k) / F), a1 = Math.PI * (-0.04 + (1.08 * (k + 1)) / F), am = (a0 + a1) / 2;
-      const i0 = fp(a0, 0.07), i1 = fp(a1, 0.07), m0 = fp(a0, 0.27), m1 = fp(a1, 0.27), o0 = fp(a0, 0.33), o1 = fp(a1, 0.33), om = fp(am, 0.39);
+      const i0 = fp(a0, 0.07), i1 = fp(a1, 0.07), m0 = fp(a0, 0.27), m1 = fp(a1, 0.27), o0 = fp(a0, 0.34), o1 = fp(a1, 0.34), om = fp(am, 0.355); // a smooth, gently lobed edge (real frills have no spikes)
       const spot = k === 3 || k === 8;
       gh.quad(i0, i1, m1, m0, spot ? col(P.spot) : col(P.frill));
       gh.quad(m0, m1, o1, o0, col(P.frillRim));
@@ -236,7 +236,7 @@ export class Protoceratops {
         // Pressed down, head thrown up, braced and struggling.
         this.body.position.y = -0.09 + Math.sin(t * 18) * 0.012;
         this.body.rotation.set(0.06, 0, Math.sin(t * 7) * 0.04);
-        pitch = 0.3 + Math.sin(t * 9) * 0.1;
+        pitch = 0.02 + Math.sin(t * 9) * 0.06; // head low and forward so the frill clears the raptor on its back
         yaw = 0.45 + Math.sin(t * 5) * 0.15;
         this.tail.rotation.y = Math.sin(t * 11) * 0.3;
         this.legs.forEach((leg, i) => { leg.upper.rotation.x = leg.restU + (i < 2 ? 0.25 : -0.2); leg.lower.rotation.x = leg.restL * 1.25; });

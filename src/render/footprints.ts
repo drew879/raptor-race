@@ -15,8 +15,9 @@ export class Footprints {
   private p = new THREE.Vector3();
   private c = new THREE.Color();
 
-  constructor(private capacity = 48, private life = 2.4) {
-    // A print: three toe slots fanning forward from a heel pad, in the XZ plane, pointing -Z.
+  /** `shape`: three-toed theropod prints, or the rounded four-toed prints of a quadruped like Protoceratops. */
+  constructor(private capacity = 48, private life = 2.4, shape: 'theropod' | 'quadruped' = 'theropod') {
+    // A print in the XZ plane, pointing -Z.
     const g = new THREE.BufferGeometry();
     const v: number[] = [];
     const quad = (cx: number, cz: number, w: number, l: number, ang: number) => {
@@ -25,13 +26,22 @@ export class Footprints {
       const a = pt(-w, -l), b = pt(w, -l), c = pt(w, l), d = pt(-w, l);
       v.push(...a, ...d, ...c, ...a, ...c, ...b);
     };
-    quad(0, 0.02, 0.035, 0.035, 0); // heel
-    quad(0, -0.1, 0.018, 0.09, 0); // middle toe
-    quad(-0.05, -0.07, 0.016, 0.07, -0.45); // inner toe
-    quad(0.05, -0.07, 0.016, 0.07, 0.45); // outer toe
+    if (shape === 'theropod') {
+      quad(0, 0.02, 0.035, 0.035, 0); // heel
+      quad(0, -0.1, 0.018, 0.09, 0); // middle toe
+      quad(-0.05, -0.07, 0.016, 0.07, -0.45); // inner toe
+      quad(0.05, -0.07, 0.016, 0.07, 0.45); // outer toe
+    } else {
+      // A broad rounded pad (an octagon) with four short blunt toes in an arc in front.
+      for (let k = 0; k < 8; k++) {
+        const a0 = (k / 8) * Math.PI * 2, a1 = ((k + 1) / 8) * Math.PI * 2;
+        v.push(0, 0, 0.01, Math.cos(a1) * 0.07, 0, 0.01 + Math.sin(a1) * 0.06, Math.cos(a0) * 0.07, 0, 0.01 + Math.sin(a0) * 0.06);
+      }
+      for (const [x, ang] of [[-0.06, -0.35], [-0.02, -0.1], [0.02, 0.1], [0.06, 0.35]] as const) quad(x, -0.075 - (Math.abs(x) < 0.03 ? 0.01 : 0), 0.016, 0.022, ang);
+    }
     g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
     g.computeVertexNormals();
-    const mat = patchWorld(new THREE.MeshBasicMaterial({ color: 0x8c5a35, transparent: true, opacity: 1, depthWrite: false, fog: true }), {});
+    const mat = patchWorld(new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, depthWrite: false, fog: true, side: THREE.DoubleSide }), {});
     this.mesh = new THREE.InstancedMesh(g, mat, capacity);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 1;
@@ -58,13 +68,17 @@ export class Footprints {
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 
-  /** Fade prints toward the sand color as they age (the material blends, so "fading" is a color lerp). */
-  update(dt: number, sand: THREE.Color) {
+  /** Fade prints toward the sand as they age and as they near the camera (close prints would loom large). A print
+   * is a mid-sand shade, never ink-dark: the darkest values belong to hazards (art review). */
+  update(dt: number, sand: THREE.Color, cameraZ = Infinity) {
     for (let i = 0; i < this.capacity; i++) {
       if (this.age[i] >= this.life) continue;
       this.age[i] += dt;
-      const k = Math.min(1, this.age[i] / this.life);
-      this.c.setHex(0x8c5a35).lerp(sand, k * k);
+      this.mesh.getMatrixAt(i, this.m);
+      const z = this.m.elements[14];
+      const near = Math.max(0, Math.min(1, (z - (cameraZ - 7)) / 2.5)); // gone within ~5 m of the lens
+      const k = Math.min(1, Math.max(this.age[i] / this.life, near));
+      this.c.setHex(0xa8784c).lerp(sand, k * k);
       this.mesh.setColorAt(i, this.c);
       if (this.age[i] >= this.life) { this.hide(i); this.mesh.instanceMatrix.needsUpdate = true; }
     }

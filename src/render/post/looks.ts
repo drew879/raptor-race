@@ -229,11 +229,13 @@ const HYBRID_FAST = /* glsl */ `
     // banks): cream haze, a rose-apricot band, then dusty blue overhead. The storm turns it ochre.
     vec4 vp = uInvProj * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
     float el = normalize(uCamRot * normalize(vp.xyz / vp.w)).y + (nz.g - 0.5) * 0.012;
-    vec3 sHaze = mix(paper, vec3(0.97, 0.86, 0.7), 0.7), sRose = mix(paper, vec3(0.94, 0.66, 0.56), 0.62);
-    vec3 sLav = mix(paper, vec3(0.7, 0.72, 0.82), 0.6), sBlue = mix(paper, vec3(0.43, 0.61, 0.77), 0.78);
-    vec3 skyc = mix(sHaze, sRose, smoothstep(0.035, 0.05, el));
-    skyc = mix(skyc, sLav, smoothstep(0.1, 0.115, el));
-    skyc = mix(skyc, sBlue, smoothstep(0.2, 0.22, el));
+    // Palette bands (Art Bible): sun-glow strip #FFE3B3, horizon #F4CFA0, a warm apricot band, mid #A9C7DC, zenith #6E9BC4.
+    vec3 sGlow = mix(paper, vec3(1.0, 0.89, 0.7), 0.8), sHaze = mix(paper, vec3(0.957, 0.812, 0.627), 0.8);
+    vec3 sApri = mix(paper, vec3(0.96, 0.74, 0.6), 0.7), sMid = mix(paper, vec3(0.663, 0.78, 0.863), 0.8), sTop = mix(paper, vec3(0.431, 0.608, 0.769), 0.85);
+    vec3 skyc = mix(sGlow, sHaze, smoothstep(0.015, 0.03, el));
+    skyc = mix(skyc, sApri, smoothstep(0.06, 0.075, el));
+    skyc = mix(skyc, sMid, smoothstep(0.12, 0.135, el));
+    skyc = mix(skyc, sTop, smoothstep(0.24, 0.26, el));
     skyc = mix(skyc, mix(paper, vec3(0.78, 0.6, 0.38), 0.7) * (1.0 - 0.15 * smoothstep(0.0, 0.3, el)), uStorm * 0.8);
     col = mix(col, skyc * (0.95 + 0.07 * grain), sky);
     // Ink: Laplacian depth breaks (contours) plus light interior lines from value breaks.

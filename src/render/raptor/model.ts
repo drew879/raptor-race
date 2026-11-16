@@ -204,7 +204,7 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     if (r.tag === 'head') {
       if (spine) return C.baseDark;
       if (back) return C.base;
-      if (upperFlank) return C.patch; // blue patch wraps the eye
+      if (upperFlank) return i === 3 ? C.patch : C.base; // blue patch around the eye only (from behind, two patches read as ear muffs)
       if (lowerFlank) return i === 4 ? C.rim : C.baseDark; // red rim behind the eye, darker rear jaw
       return C.under;
     }
@@ -216,7 +216,8 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
       return band ? mix(pl.light, pl.under, 0.5) : C.baseDark;
     }
     if (spine) return C.baseDark;
-    if (back) return C.base;
+    // Two bold cream streaks down the back either side of the dark spine: the chase camera sees the back most.
+    if (back) return r.tag === 'body' ? C.light : r.tag === 'tail' ? C.baseLight : C.base;
     if (upperFlank) return r.tag === 'neck' || r.tag === 'tail' ? C.baseLight : C.light; // cream streak along the body; muted on the tail so it doesn't pool into a pale patch at the hips
     if (lowerFlank) return r.tag === 'tail' ? C.underWarm : C.under; // hard countershading break at the midline
     return lateral ? C.baseLight : C.belly;
@@ -372,16 +373,16 @@ export function buildRaptor(pl: RaptorPlumage, opts: { body?: RrmBody } = {}): R
     if (code) limbTube(g, [W, tipH], [0.016, 0.0], [bH, bH], 5, () => C.claw, false);
     // Wing feathers lying along the flank, pointing back. Plane normal faces outward.
     const nrm = new THREE.Vector3(sx, 0.15, 0).normalize();
-    const nF = 7;
+    const nF = 4; // a few long primary shards (seven overlapping feathers read as a solid slab)
     for (let k = 0; k < nF; k++) {
       const t = k / (nF - 1);
       const onHand = t > 0.55;
       const base = onHand ? W.clone().lerp(tipH, (t - 0.55) / 0.45) : E.clone().lerp(W, t / 0.55);
       base.x += sx * 0.012;
-      const len = 0.28 + t * 0.22 + (k % 2 ? 0.05 : -0.02); // a ragged trailing edge, not a flat panel
-      const fan = -0.5 + t * 0.35; // folded: primaries swept down and back along the flank
+      const len = 0.32 + t * 0.24;
+      const fan = -0.65 + t * 0.55; // folded, fanned a little: primaries swept down and back along the flank
       const dir = new THREE.Vector3(sx * 0.03, fan * 0.6 - 0.2, 1).normalize();
-      feather(g, base, dir, nrm, len, 0.075, k % 2 ? C.base : C.baseDark, t > 0.55 ? C.accent : C.baseDark, skinOf(onHand ? bH : bF));
+      feather(g, base, dir, nrm, len, 0.062, k % 2 ? C.base : C.baseDark, t > 0.55 ? C.accent : C.baseDark, skinOf(onHand ? bH : bF));
     }
   }
 

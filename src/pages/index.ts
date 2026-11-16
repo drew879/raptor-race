@@ -205,8 +205,9 @@ function applyPlumage(id: string) {
 const prey = new Protoceratops();
 stage.world.add(items.group, powerups.group, dust.field.points, sparks.field.points, raptor.root, prey.root);
 // Tracks in the sand: the raptor's own, and the prey's ahead of it (you're following its trail).
-const prints = new Footprints(72);
-stage.world.add(prints.mesh);
+const prints = new Footprints(40);
+const preyPrints = new Footprints(48, 2.4, 'quadruped');
+stage.world.add(prints.mesh, preyPrints.mesh);
 const SAND_TRACK = col(GOBI.track);
 let printSide = 1, preyPrintAcc = 0, preyPrintSide = 1;
 // A distant herd walks the dunes through the level's 'herd' stretch.
@@ -244,6 +245,7 @@ let hintTimer = 0;
 
 function resetWorld() {
   prints.clear();
+  preyPrints.clear();
   for (const m of hazardMeshes.values()) stage.world.remove(m);
   hazardMeshes.clear();
   pickupViews.clear();
@@ -746,7 +748,7 @@ function syncWorld(dt: number) {
     footAcc += r.speed * dt;
     if (footAcc > 1.05) {
       footAcc = 0;
-      if (!r.sliding) { printSide = -printSide; prints.add(r.x + printSide * 0.09, z + 0.15, 1.15, -r.lean * 0.15); }
+      if (!r.sliding) { printSide = -printSide; prints.add(r.x + printSide * 0.09, z + 0.15, 0.85, -r.lean * 0.15); }
       dust.emit(r.x + (fxRng.next() - 0.5) * 0.2, 0.03, z + 0.15, r.sliding ? 6 : 3, { spread: 0.7, up: 0.2, back: 2.5, size: 0.4, grow: 1.7, life: 0.5, alpha: 0.34, rand });
     }
     if (r.sliding) dust.emit(r.x, 0.04, z - 0.2, 1, { spread: 1.2, up: 0.35, back: 1, size: 0.24, grow: 1.6, life: 0.4, alpha: 0.32, color: SAND, rand });
@@ -761,10 +763,11 @@ function syncWorld(dt: number) {
       preyPrintAcc = 0;
       preyPrintSide = -preyPrintSide;
       const pzv = app === 'intro' ? introPreyD() : session.preyD;
-      if (!session.hazards.some((h) => h.type === 'gully' && Math.abs(h.d - pzv) < 1.8)) prints.add(session.preyX + preyPrintSide * 0.16, -pzv + 0.3, 1.3);
+      if (!session.hazards.some((h) => h.type === 'gully' && Math.abs(h.d - pzv) < 1.8)) preyPrints.add(session.preyX + preyPrintSide * 0.16, -pzv + 0.3, 1.1);
     }
   }
-  prints.update(dt, SAND_TRACK);
+  prints.update(dt, SAND_TRACK, stage.camera.position.z);
+  preyPrints.update(dt, SAND_TRACK, stage.camera.position.z);
   // Wind: sand streaming off the dune crests ahead, and sheets of it blowing past as the storm builds.
   if (app === 'playing' || app === 'intro') {
     const storm = clamp(session.storm * 0.85 + clamp((r.distance - LEVEL.stormRises) / (LEVEL.length - LEVEL.stormRises), 0, 1) * 0.6, 0, 1);

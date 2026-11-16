@@ -41,6 +41,7 @@ Newest first. Every session updates this before pushing.
   - Raptor: continuous tail vanes with a teal tip band, folded wings with a ragged trailing edge, crest ridge on head and neck, broader skull, fuller thighs, springier run with tail counter-sway and a wing flick
   - Ground: ripple hatching and crust on flat sand (world space, fades by 28 m), palette sand beside the track, footprints behind the raptor and the prey's trail ahead
   - Effects: darker, bigger dust; sand kicked up on lane changes; bigger landings; sand streaming off dune crests; sheets of sand in the storm; a burst of sand on the pin
+  - Blind before/after review (sets unlabeled): after wins on every item but UI (style 5 to 7, readability 6 to 7, raptor 5 to 6, lighting 4 to 7, composition 5 to 6, polish 3 to 5). Its follow-ups done: canyon wall winding, softer smaller prints with a quadruped print for the prey and a fade near the lens, palette sky bands (no grey), cream back streaks and fewer wing shards, eye patch only at the eye, smooth frill edge, pin pose clear of the frill
   - Also: procedural canyon strata walls (scans broke into shards; canyon terrain 160k to 84k triangles), Protoceratops with a solid scalloped frill and tapered bent legs
 - Amber stays score only (owner). After the wrap-up: a new Level 1 with an Oviraptor chasing a runaway egg downhill; this level becomes Level 2 (owner, for Aidan)
 

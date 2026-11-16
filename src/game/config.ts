@@ -20,7 +20,7 @@ export const CONFIG = {
     pounceTime: 0.6, // seconds of the leap
     pounceArc: 0.9, // extra height at the top of the leap (m)
     pinHeight: 0.78, // the raptor's feet on the prey's back (m)
-    pinOffset: -0.05, // where it lands along the prey: 0 = the prey's hips, + = further back (m)
+    pinOffset: 0.12, // where it lands along the prey: 0 = the prey's hips, + = further back (m); back over the hips, clear of the frill
   },
   world: { chunkLength: 40, chunksAhead: 6, chunksBehind: 1, trackHalfWidth: 2.6, trackRow: 1.25 },
   /** A wandering Protoceratops starts across when you're `start` m away and settles in its lane by `end` m. */
