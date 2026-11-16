@@ -18,7 +18,7 @@ const P = { shell: 0x86c9b6, light: 0xbfe8d9, speck: 0x4f8f80, inside: 0xf4efe2,
  * contact shadow and wobble say "egg". Built on first use (after the graphics version is set). */
 let eggMat: THREE.Material | null = null;
 const EGG_MAT = () => (eggMat ??= lookAt(2)
-  ? patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: false, emissive: new THREE.Color(0x061210), side: THREE.DoubleSide }), { rim: 0.22, rimColor: 0xeafff7 })
+  ? patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: false, emissive: new THREE.Color(0x061210), side: THREE.DoubleSide }), { rim: 0.22, rimColor: 0xeafff7, dapple: true })
   : patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color(0x163a34), side: THREE.DoubleSide }), { rim: 0.8, rimColor: 0xeafff7 }));
 
 const NEST_MAT = litMaterial({ rim: 0.15, side: THREE.DoubleSide });

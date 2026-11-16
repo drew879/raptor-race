@@ -10,6 +10,10 @@ export const worldUniforms = {
   /** Lateral bend (track curves): + bends the world to the right with distance. Animated per frame. */
   uBend: { value: 0 },
   uRimColor: { value: new THREE.Color(GOBI.sunGlow) },
+  /** Dappled canopy light (forest, graphics version 3): 0 off, 1 full. */
+  uDapple: { value: 0 },
+  /** Seconds, for slow drifts (the canopy's light pattern sways). */
+  uTime: { value: 0 },
   /** Visual downhill, as a hill profile along the course: flat until `uSlopeFrom` (the crest), then dropping
    * `uSlope` meters per meter until it levels out at `uSlopeTo` (the bottom), with soft bends at both ends. The
    * drop is applied to screen positions relative to the camera, so the trail falls away while trees stay upright.
@@ -47,7 +51,7 @@ export const BEND_KNEE = 90;
 export const rimColors: Record<string, THREE.Color> = {};
 type Patchable = THREE.MeshLambertMaterial | THREE.MeshBasicMaterial | THREE.PointsMaterial;
 
-export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; bend?: boolean; rimColor?: number; sand?: boolean } = {}): T {
+export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; bend?: boolean; rimColor?: number; sand?: boolean; dapple?: boolean } = {}): T {
   const rim = opts.rim ?? 0;
   const rimCol = opts.rimColor !== undefined ? new THREE.Color(opts.rimColor) : null;
   const bend = opts.bend ?? true;
@@ -70,6 +74,31 @@ export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; be
             bentPos.xyz += rrHillWarp(mvPosition.xyz) - mvPosition.xyz; // the hill, measured where the vertex really is
             bentPos.x += uBend * zz / (1.0 + abs(bentPos.z) / ${BEND_KNEE.toFixed(1)}); gl_Position = projectionMatrix * bentPos; }`,
         );
+    }
+    if (opts.dapple) {
+      // Dappled canopy light: soft pools of warm sun and cool shade, fixed in the world (with a slow sway), so
+      // you run through them. Painted onto the surface color (the illustrated look), on ground, obstacles and
+      // characters alike.
+      shader.uniforms.uDapple = worldUniforms.uDapple;
+      shader.uniforms.uTime = worldUniforms.uTime;
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vDapPos;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\nvDapPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', `#include <common>
+          varying vec3 vDapPos;
+          uniform float uDapple, uTime;
+          float dapHash(vec2 p) { return fract(sin(dot(p, vec2(41.3, 289.1))) * 23758.5453); }
+          float dapNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+            return mix(mix(dapHash(i), dapHash(i + vec2(1, 0)), f.x), mix(dapHash(i + vec2(0, 1)), dapHash(i + vec2(1, 1)), f.x), f.y); }`)
+        .replace('#include <color_fragment>', `#include <color_fragment>
+          if (uDapple > 0.0) {
+            // Sun spots ~1.5-3 m across over cool canopy shade, about a third of the ground lit.
+            vec2 w = vDapPos.xz * 0.42 + vec2(vDapPos.y * 0.12, vDapPos.y * 0.25) + vec2(sin(uTime * 0.21), cos(uTime * 0.17)) * 0.18;
+            float n = dapNoise(w) * 0.6 + dapNoise(w * 2.3 + 13.1) * 0.4;
+            float lit = smoothstep(0.47, 0.57, n);
+            diffuseColor.rgb *= mix(vec3(1.0), mix(vec3(0.72, 0.77, 0.86), vec3(1.3, 1.19, 1.0), lit), uDapple);
+          }`);
     }
     if (opts.sand) {
       // Sand surface detail on flat ground: thin wind-ripple troughs and crusty patches, in world space, fading out
@@ -109,14 +138,14 @@ export function patchWorld<T extends Patchable>(mat: T, opts: { rim?: number; be
         );
     }
   };
-  mat.customProgramCacheKey = () => `rr-world-${rim.toFixed(3)}-${bend ? 1 : 0}-${rimCol ? rimCol.getHexString() : 'w'}-${opts.sand ? 's' : ''}`;
+  mat.customProgramCacheKey = () => `rr-world-${rim.toFixed(3)}-${bend ? 1 : 0}-${rimCol ? rimCol.getHexString() : 'w'}-${opts.sand ? 's' : ''}-${opts.dapple ? 'd' : ''}`;
   return mat;
 }
 
 /** Flat-shaded, vertex-colored lit material used by almost everything in the world. */
-export function litMaterial(opts: { rim?: number; side?: THREE.Side; bend?: boolean; sand?: boolean } = {}) {
-  const m = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: opts.side ?? THREE.FrontSide });
-  return patchWorld(m, { rim: opts.rim ?? 0.0, bend: opts.bend, sand: opts.sand });
+export function litMaterial(opts: { rim?: number; side?: THREE.Side; bend?: boolean; sand?: boolean; dapple?: boolean; smooth?: boolean } = {}) {
+  const m = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: !opts.smooth, side: opts.side ?? THREE.FrontSide });
+  return patchWorld(m, { rim: opts.rim ?? 0.0, bend: opts.bend, sand: opts.sand, dapple: opts.dapple });
 }
 
 /** Unlit vertex-colored material (emissive look for amber, sky props). */
@@ -136,12 +165,14 @@ export function applyLookMaterials(smooth: boolean) {
 /** Shared material instances (one program each). */
 export const MATS = {
   world: litMaterial({ rim: 0.12, sand: true }),
-  hazard: litMaterial({ rim: 0.4 }),
-  character: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide }), { rim: 0.95, rimColor: 0xffd29a }), // warm sun-edge rim
+  hazard: litMaterial({ rim: 0.4, dapple: true }),
+  /** Organic forest obstacles in graphics version 3: smooth-shaded bark (their geometry carries crease normals). */
+  hazardSmooth: litMaterial({ rim: 0.35, dapple: true, smooth: true }),
+  character: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide }), { rim: 0.95, rimColor: 0xffd29a, dapple: true }), // warm sun-edge rim
   glow: unlitMaterial({ toneMapped: false }),
   backdrop: unlitMaterial({ fog: false, bend: false }),
   /** The forest's terrain (no sand detail). */
-  forest: litMaterial({ rim: 0.1 }),
+  forest: litMaterial({ rim: 0.1, dapple: true }),
   egg: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color(0x8a6a34) }), { rim: 0.5 }),
   outline: patchWorld(new THREE.MeshBasicMaterial({ color: new THREE.Color(0x5a2c0c), side: THREE.BackSide, fog: true }), {}),
 };

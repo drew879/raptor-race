@@ -94,6 +94,9 @@ Palette (`FOREST` in `palette.ts`): misty blue-green air (horizon #DBE3C9, fog #
 - **The egg:** long and narrow, blue-green (#86C9B6) with dark speckles and a cool pale rim, drawn 1.4x while it rolls so it reads 10-20 m ahead; it eases back to life size when caught. The chick: pale down, big dark eyes, a little orange beak, wearing the shell's cap.
 - **Obstacle readability:** the propped trunk's underside is ~1 m up and its top well above any jump (never looks hoppable); the hollow trunk's opening has a pale wood rim and a dark inside; streams brim so the water isn't hidden behind the near bank.
 
+## 6d. Graphics test (three versions, owner-approved plan)
+A pause-menu switch picks the graphics version (`src/render/look.ts`): 1 is the look above; 2 softens the post pass (blended value bands pulled 45% instead of hard bands at 80%, a little wobble, light interior ink, ink fading 30-100 m), smooth-shades the heroes and egg (crease-angle normals: rounded bodies, crisp beaks, claws and feather tips), broadens feathers, rides Caudipteryx's fan at ~45 degrees while running, and mattes the egg (contact shadow, no glow); 3 adds the forest's composition and light (hillside trail, planted clusters with shade beneath and gaps between, dappled sun spots, worn lane strips, richer bark, moss and roots). The owner chooses after playing each.
+
 ## 7. Lighting
 - Key: warm directional `#FFD9A8`, intensity 2.9, ~31 degrees elevation, **behind and to the right of the chase camera** (~120 degrees from the run direction) so camera-facing surfaces are lit and shadows rake forward-left across the lanes. Hero and menu cameras may use a front-right sun.
 - Fill: hemisphere sky `#D6CCE0` (warm lavender keeps shadows warm, never olive) / ground bounce `#C58A55`, intensity 2.6.

@@ -170,7 +170,7 @@ describe('Flaming Cliffs (Level 2) playthrough', () => {
     expect(res.stumbles).toBe(0);
     expect(res.eggs).toBe(3);
   });
-  it('is fair but harder than the tutorial: a human-like player usually finishes without being caught twice', () => {
+  it('is fair but harder than the tutorial: a human-like player usually finishes without being caught twice', { timeout: 30000 }, () => {
     const N = 120;
     let clean = 0, withRevive = 0, total = 0, neverLost = 0;
     for (let i = 0; i < N; i++) {

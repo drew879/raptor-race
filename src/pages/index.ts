@@ -205,6 +205,7 @@ if (LEVEL.slope) {
   worldUniforms.uSlopeTo.value = LEVEL.slope.to;
 }
 worldUniforms.uRimColor.value.set(FORESTED ? FOREST.sunGlow : GOBI.sunGlow);
+worldUniforms.uDapple.value = FORESTED && lookAt(3) ? 1 : 0; // dappled canopy light: the forest, version 3
 const items = new CollectibleField(400, FOG);
 const powerups = new PowerupView();
 const dust = new Particles(440, THREE.NormalBlending, FOG, FORESTED ? DIRT : SAND); // footfalls, lane kicks, landings, dune streamers and storm sand
@@ -1021,6 +1022,7 @@ function hud() {
 const STEP = 1 / 60;
 function step(dt: number) {
   clock += dt;
+  worldUniforms.uTime.value = clock;
   if (app === 'intro') {
     introT += dt;
     if (introT >= introEnd) beginChase();
@@ -1189,6 +1191,8 @@ window.__rr = {
   firstOf: (type: string) => (LEVEL.hazards.find((h) => h.type === type)?.d ?? 0) / (LEVEL.length / 1100),
   /** Design-meter distance where the n-th fork's fin starts. */
   forkNose: (n: number) => (LEVEL.hazards.filter((h) => h.type === 'spine')[n]?.d ?? 0) / (LEVEL.length / 1100),
+  /** Test hook: set a shared world uniform (e.g. uDapple) on this page's own materials. */
+  uniform: (name: keyof typeof worldUniforms, v: number) => { (worldUniforms[name] as { value: number }).value = v; },
   stats: () => { const c = streamer.stats(); return { chunks: c.chunks, cached: c.cached, chunkTris: c.tris, calls: stage.renderer.info.render.calls, tris: stage.renderer.info.render.triangles }; },
 };
 if (!SHOT) requestAnimationFrame(frame);

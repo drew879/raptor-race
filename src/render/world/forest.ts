@@ -6,7 +6,8 @@ import { Noise2D } from '../../core/noise';
 import { Rng, hash2 } from '../../core/rng';
 import { smoothstep } from '../../core/math';
 import { CONFIG } from '../../game/config';
-import { addRock } from './props';
+import { addRock, addTube } from './props';
+import { lookAt } from '../look';
 import { sectionAt, type Chunk, type TerrainLayout } from './terrain';
 
 /**
@@ -23,18 +24,40 @@ const STREAM_HALF = 1.25; // a stream is two track rows wide
 const WATER_Y = -0.12; // brimming: lower water hides behind the near bank from the chase camera
 const BED_Y = -0.7;
 
-/** Ground height beside the trail: a low mossy berm, a gentle rise, then the valley walls; streams cut across. */
-export function forestHeight(x: number, z: number, streams: number[] = []): number {
+/** Graphics version 3: the trail runs across a hillside. +1: the hill rises on the right (+x); -1: on the left.
+ * It swaps sides every few hundred meters with a soft turn. */
+export const uphillSide = (d: number) => Math.tanh(Math.sin(d / 110 + 0.9) * 3);
+/** Version 3: how much of the hillside there is at course distance d (none at the crest or in the clearing). */
+const hillsideAmount = (d: number) => smoothstep(18, 60, d) * (1 - smoothstep(985, 1030, d));
+/** Version 3: stretches where the drop side opens onto the valley (few trees there). */
+const openingAt = (d: number) => smoothstep(0.3, 0.75, Math.sin(d / 47 + 2.0));
+
+/** Ground height beside the trail before streams cut it. Versions 1-2: a low berm, a gentle rise, then valley
+ * walls on both sides. Version 3: a hillside: a bank on the uphill side, a long drop on the other. */
+function forestBase(x: number, z: number): number {
   const ax = Math.abs(x);
   if (ax <= TRACK) return 0;
   const berm = smoothstep(TRACK, TRACK + 0.9, ax) * 0.16;
+  const mounds = noise.fbm(x * 0.09, z * 0.09, 2) * 0.32 * smoothstep(TRACK, TRACK + 3, ax);
   const rise = smoothstep(TRACK + 0.8, 16, ax) * (1.1 + 0.6 * noise.get(x * 0.03, z * 0.02));
   const walls = smoothstep(16, 80, ax) * (9 + 9 * (noise.fbm(x * 0.012, z * 0.01, 3) * 0.5 + 0.5));
-  const mounds = noise.fbm(x * 0.09, z * 0.09, 2) * 0.32 * smoothstep(TRACK, TRACK + 3, ax);
-  let h = berm + rise + walls + mounds;
+  const valley = rise + walls;
+  if (!lookAt(3)) return berm + valley + mounds;
+  const d = -z;
+  const k = 0.5 + 0.5 * uphillSide(d) * Math.sign(x); // 1 on the uphill side, 0 on the drop side
+  const up = smoothstep(TRACK + 0.5, TRACK + 3.2, ax) * (1.6 + 0.5 * noise.get(x * 0.2, z * 0.15)) + smoothstep(TRACK + 3, 28, ax) * 10 + smoothstep(28, 90, ax) * 14;
+  const down = -(smoothstep(TRACK + 1.6, 13, ax) * 4.5 + smoothstep(13, 60, ax) * 26);
+  const hill = up * k + down * (1 - k);
+  return berm + mounds + valley + (hill - valley) * hillsideAmount(d);
+}
+
+/** Ground height beside the trail, with the streams cut across it (a stream only ever lowers the ground). */
+export function forestHeight(x: number, z: number, streams: number[] = []): number {
+  let h = forestBase(x, z);
+  if (Math.abs(x) <= TRACK) return h;
   for (const d of streams) {
     const dz = Math.abs(-z - d);
-    if (dz < 3.2) h += (BED_Y - h) * (1 - smoothstep(STREAM_HALF * 0.9, 3.0, dz)) * (1 - smoothstep(30, 60, ax));
+    if (dz < 3.2 && h > BED_Y) h += (BED_Y - h) * (1 - smoothstep(STREAM_HALF * 0.9, 3.0, dz)) * (1 - smoothstep(30, 60, Math.abs(x)));
   }
   return h;
 }
@@ -234,7 +257,12 @@ export function buildForestChunk(index: number, layout?: TerrainLayout): Chunk {
       const patch = noise.get(xm * 0.7, zm * 0.12);
       // Dirt, darker in the worn lane centers, with drifts of leaf litter; moss and litter at the verge.
       let base = mix(F.track, F.trackDark, Math.max(0, patch) * 0.45);
-      if (Math.abs(Math.abs(xm) - 1.5) < 0.25 || Math.abs(xm) < 0.2) base = base.lerp(col(F.trackSeam), 0.25);
+      if (lookAt(3)) {
+        // Three worn running strips (darker, packed) between lighter seams: the lanes read without walls.
+        const lane = Math.min(Math.abs(xm + 1.5), Math.abs(xm), Math.abs(xm - 1.5));
+        const worn = 1 - smoothstep(0.3, 0.5, lane);
+        base = mix(F.track, F.trackDark, 0.08 + 0.34 * worn + Math.max(0, patch) * 0.12).lerp(col(0xc49a6e), 0.3 * (1 - worn));
+      } else if (Math.abs(Math.abs(xm) - 1.5) < 0.25 || Math.abs(xm) < 0.2) base = base.lerp(col(F.trackSeam), 0.25);
       const drift = noise.get(xm * 1.3 + 9, zm * 0.33);
       if (drift > 0.42) base = base.lerp(col(F.litter), 0.55);
       else if (drift < -0.5) base = base.lerp(col(F.trackDark), 0.4);
@@ -242,6 +270,19 @@ export function buildForestChunk(index: number, layout?: TerrainLayout): Chunk {
       const v1 = 0.95 + hash2(c, gr, 11) * 0.1, v2 = 0.95 + hash2(c, gr, 13) * 0.1;
       if ((c + r) % 2 === 0) g.quad(a, b, cc, d, shade(base, v1), shade(base, v2));
       else { g.tri(a, b, d, shade(base, v1)); g.tri(b, cc, d, shade(base, v2)); }
+    }
+  }
+
+  // Version 3: low flat stones here and there along the seams between the lanes (flush with the dirt).
+  if (lookAt(3)) for (const sx of [-0.75, 0.75]) {
+    for (let dd = rng.range(1, 6); dd < L; dd += rng.range(4, 9)) {
+      const z = z0 - dd;
+      if (nearStream(z) < 2) continue;
+      const c = new THREE.Vector3(sx + rng.range(-0.08, 0.08), 0.012, z), r = rng.range(0.1, 0.2);
+      const n = 6, rot = rng.range(0, 6.28);
+      const ring = Array.from({ length: n }, (_, k) => c.clone().add(new THREE.Vector3(Math.cos(rot + (k / n) * 6.283) * r * rng.range(0.8, 1.2), 0, Math.sin(rot + (k / n) * 6.283) * r * 0.75)));
+      const tone = shade(mix(F.rock, 0xb8b4a2, 0.4), rng.range(0.9, 1.08));
+      for (let k = 0; k < n; k++) otri(g, c.clone().setY(0.03), ring[k], ring[(k + 1) % n], UP, tone);
     }
   }
 
@@ -285,11 +326,14 @@ export function buildForestChunk(index: number, layout?: TerrainLayout): Chunk {
       for (let k = 0; k < xs.length - 1; k++) {
         const x0 = sgn * xs[k], x1 = sgn * xs[k + 1];
         const wob = (x: number) => Math.sin(x * 0.35 + d) * 0.6;
-        const p = (x: number, dz: number) => new THREE.Vector3(x, WATER_Y, -d + dz + wob(x));
+        // Version 3: on the drop side the stream runs down the hillside (the water follows the ground down).
+        const wy = (x: number) => (lookAt(3) ? Math.min(WATER_Y, forestBase(x, -d) - 0.12) : WATER_Y);
+        const p = (x: number, dz: number) => new THREE.Vector3(x, wy(x), -d + dz + wob(x));
         oquad(g, p(x0, -STREAM_HALF * 0.8), p(x1, -STREAM_HALF * 0.8), p(x1, STREAM_HALF * 0.8), p(x0, STREAM_HALF * 0.8), UP, mix(F.water, F.waterDeep, 0.25 + 0.2 * hash2(k, sgn, 31)), col(F.water));
         if (k % 2 === 0) {
           const fz = rng.range(-0.6, 0.6);
-          oquad(g, p(x0, fz - 0.05).setY(WATER_Y + 0.01), p(x1, fz - 0.05).setY(WATER_Y + 0.01), p(x1, fz + 0.05).setY(WATER_Y + 0.01), p(x0, fz + 0.05).setY(WATER_Y + 0.01), UP, col(F.foam));
+          const lift = (q: THREE.Vector3) => q.setY(q.y + 0.01);
+          oquad(g, lift(p(x0, fz - 0.05)), lift(p(x1, fz - 0.05)), lift(p(x1, fz + 0.05)), lift(p(x0, fz + 0.05)), UP, col(F.foam));
         }
       }
       for (let k = 0; k < 5; k++) {
@@ -316,7 +360,8 @@ export function buildForestChunk(index: number, layout?: TerrainLayout): Chunk {
   }[kind as 'hilltop'] ?? { conifer: 6, ginkgo: 2, treefern: 2, near: 1 };
   const ok = (x: number, z: number, clear = 2.6) => nearStream(z) > clear && Math.abs(x) > TRACK + 0.9;
   const at = (x: number, z: number) => new THREE.Vector3(x, forestHeight(x, z, streams), z);
-  for (const sgn of [-1, 1]) {
+  if (lookAt(3)) plantClusters(g, rng, kind, z0, L, ok, at);
+  else for (const sgn of [-1, 1]) {
     // Near-field ferns and mossy rocks at the trail edge: they whip past and sell the speed.
     for (let dd = rng.range(0, 2); dd < L; dd += rng.range(1.6, 3.4) / D.near) {
       const x = sgn * rng.range(2.9, 4.4), z = z0 - dd;
@@ -351,6 +396,90 @@ export function buildForestChunk(index: number, layout?: TerrainLayout): Chunk {
   mesh.frustumCulled = false;
   mesh.name = `forest-chunk-${index}`;
   return { index, mesh };
+}
+
+/**
+ * Graphics version 3: vegetation in composed clusters with gaps between them. Each cluster is a big tree with roots
+ * running into the ground, ferns and a rock or two around its foot, and a patch of shade under it; near the trail
+ * the clusters frame it, further out a second row, then scattered trees into the distance. On the hillside's drop
+ * side, some stretches open onto the valley (few trees there).
+ */
+function plantClusters(g: GeomBuilder, rng: Rng, kind: string, z0: number, L: number, ok: (x: number, z: number, clear?: number) => boolean, at: (x: number, z: number) => THREE.Vector3) {
+  const W: Record<string, [number, number, number]> = { // conifer, ginkgo, tree fern weights
+    hilltop: [1, 1, 0], conifers: [8, 1, 1], ginkgo: [3, 6, 1], ferns: [4, 1, 5], streamside: [6, 2, 2], clearing: [2, 2, 1],
+  };
+  const [wc, wg, wf] = W[kind] ?? [6, 2, 2];
+  const pick = () => { const r = rng.range(0, wc + wg + wf); return r < wc ? 'conifer' : r < wc + wg ? 'ginkgo' : 'treefern'; };
+  const sparse = kind === 'hilltop' || kind === 'clearing' ? 0.55 : 1;
+  for (const sgn of [-1, 1]) {
+    const dropSide = (z: number) => uphillSide(-z) * sgn < 0 && hillsideAmount(-z) > 0.5;
+    const rows: [number, number, number, number][] = [[3.9, 6.2, 7, 15], [8, 13, 9, 17]]; // x from, x to, spacing from, to
+    for (const [xa, xb, sa, sb] of rows) {
+      for (let dd = rng.range(0, sa); dd < L; dd += rng.range(sa, sb) / sparse) {
+        const z = z0 - dd, x = sgn * rng.range(xa, xb);
+        if (!ok(x, z, 3)) continue;
+        if (dropSide(z) && openingAt(-z) > 0.5 && rng.chance(0.8)) continue; // a view onto the valley
+        cluster(g, rng, at, pick(), x, z, sgn);
+      }
+    }
+    // Scattered trees further out, into the distance.
+    const far = Math.round((kind === 'conifers' ? 6 : 4) * sparse);
+    for (let i = 0; i < far; i++) {
+      const x = sgn * rng.range(14, 26), z = z0 - rng.range(0, L);
+      if (!ok(x, z) || (dropSide(z) && openingAt(-z) > 0.4)) continue;
+      const t = pick();
+      if (t === 'ginkgo') addGinkgo(g, at(x, z), rng.range(7, 12), rng);
+      else addConifer(g, at(x, z), rng.range(12, 22), rng);
+    }
+    // A few small ferns at the trail edge between clusters, so the verge isn't bare.
+    for (let dd = rng.range(0, 4); dd < L; dd += rng.range(3.5, 7)) {
+      const x = sgn * rng.range(2.9, 3.6), z = z0 - dd;
+      if (ok(x, z, 1.8)) addFern(g, at(x, z), rng.range(0.45, 0.8), rng);
+    }
+  }
+}
+
+/** One planted group: a tree rooted into the ground, ferns and rocks around its foot, shade under it. */
+function cluster(g: GeomBuilder, rng: Rng, at: (x: number, z: number) => THREE.Vector3, type: string, x: number, z: number, sgn: number) {
+  const base = at(x, z);
+  // Shade under the group: a soft irregular patch of dark litter and moss on the ground.
+  const R = type === 'treefern' ? 1.4 : rng.range(1.8, 2.6);
+  const n = 9;
+  const ring = Array.from({ length: n }, (_, k) => {
+    const a = (k / n) * Math.PI * 2, rr = R * rng.range(0.75, 1.15);
+    const px = x + Math.cos(a) * rr, pz = z + Math.sin(a) * rr;
+    return at(px, pz).add(new THREE.Vector3(0, 0.035, 0));
+  });
+  const ctr = base.clone().add(new THREE.Vector3(0, 0.04, 0));
+  const shadeCol = mix(F.litterDark, F.mossDark, 0.45).multiplyScalar(0.82);
+  for (let k = 0; k < n; k++) otri(g, ctr, ring[k], ring[(k + 1) % n], UP, shadeCol);
+  // The tree, with roots running out into the ground.
+  if (type === 'treefern') addTreeFern(g, base, rng.range(2.4, 3.8), rng);
+  else {
+    const h = type === 'ginkgo' ? rng.range(8, 13) : rng.range(13, 24);
+    if (type === 'ginkgo') addGinkgo(g, base, h, rng); else addConifer(g, base, h, rng);
+    const r0 = type === 'ginkgo' ? h * 0.04 : h * 0.026;
+    for (let k = 0; k < 4; k++) {
+      const a = rng.range(0, 6.28) + k * 1.57;
+      const dir = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+      const p0 = base.clone().add(dir.clone().multiplyScalar(r0 * 0.6)).add(new THREE.Vector3(0, 0.35, 0));
+      const tipXZ = base.clone().add(dir.clone().multiplyScalar(r0 + rng.range(0.7, 1.2)));
+      const p2 = at(tipXZ.x, tipXZ.z).add(new THREE.Vector3(0, -0.04, 0));
+      const p1 = p0.clone().lerp(p2, 0.5).add(new THREE.Vector3(0, 0.06, 0));
+      addTube(g, [p0, p1, p2], [r0 * 0.35, r0 * 0.2, 0.02], 5, () => col(F.bark));
+    }
+  }
+  // Ferns around its foot (more on the trail side), and a mossy rock or two.
+  for (let k = 0; k < rng.int(2, 4); k++) {
+    const a = rng.range(0, 6.28), rr = rng.range(0.9, 1.7);
+    const fx = x + Math.cos(a) * rr - sgn * rng.range(0, 0.6), fz = z + Math.sin(a) * rr;
+    if (Math.abs(fx) > TRACK + 0.3) addFern(g, at(fx, fz), rng.range(0.6, 1.15), rng);
+  }
+  for (let k = 0; k < rng.int(0, 2); k++) {
+    const a = rng.range(0, 6.28), rr = rng.range(0.8, 1.6);
+    const rx = x + Math.cos(a) * rr, rz = z + Math.sin(a) * rr;
+    if (Math.abs(rx) > TRACK + 0.4) addRock(g, at(rx, rz).add(new THREE.Vector3(0, -0.05, 0)), rng.range(0.18, 0.4), rng, mix(F.rock, F.rockMoss, 0.65));
+  }
 }
 
 /** A track row turned into a stream: soil and rock walls, a pebbly bed, and the water surface. */

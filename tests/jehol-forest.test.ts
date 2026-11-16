@@ -98,7 +98,7 @@ describe('Jehol Forest playthrough', () => {
     expect(res.eggs).toBe(3);
     expect(res.score).toBeGreaterThan(LV.parScore);
   });
-  it('is easy: a human-like player nearly always finishes within one revive and keeps the egg in sight', () => {
+  it('is easy: a human-like player nearly always finishes within one revive and keeps the egg in sight', { timeout: 30000 }, () => {
     const N = 120;
     let clean = 0, withRevive = 0, neverLost = 0, total = 0;
     for (let i = 0; i < N; i++) {

@@ -1,17 +1,18 @@
 // Warps the real game page through each landmark stretch and captures the chase view without HUD banners.
-// Usage: node scripts/scenery-tour.mjs <outDir> [design-meter marks like 320:canyon,455:hoodoos] [--dpr=2] [--level=jehol-forest]
+// Usage: node scripts/scenery-tour.mjs <outDir> [design-meter marks like 320:canyon,455:hoodoos] [--dpr=2] [--level=jehol-forest] [--look=1|2|3]
 import { chromium } from './lib/pw.mjs';
 import { mkdirSync } from 'node:fs';
 const pos = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const dpr = Number((process.argv.find((a) => a.startsWith('--dpr=')) ?? '--dpr=1').slice(6));
 const level = (process.argv.find((a) => a.startsWith('--level=')) ?? '--level=').slice(8);
+const look = (process.argv.find((a) => a.startsWith('--look=')) ?? '--look=').slice(7);
 const [outDir = 'artifacts/tour', marksArg = '20:dunes,330:canyon,470:hoodoos,650:basin,735:bones,840:herd,1040:flats'] = pos;
 mkdirSync(outDir, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: dpr, isMobile: true, hasTouch: true });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
-await page.goto(`http://localhost:5173/index.html?shot=1&nointro=1${level ? `&level=${level}` : ''}`);
+await page.goto(`http://localhost:5173/index.html?shot=1&nointro=1${level ? `&level=${level}` : ''}${look ? `&look=${look}` : ''}`);
 await page.waitForFunction(() => window.__rr?.ready === true, null, { timeout: 60000 });
 await page.addStyleTag({ content: '.floats, .hint, #hint { display: none !important; }' });
 await page.evaluate(() => { window.__rr.autoplay(); window.__rr.start(); window.__rr.advance(0.5); });

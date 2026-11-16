@@ -10,7 +10,11 @@ Newest first. Every session updates this before pushing.
 - [x] Jehol Forest: dirt trail with ragged mossy verges, conifers, ginkgos, tree ferns, ferns, horsetails, brimming streams, a misty valley backdrop with a volcano; forest dress for every obstacle (trees, logs, hollow trunks, propped trunks, a fallen giant); a hill profile (crest at the nest, level at the bottom)
 - [x] Opening: it walks up to the nest, the egg twitches, rocks and rolls off downhill; ending: the scoop, the hatch, "Hatching Day" plate
 - [x] The tutorial course, three new inclusion pages, tests (spacing, beat grid, bots: within one revive 95%); Level 2 a little harder (16-22.5 m/s, within one revive 83%)
-- [ ] Owner playtest of the new Level 1
+- [x] Owner playtest of the new Level 1: opening length right, egg easy to follow, slides and jumps read, difficulty right for Aidan, ending lands, Level 2 the right amount harder; downhill only "a little"; obstacles and heroes look basic
+- [x] Graphics test (owner approved the three-version plan after an outside review): a pause-menu switch, Graphics 1/2/3 (saved; `?look=`), default 1
+  - Version 2: gentler post pass (soft blended value bands, less wobble, light interior ink, ink fading 30-100 m), crease-angle smooth shading on both heroes and the egg, broad rounded feathers, Caudipteryx's fan on its own pivot (~45 degrees running, opening on jumps, turns, the brood), a dark nape from behind, a matte egg with a contact shadow, the camera a little closer
+  - Version 3: version 2 plus a hillside trail (bank on one side, a drop on the other, swapping sides; openings onto the valley; streams cascade down the drop), planted clusters (a tree with roots, ferns, rocks and shade under it, with gaps), dappled canopy light (sun spots on the ground, obstacles and characters), worn running strips for the lanes with flat seam stones, richer obstacles (bark ridges, moss, roots, splintered ends); same triangle budget as version 1
+- [ ] Owner picks a version (and checks the frame rate of each on the phone)
 
 ## Previous milestone: rework after owner playtest (fun 1-2/5, graphics 1-2/5)
 - [x] Speed: Level 1 runs 15-21 m/s (was 10-14), course scaled 1.5x so every reaction window keeps its duration; snappier lane change (0.14 s); lower, closer camera with speed FOV kick; edge streaks; near-track scenery
