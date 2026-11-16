@@ -188,7 +188,9 @@ const HYBRID_FAST = /* glsl */ `
   #include <packing>
   uniform sampler2D tDiffuse, tDepth, tNoise;
   uniform vec2 res;
-  uniform float cNear, cFar, dpr;
+  uniform float cNear, cFar, dpr, uStorm;
+  uniform mat4 uInvProj;
+  uniform mat3 uCamRot;
   varying vec2 vUv;
   float viewZ(vec2 uv) { return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, cNear, cFar); }
   float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
@@ -223,29 +225,41 @@ const HYBRID_FAST = /* glsl */ `
     float zH = -perspectiveDepthToViewZ(d0, cNear, cFar);
     float haze = smoothstep(35.0, 230.0, zH);
     col = mix(col, skyLow * (0.97 + 0.04 * grain), (1.0 - sky) * (floor(haze * 4.0 + 0.5) / 4.0 * 0.35 + haze * 0.2));
-    // Sky: wash bands keyed to the rendered sky's own gradient, so they follow the horizon when the camera banks.
-    float sl = smoothstep(0.62, 0.8, dot(c, vec3(-0.6, 0.25, 1.1)) + 0.25);
-    float sb = floor(sl * 3.0 + 0.5) / 3.0;
-    vec3 skyc = mix(skyLow, skyTop, mix(sl, sb, 0.85));
+    // Sky: golden-hour wash bands by how high each pixel looks (so they follow the horizon when the camera
+    // banks): cream haze, a rose-apricot band, then dusty blue overhead. The storm turns it ochre.
+    vec4 vp = uInvProj * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
+    float el = normalize(uCamRot * normalize(vp.xyz / vp.w)).y + (nz.g - 0.5) * 0.012;
+    vec3 sHaze = mix(paper, vec3(0.97, 0.86, 0.7), 0.7), sRose = mix(paper, vec3(0.94, 0.66, 0.56), 0.62);
+    vec3 sLav = mix(paper, vec3(0.7, 0.72, 0.82), 0.6), sBlue = mix(paper, vec3(0.43, 0.61, 0.77), 0.78);
+    vec3 skyc = mix(sHaze, sRose, smoothstep(0.035, 0.05, el));
+    skyc = mix(skyc, sLav, smoothstep(0.1, 0.115, el));
+    skyc = mix(skyc, sBlue, smoothstep(0.2, 0.22, el));
+    skyc = mix(skyc, mix(paper, vec3(0.78, 0.6, 0.38), 0.7) * (1.0 - 0.15 * smoothstep(0.0, 0.3, el)), uStorm * 0.8);
     col = mix(col, skyc * (0.95 + 0.07 * grain), sky);
     // Ink: Laplacian depth breaks (contours) plus light interior lines from value breaks.
     vec2 o = 1.2 * dpr / res;
     float z = -perspectiveDepthToViewZ(d0, cNear, cFar);
     float lx = abs(viewZ(uv + vec2(o.x, 0.0)) + viewZ(uv - vec2(o.x, 0.0)) - 2.0 * z);
     float ly = abs(viewZ(uv + vec2(0.0, o.y)) + viewZ(uv - vec2(0.0, o.y)) - 2.0 * z);
-    float e = smoothstep(0.02, 0.04, max(lx, ly) / max(z, 0.5)) * (1.0 - smoothstep(60.0, 160.0, z) * 0.6);
+    // The same test at twice the distance: real contours pass both; one-pixel slivers (speckle) only pass one.
+    float lx2 = abs(viewZ(uv + vec2(2.0 * o.x, 0.0)) + viewZ(uv - vec2(2.0 * o.x, 0.0)) - 2.0 * z);
+    float ly2 = abs(viewZ(uv + vec2(0.0, 2.0 * o.y)) + viewZ(uv - vec2(0.0, 2.0 * o.y)) - 2.0 * z);
+    float inkFade = 1.0 - smoothstep(45.0, 150.0, z); // far landmarks stay soft washes instead of pale scribbles
+    float e = min(smoothstep(0.02, 0.04, max(lx, ly) / max(z, 0.5)), smoothstep(0.03, 0.06, max(lx2, ly2) / max(z, 0.5))) * inkFade;
     float gx = luma(texture2D(tDiffuse, uv + vec2(o.x, 0.0)).rgb) - luma(texture2D(tDiffuse, uv - vec2(o.x, 0.0)).rgb);
     float gy = luma(texture2D(tDiffuse, uv + vec2(0.0, o.y)).rgb) - luma(texture2D(tDiffuse, uv - vec2(0.0, o.y)).rgb);
-    float inner = smoothstep(0.14, 0.26, length(vec2(gx, gy))) * (1.0 - sky);
+    float inner = smoothstep(0.14, 0.26, length(vec2(gx, gy))) * (1.0 - sky) * inkFade;
     float broken = smoothstep(0.3, 0.6, texture2D(tNoise, px / 40.0).a + 0.3);
     col = mix(col, vec3(0.19, 0.13, 0.1), clamp(e * 0.95 + inner * 0.35 * broken, 0.0, 1.0));
     gl_FragColor = vec4(col, 1.0);
   }`;
 
 export class LookPipeline {
+  /** 0..1: how much the sandstorm tints the sky (game look). */
+  storm = 0;
   readonly composer: EffectComposer;
   private pass: ShaderPass | null = null;
-  constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, readonly look: LookName) {
+  constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, private camera: THREE.PerspectiveCamera, readonly look: LookName) {
     const size = renderer.getDrawingBufferSize(new THREE.Vector2());
     const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
     rt.depthTexture = new THREE.DepthTexture(size.x, size.y);
@@ -259,6 +273,7 @@ export class LookPipeline {
         tDiffuse: { value: null }, tDepth: { value: rt.depthTexture }, res: { value: new THREE.Vector2(size.x, size.y) },
         cNear: { value: camera.near }, cFar: { value: camera.far }, time: { value: 0 }, dpr: { value: renderer.getPixelRatio() },
         tNoise: { value: look === 'game' ? bakeNoiseTexture() : null },
+        uInvProj: { value: new THREE.Matrix4() }, uCamRot: { value: new THREE.Matrix3() }, uStorm: { value: 0 },
       };
       this.pass = new ShaderPass(new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: frag }));
       this.composer.addPass(this.pass);
@@ -276,7 +291,14 @@ export class LookPipeline {
   render() {
     // The scene renders into the composer's current read buffer (a clone of our target), so bind
     // that buffer's depth each frame.
-    if (this.pass) this.pass.uniforms.tDepth.value = this.composer.readBuffer.depthTexture;
+    if (this.pass) {
+      const u = this.pass.uniforms;
+      u.tDepth.value = this.composer.readBuffer.depthTexture;
+      this.camera.updateMatrixWorld();
+      u.uInvProj.value.copy(this.camera.projectionMatrixInverse);
+      u.uCamRot.value.setFromMatrix4(this.camera.matrixWorld);
+      u.uStorm.value = this.storm;
+    }
     this.composer.render();
   }
 }

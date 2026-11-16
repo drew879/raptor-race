@@ -287,3 +287,51 @@ export function addNest(g: GeomBuilder, pos: THREE.Vector3, size: number, rng: R
     g.appendGeometry(ICO1, new THREE.Matrix4().compose(p, q, new THREE.Vector3(size * 0.09, size * 0.16, size * 0.09)), (_i, _c, nn) => shade(egg, 0.82 + Math.max(0, nn.y) * 0.22));
   }
 }
+
+/**
+ * A Flaming Cliffs canyon wall along one side of the trail, from distance zNear to zFar (world z, negative ahead):
+ * stacked sandstone strata stepping back in terraces, with vertical erosion grooves and a talus apron. Shapes
+ * come from world position (not the chunk's random stream), so walls in neighboring chunks meet seamlessly.
+ * `heightAt(z)` scales the wall (0 = flat, 1 = full), for easing in and out of the canyon.
+ */
+export function addCanyonWall(g: GeomBuilder, sgn: 1 | -1, zNear: number, zFar: number, heightAt: (z: number) => number) {
+  const strata = [mix(GOBI.cliffRed, GOBI.cliffShadow, 0.15), col(GOBI.cliffLight), col(GOBI.cliffRed), mix(GOBI.cliffLight, GOBI.cliffPale, 0.5), mix(GOBI.cliffRed, 0xa8452f, 0.6), col(GOBI.cliffLight), mix(GOBI.cliffPale, GOBI.sandLight, 0.3)];
+  const talus = mix(GOBI.cliffRed, GOBI.sandMid, 0.55);
+  const STEP = 1.6;
+  const zs: number[] = [];
+  for (let z = zNear; z > zFar - 1e-6; z -= STEP) zs.push(z);
+  if (zs[zs.length - 1] > zFar + 0.01) zs.push(zFar);
+  const groove = (z: number) => 0.6 * Math.sin(z * 0.45 + 1.3) + 0.25 * Math.sin(z * 1.1 + 0.4);
+  const crown = (z: number) => 12 + 2.2 * Math.sin(z * 0.11 + 2) + 1.4 * Math.sin(z * 0.37) + 0.6 * Math.sin(z * 1.3);
+  const LAYERS = [0, 1.3, 3.1, 4.6, 6.6, 8.2, 10.3, 99];
+  const faceX = (z: number, layer: number) => sgn * (6.6 + layer * 0.32 + groove(z) * (1 - layer * 0.07) + (layer % 2 ? 0.12 : 0));
+  // Each layer is a band of quads facing the trail, plus a terrace top where the next layer steps back.
+  for (let i = 0; i < zs.length - 1; i++) {
+    const za = zs[i], zb = zs[i + 1];
+    const ha = heightAt(za), hb = heightAt(zb);
+    if (ha <= 0.01 && hb <= 0.01) continue;
+    const topA = crown(za) * ha, topB = crown(zb) * hb;
+    // Talus apron from the trail edge up to the foot of the wall.
+    const ta = new THREE.Vector3(sgn * 4.4, -0.05, za), tb = new THREE.Vector3(sgn * 4.4, -0.05, zb);
+    const fa = new THREE.Vector3(faceX(za, 0), Math.min(1.1, topA), za), fb = new THREE.Vector3(faceX(zb, 0), Math.min(1.1, topB), zb);
+    if (sgn > 0) g.quad(ta, tb, fb, fa, shade(talus, 0.95 + 0.06 * Math.sin(za * 1.7)));
+    else g.quad(tb, ta, fa, fb, shade(talus, 0.95 + 0.06 * Math.sin(za * 1.7)));
+    for (let L = 0; L < LAYERS.length - 1; L++) {
+      const y0a = Math.max(1.1 * Math.min(1, ha * 3), LAYERS[L] * ha), y0b = Math.max(1.1 * Math.min(1, hb * 3), LAYERS[L] * hb);
+      const y1a = Math.min(topA, LAYERS[L + 1] * ha), y1b = Math.min(topB, LAYERS[L + 1] * hb);
+      if (y1a <= y0a && y1b <= y0b) continue;
+      const xa = faceX(za, L), xb = faceX(zb, L);
+      const p0 = new THREE.Vector3(xa, y0a, za), p1 = new THREE.Vector3(xb, y0b, zb);
+      const p2 = new THREE.Vector3(xb, Math.max(y0b, y1b), zb), p3 = new THREE.Vector3(xa, Math.max(y0a, y1a), za);
+      const c = shade(strata[L % strata.length], 0.97 + 0.03 * Math.sin(za * 0.2 + L)); // gentle drift: no tiled seams
+      if (sgn > 0) g.quad(p0, p1, p2, p3, c); else g.quad(p1, p0, p3, p2, c);
+      // Terrace: from this layer's face back to the next layer's face (or the crown).
+      const last = y1a >= topA - 1e-3 && y1b >= topB - 1e-3;
+      const xa2 = last ? xa + sgn * 3 : faceX(za, L + 1), xb2 = last ? xb + sgn * 3 : faceX(zb, L + 1);
+      const q0 = p3, q1 = p2, q2 = new THREE.Vector3(xb2, p2.y, zb), q3 = new THREE.Vector3(xa2, p3.y, za);
+      const top = shade(mix(GOBI.cliffPale, GOBI.sandLight, 0.35), 0.98 + 0.02 * Math.sin(za * 0.2 + L));
+      if (sgn > 0) g.quad(q0, q1, q2, q3, top); else g.quad(q1, q0, q3, q2, top);
+      if (last) break;
+    }
+  }
+}

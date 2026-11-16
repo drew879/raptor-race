@@ -6,7 +6,7 @@ import { Noise2D } from '../../core/noise';
 import { Rng, hash2 } from '../../core/rng';
 import { smoothstep } from '../../core/math';
 import { CONFIG } from '../../game/config';
-import { addBush, addHoodoo, addMesa, addNest, addRibcage, addRock, addScanBush, addScanCliff, addScanRock, addScanTree, addSkull, addVertebrae } from './props';
+import { addBush, addCanyonWall, addHoodoo, addMesa, addNest, addRibcage, addRock, addScanBush, addScanCliff, addScanRock, addScanTree, addSkull, addVertebrae } from './props';
 
 const noise = new Noise2D(1923);
 const TRACK = CONFIG.world.trackHalfWidth;
@@ -142,8 +142,6 @@ export function buildChunk(index: number, opts: { mesas?: boolean; layout?: Terr
   // Each stretch of the level has its own landmarks (owner playtest: the landscape felt repetitive).
   const dMid = index * L + L / 2;
   const kind = sectionAt(opts.layout, dMid);
-  // Canyon walls rise and fall over the first and last chunk of a canyon instead of popping in.
-  const canyonEdge = kind === 'canyon' ? Math.min(1, 0.45 + 0.55 * Number(sectionAt(opts.layout, dMid - L) === 'canyon'), 0.45 + 0.55 * Number(sectionAt(opts.layout, dMid + L) === 'canyon')) : 0;
   const busy = kind === 'basin' ? 0.3 : kind === 'canyon' ? 0.6 : kind === 'flats' ? 0.5 : 1;
 
   // Near-field detail right at the track edge: whips past the camera and sells speed.
@@ -175,14 +173,16 @@ export function buildChunk(index: number, opts: { mesas?: boolean; layout?: Terr
     }
 
     if (kind === 'canyon') {
-      // The Flaming Cliffs close in: a near-continuous wall of banded cliffs either side, boulders at their feet.
-      for (let d = rng.range(0, 4); d < L; d += rng.range(11, 14)) {
-        const x = sgn * rng.range(7.2, 9.5), z = z0 - d;
-        addScanCliff(g, new THREE.Vector3(x, groundHeight(x, z) - 1.2, z), rng.range(11, 16) * canyonEdge, rng, sgn > 0 ? Math.PI / 2 : -Math.PI / 2);
-      }
-      for (let i = 0; i < 3; i++) {
-        const x = sgn * rng.range(5.2, 6.8), z = z0 - rng.range(0, L);
-        addScanRock(g, new THREE.Vector3(x, groundHeight(x, z) - 0.2, z), rng.range(1.0, 2.0), rng);
+      // The Flaming Cliffs close in: banded strata walls either side (built from world position, so they join
+      // up across chunks), easing up over the first and last 30 m of the canyon. Boulders at their feet.
+      const sec = (opts.layout?.sections ?? []);
+      const ci = sec.findIndex((q) => q.kind === 'canyon' && q.from <= dMid && (sec[sec.indexOf(q) + 1]?.from ?? Infinity) > dMid);
+      const from = ci >= 0 ? sec[ci].from : index * L, to = ci >= 0 ? sec[ci + 1]?.from ?? from + 200 : from + 200;
+      const ease = (z: number) => { const d = -z; const e = Math.min(1, Math.max(0, (d - from) / 30), Math.max(0, (to - d) / 30)); return e * e * (3 - 2 * e); };
+      addCanyonWall(g, sgn as 1 | -1, z0, z0 - L, ease);
+      for (let i = 0; i < 4; i++) {
+        const x = sgn * rng.range(5.4, 6.4), z = z0 - rng.range(0, L);
+        addRock(g, new THREE.Vector3(x, groundHeight(x, z) - 0.1, z), rng.range(0.3, 0.6), rng, mix(GOBI.cliffRed, GOBI.cliffShadow, 0.3));
       }
     } else if (kind === 'hoodoos') {
       // A garden of hoodoos: a few close enough to whip past, taller ones further out.

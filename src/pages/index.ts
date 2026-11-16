@@ -3,7 +3,7 @@ import '../ui/theme.css';
 import '../ui/game.css';
 import { Stage, FOG } from '../render/stage';
 import { LookPipeline } from '../render/post/looks';
-import { ChunkStreamer } from '../render/world/terrain';
+import { ChunkStreamer, groundHeight } from '../render/world/terrain';
 import { CollectibleField, type Collectible } from '../render/world/collectibles';
 import { createHazard } from '../render/world/hazards';
 import { PowerupView } from '../render/world/powerups';
@@ -185,7 +185,7 @@ const stage = new Stage(container, { preserveDrawingBuffer: SHOT });
 const streamer = new ChunkStreamer(stage.world, true, { gullies: LEVEL.hazards.filter((h) => h.type === 'gully').map((h) => h.d), sections: LEVEL.sections });
 const items = new CollectibleField(400, FOG);
 const powerups = new PowerupView();
-const dust = new Particles(260, THREE.NormalBlending, FOG);
+const dust = new Particles(440, THREE.NormalBlending, FOG); // footfalls, lane kicks, landings, dune streamers and storm sand
 const sparks = new Particles(200, THREE.AdditiveBlending, FOG);
 const PLUMAGE_COLORS: Record<string, RaptorPlumage> = { 'gobi-streak': RAPTOR_GOBI_STREAK, dusk: RAPTOR_DUSK };
 const chosenPlumage = () => {
@@ -494,9 +494,13 @@ function handle(e: GameEvent) {
   const z = -r.distance;
   switch (e.t) {
     case 'move':
-      if (e.e === 'lane') audio.play('lane', { dir: e.dir });
+      if (e.e === 'lane') {
+        audio.play('lane', { dir: e.dir });
+        // A kick of sand off the trailing foot.
+        dust.emit(r.x - (e.dir ?? 0) * 0.25, 0.05, z + 0.1, 6, { spread: 0.6, up: 0.3, side: -(e.dir ?? 0) * 2.6, back: 2, size: 0.26, grow: 1.8, life: 0.45, alpha: 0.32, rand });
+      }
       else if (e.e === 'jump') { audio.play('jump'); dust.emit(r.x, 0.04, z + 0.2, 6, { spread: 0.8, up: 0.2, back: 3, size: 0.25, grow: 1.6, alpha: 0.3, rand }); }
-      else if (e.e === 'land') { audio.play('land'); shake = Math.max(shake, 0.05); dust.emit(r.x, 0.04, z + 0.1, 10, { spread: 1.4, up: 0.3, back: 2, size: 0.3, grow: 1.8, alpha: 0.35, rand }); }
+      else if (e.e === 'land') { audio.play('land'); shake = Math.max(shake, 0.05); dust.emit(r.x, 0.04, z + 0.1, 16, { spread: 1.7, up: 0.35, back: 2, size: 0.32, grow: 2, alpha: 0.38, rand }); }
       else if (e.e === 'slide') audio.play('slide');
       else if (e.e === 'fastfall') audio.play('lane', { dir: 0 });
       else if (e.e === 'glide') audio.play('powerup');
@@ -590,6 +594,8 @@ function handle(e: GameEvent) {
       break;
     case 'finish':
       audio.play('finish');
+      // The pin: a burst of sand around the pair.
+      dust.emit(session.preyX, 0.1, -session.preyD, 34, { spread: 2.4, up: 0.8, back: 0, size: 0.55, grow: 2.6, life: 1.4, alpha: 0.45, drag: 1.4, gravity: 1.2, rand });
       timeScale = 1;
       // Freeze-frame as a Field Journal plate, then the results.
       setTimeout(() => { $('plate').hidden = false; container.classList.add('freeze'); frozen = true; }, 1100);
@@ -759,6 +765,17 @@ function syncWorld(dt: number) {
     }
   }
   prints.update(dt, SAND_TRACK);
+  // Wind: sand streaming off the dune crests ahead, and sheets of it blowing past as the storm builds.
+  if (app === 'playing' || app === 'intro') {
+    const storm = clamp(session.storm * 0.85 + clamp((r.distance - LEVEL.stormRises) / (LEVEL.length - LEVEL.stormRises), 0, 1) * 0.6, 0, 1);
+    if (fxRng.chance(0.35 + storm * 0.5)) {
+      const sx = fxRng.chance(0.5) ? 1 : -1, x = sx * fxRng.range(5, 17), zz = z - fxRng.range(12, 55);
+      dust.emit(x, groundHeight(x, zz) + 0.25, zz, 1, { spread: 0.4, up: 0.15, side: -3.2 - storm * 3, back: 0, size: 0.55, grow: 2.6, life: 1.6, alpha: 0.16 + storm * 0.1, gravity: 0, drag: 0, rand });
+    }
+    if (storm > 0.2 && fxRng.chance(storm * 0.9)) {
+      dust.emit(fxRng.range(-1, 7), fxRng.range(0.3, 2.6), z + fxRng.range(-7, 1.5), 1, { spread: 0.2, up: 0, side: -10 - storm * 6, back: 1, size: 0.3, grow: 3.5, life: 0.7, alpha: 0.22 * storm, gravity: 0, drag: 0, rand });
+    }
+  }
   herd?.update(dt, r.distance);
   streamer.update(r.distance);
 
@@ -800,6 +817,7 @@ function syncWorld(dt: number) {
   const ambient = clamp((r.distance - LEVEL.stormRises) / (LEVEL.length - LEVEL.stormRises), 0, 1) * 0.32;
   const stormLevel = clamp(session.storm * 0.85 + ambient, 0, 1);
   $('storm').style.opacity = (app === 'title' || app === 'prerun' ? 0 : stormLevel).toFixed(3);
+  look.storm = app === 'title' || app === 'prerun' ? 0 : clamp(stormLevel * 1.2, 0, 1);
   const fog = stage.scene.fog as THREE.Fog;
   fog.color.copy(fogColor).lerp(stormFog, ambient * 1.6);
   fog.far = lerp(FOG.far, 120, ambient * 2.2);

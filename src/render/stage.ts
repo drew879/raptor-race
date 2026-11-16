@@ -4,7 +4,8 @@ import { createBackdrop, createSky } from './sky';
 import { CONFIG } from '../game/config';
 import { damp } from '../core/math';
 
-export const SUN_DIR = new THREE.Vector3(0.76, 0.52, 0.44).normalize();
+/** Low golden-hour sun (~22° up) behind and to the right of the chase camera: long shadows, warm light. */
+export const SUN_DIR = new THREE.Vector3(0.802, 0.375, 0.465).normalize();
 export const FOG = { near: 42, far: 235 };
 
 /** Renderer, scene, lights, sky and the chase camera. */

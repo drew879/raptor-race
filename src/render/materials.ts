@@ -67,8 +67,8 @@ export function unlitMaterial(opts: { fog?: boolean; bend?: boolean; transparent
 /** Shared material instances (one program each). */
 export const MATS = {
   world: litMaterial({ rim: 0.12 }),
-  hazard: litMaterial({ rim: 0.28 }),
-  character: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide }), { rim: 0.7, rimColor: 0xcfe3ff }),
+  hazard: litMaterial({ rim: 0.4 }),
+  character: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, side: THREE.DoubleSide }), { rim: 0.95, rimColor: 0xffd29a }), // warm sun-edge rim
   glow: unlitMaterial({ toneMapped: false }),
   backdrop: unlitMaterial({ fog: false, bend: false }),
   egg: patchWorld(new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, emissive: new THREE.Color(0x8a6a34) }), { rim: 0.5 }),

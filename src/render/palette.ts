@@ -23,7 +23,7 @@ export const GOBI = {
   amberCore: 0xffb21e,
   amberLight: 0xffe08a,
   amberDeep: 0xc8620a,
-  keyLight: 0xffd9a8,
+  keyLight: 0xffc98a,
   hemiSky: 0xd6cce0,
   hemiGround: 0xb5977c,
 } as const;
