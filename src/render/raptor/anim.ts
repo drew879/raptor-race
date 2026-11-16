@@ -93,7 +93,7 @@ export class RaptorAnimator {
 
     // ---------- Run ----------
     const run = this.poses.run;
-    run.pY = -0.02 - 0.028 * Math.cos(2 * TAU * (p - 0.19));
+    run.pY = -0.02 - 0.036 * Math.cos(2 * TAU * (p - 0.19)); // a springier bob
     run.pZ = 0;
     run.pPitch = -0.08 * k + 0.02 * Math.sin(2 * TAU * p);
     run.pYaw = 0.05 * Math.sin(TAU * p);
@@ -112,11 +112,12 @@ export class RaptorAnimator {
     run.t2X = 0.01 + 0.03 * Math.sin(2 * TAU * p - 1.3);
     run.t3X = 0.02 + 0.03 * Math.sin(2 * TAU * p - 2.0);
     run.t4X = 0.02 + 0.03 * Math.sin(2 * TAU * p - 2.7);
-    run.t1Y = 0.06 * Math.sin(TAU * p - 0.7);
-    run.t2Y = 0.06 * Math.sin(TAU * p - 1.4);
-    run.t3Y = 0.07 * Math.sin(TAU * p - 2.1);
-    run.t4Y = 0.08 * Math.sin(TAU * p - 2.8);
-    const flutter = 0.05 * Math.sin(2 * TAU * p);
+    // Tail counter-sways against the hips, the wave travelling to the tip.
+    run.t1Y = 0.08 * Math.sin(TAU * p - 0.7);
+    run.t2Y = 0.09 * Math.sin(TAU * p - 1.4);
+    run.t3Y = 0.1 * Math.sin(TAU * p - 2.1);
+    run.t4Y = 0.12 * Math.sin(TAU * p - 2.8);
+    const flutter = 0.09 * Math.sin(2 * TAU * p); // a wing flick on each footfall
     run.uaLX = run.uaRX = 0.05;
     run.uaLY = run.uaRY = 0;
     run.uaLZ = -0.05 - flutter;
