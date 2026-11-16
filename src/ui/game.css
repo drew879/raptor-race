@@ -45,7 +45,9 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; backgrou
 .floats { position: absolute; inset: 0; pointer-events: none; }
 .float { position: absolute; left: 50%; transform: translateX(-50%); font-weight: 900; color: var(--ink); text-shadow: 0 2px 0 rgba(243, 230, 204, .9), 0 0 10px rgba(255, 224, 138, .8);
   animation: floatUp 1s ease-out forwards; white-space: nowrap; }
-.float.big { font-family: var(--display); font-size: 30px; }
+.float.big { font-family: var(--display); font-size: 34px;
+  /* A paper outline so big callouts ("Hunt!", combos) read on sky, sand or rock alike. */
+  text-shadow: 2px 0 0 #F3E6CC, -2px 0 0 #F3E6CC, 0 2px 0 #F3E6CC, 0 -2px 0 #F3E6CC, 1.5px 1.5px 0 #F3E6CC, -1.5px 1.5px 0 #F3E6CC, 1.5px -1.5px 0 #F3E6CC, -1.5px -1.5px 0 #F3E6CC, 0 4px 0 rgba(58, 42, 30, .35); }
 .float.small { font-size: 18px; }
 .float.banner { font-family: var(--display); font-size: 22px; padding: 6px 14px; background: var(--paper); border: 2px solid var(--ink); border-radius: 10px; box-shadow: 0 3px 0 var(--ink); text-shadow: none; animation: bannerIn 1.8s ease-out forwards; }
 @keyframes floatUp { from { opacity: 0; transform: translate(-50%, 10px) scale(.9); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.05); } to { opacity: 0; transform: translate(-50%, -46px) scale(1); } }
