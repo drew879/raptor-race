@@ -23,6 +23,8 @@ export const CONFIG = {
     pinOffset: -0.05, // where it lands along the prey: 0 = the prey's hips, + = further back (m)
   },
   world: { chunkLength: 40, chunksAhead: 6, chunksBehind: 1, trackHalfWidth: 2.6, trackRow: 1.25 },
+  /** A wandering Protoceratops starts across when you're `start` m away and settles in its lane by `end` m. */
+  wander: { start: 52, end: 16 },
   /** Automatic bends (visual only): world bend per unit of level curvature, how far ahead a bend shows,
    * how fast the far scenery swings round, and how much the camera banks. */
   curves: { bend: 0.004, lookAhead: 28, headingGain: 1.2, maxHeading: 0.7, roll: 0.07 }, // owner: 0.0006 was barely noticeable

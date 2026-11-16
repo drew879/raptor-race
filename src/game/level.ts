@@ -2,14 +2,14 @@ import type { HazardType, Lane, PickupKind } from './types';
 import { CONFIG } from './config';
 import { Runner } from './runner';
 
-export type HintKind = 'lanes' | 'jump' | 'slide' | 'updraft' | 'magnet' | 'fork';
+export type HintKind = 'lanes' | 'jump' | 'slide' | 'updraft' | 'magnet' | 'fork' | 'nest' | 'pterosaur';
 
 /** `len` is set for long hazards (the fork spine): `d` is where it starts, and it runs `len` meters on. */
-export interface HazardEvent { d: number; type: HazardType; lane: Lane; len?: number }
+export interface HazardEvent { d: number; type: HazardType; lane: Lane; len?: number; /** wanderer: the lane it starts in (`lane` is where it ends up) */ from?: Lane }
 export interface PickupEvent { d: number; kind: PickupKind; lane: Lane; y: number }
 export interface HintEvent { d: number; hint: HintKind }
 /** The kinds of landmark stretch a level is built from (terrain and scenery change per stretch). */
-export type SectionKind = 'dunes' | 'canyon' | 'hoodoos' | 'basin' | 'bones' | 'herd' | 'flats';
+export type SectionKind = 'dunes' | 'canyon' | 'hoodoos' | 'nest' | 'basin' | 'bones' | 'herd' | 'flats';
 export interface SectionEvent { from: number; kind: SectionKind }
 /** A visual bend in the track (the simulation stays straight). `amount` is signed curvature, + bends right. */
 export interface CurveEvent { d: number; len: number; amount: number }
@@ -111,6 +111,11 @@ export class LevelBuilder {
   egg(d: number, lane: Lane, y = 0.8) { this.pickups.push({ d: d * this.k, kind: 'egg', lane, y }); return this; }
   power(d: number, kind: 'magnet' | 'updraft', lanes: Lane[] = [-1, 0, 1], y = 0.9) {
     for (const lane of lanes) this.pickups.push({ d: d * this.k, kind, lane, y });
+    return this;
+  }
+  /** A Protoceratops that walks from lane `from` to lane `to` as you approach, arriving well before you do. */
+  wander(d: number, from: Lane, to: Lane) {
+    this.hazards.push({ d: d * this.k, type: 'wanderer', lane: to, from });
     return this;
   }
   /** A fork: a sandstone fin fills the middle lane from `from` to `to`; each side lane becomes its own route. */

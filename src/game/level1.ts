@@ -67,11 +67,15 @@ B.line(487, 501, 1, 1); // sparse: quarter notes
 B.hz(511, 'ledge', 1);
 B.line(516, 528, 1, 1);
 B.line(536, 552, -1);
-B.hz(547, 'boulder', 1, 0);
+// The nesting ground: Protoceratops resting on their nests (jump them, or go around), then one gets up and
+// walks off across the trail (the level's moving obstacle: read where it's heading).
+B.hint(534, 'nest');
+B.hz(547, 'nester', 1, 0);
 B.hz(564, 'ribArch', 0).low(560, 568, -1);
 B.hz(580, 'gully', 0).arcOver(580, -1);
-B.hz(596, 'boulder', -1);
-B.line(592, 604, 0);
+B.hz(593, 'nester', -1);
+B.wander(597, -1, 1);
+B.line(590, 604, 0);
 
 // Beat 5: Updraft glide over a boulder field no runner could cross; Egg 2 high in the glide path (606-770).
 B.hint(606, 'updraft');
@@ -91,7 +95,8 @@ B.hz(790, 'ledge', 0).hz(790, 'boulder', -1, 1).arcOver(790, 0);
 B.hz(806, 'arch', 0).hz(806, 'boulder', -1, 1).low(802, 810, 0);
 B.hz(822, 'ledge', 0).arcOver(822, 0);
 B.hz(838, 'boulder', 0).hz(838, 'ledge', -1).hz(838, 'arch', 1).arcOver(838, -1).low(834, 842, 1);
-B.hz(858, 'ribArch', 0).low(854, 862, 0);
+B.hint(832, 'pterosaur');
+B.hz(858, 'pterosaur', 0).low(854, 862, 0); // swoops in low across all lanes: slide
 B.hz(876, 'gully', 0).arcOver(876, 0);
 // Egg 3: jump the ledge in the middle, then cut right behind the boulder.
 B.hz(894, 'ledge', 0, 1).hz(894, 'boulder', -1).arcOver(894, 0);
@@ -121,6 +126,7 @@ B.line(1074, 1094, 0);
 B.section(0, 'dunes');
 B.section(290, 'canyon');
 B.section(430, 'hoodoos');
+B.section(532, 'nest');
 B.section(600, 'basin');
 B.section(700, 'bones');
 B.section(790, 'herd');

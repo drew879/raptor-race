@@ -11,6 +11,9 @@ export const CRASH_COPY: Record<HazardType | 'storm', [string, string, string]> 
   arch: ['Ouch', 'Hit the arch', 'Swipe down to slide under arches.'],
   ribArch: ['Ouch', 'Hit the fallen bone', 'Swipe down to slide under giant bones.'],
   spine: ['Ouch', 'Ran into the rock fin', 'When the trail splits, pick the left or right side before the fin.'],
+  nester: ['Ouch', 'Tripped over a resting Protoceratops', 'Jump the resting ones, or go around them.'],
+  wanderer: ['Ouch', 'Ran into a wandering Protoceratops', 'Watch which way it\'s walking, then take another lane.'],
+  pterosaur: ['Ouch', 'Clipped by a pterosaur', 'When one swoops in low, swipe down to duck under it.'],
   storm: ['Lost', 'The storm closed in', 'Run clean to keep the prey in sight.'],
 };
 

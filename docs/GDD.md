@@ -86,6 +86,8 @@ Length ~1.1 km, speed 10 to 14 m/s (~92 s), 2 checkpoints.
 
 **As built after playtest 4 (supersedes the table above where they differ):** jumps are **dry gullies** (cut across all three lanes, banded walls) and **flat sandstone slabs** (one lane each, pale top, banded front); no logs (the owner: they don't belong in the Gobi), no cacti (they only evolved in the Americas, ~35 mya). Landmark stretches: dawn dunes (0-290, design m), a **Flaming Cliffs canyon** for the slide lessons (290-430), a **hoodoo garden** with the first fork (430-600), an open **basin** for the updraft glide (600-700), a **bone field** (700-790), a **herd of Protoceratops** along the trail's edges as the storm rises (790-1020), and open **flats** for the final dash (1020-1100).
 
+**Added at the Level 1 wrap-up:** the nesting ground (resting Protoceratops on nests are a low jump; one walks across the lanes as you approach, the level's moving obstacle) and a swooping pterosaur in the storm (slide). Science note: giant azhdarchid pterosaur neck bones are known from Mongolia's Nemegt Formation (Tsuihiji et al. 2017), somewhat younger than the Flaming Cliffs rocks, and Mongolian pterosaur fossils are rare, so ours is a small liberty; it's a modest 6 m across.
+
 Difficulty target ("fairly easy"): a bot with ~300 ms reactions and occasional input errors clears it at least 85% of the time.
 
 ## 9. Roster

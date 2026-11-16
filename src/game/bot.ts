@@ -16,7 +16,7 @@ export const PERFECT: BotProfile = { reaction: 0, jitter: 0, errorRate: 0, greed
 export const HUMANLIKE: BotProfile = { reaction: 0.3, jitter: 0.07, errorRate: 0.03, greedEggs: false, seed: 1 };
 
 type Need = 'free' | 'block' | 'jump' | 'slide';
-const NEED: Record<string, Need> = { boulder: 'block', ledge: 'jump', gully: 'jump', arch: 'slide', ribArch: 'slide', spine: 'block' };
+const NEED: Record<string, Need> = { boulder: 'block', ledge: 'jump', gully: 'jump', arch: 'slide', ribArch: 'slide', spine: 'block', nester: 'jump', wanderer: 'block', pterosaur: 'slide' };
 
 /** Plays a Session through its public input API, the same way a player would. */
 export class Bot {

@@ -9,6 +9,7 @@ import { createHazard } from '../render/world/hazards';
 import { PowerupView } from '../render/world/powerups';
 import { Protoceratops } from '../render/prey/protoceratops';
 import { Herd } from '../render/prey/herd';
+import { Pterosaur } from '../render/prey/pterosaur';
 import { Particles, SAND, SPARK } from '../render/fx';
 import { RaptorView } from '../render/raptor/view';
 import { GOBI, RAPTOR_DUSK, RAPTOR_GOBI_STREAK, col, mix, type RaptorPlumage } from '../render/palette';
@@ -443,6 +444,8 @@ const HINTS: Record<HintKind, [string, string, string, string]> = {
   magnet: ['◈', 'Amber Sense pulls nearby amber to you', '0', '0'],
   updraft: ['≋', 'Grab the updraft to glide over the boulders. Steer left and right while you fly', '0', '-6px'],
   fork: ['⇆', 'The trail splits around a rock fin. Pick a side: left is rougher, with more amber', '8px', '0'],
+  nest: ['↑', 'Protoceratops nesting ground: jump the resting ones, and watch for one on the move', '0', '-6px'],
+  pterosaur: ['↓', 'Pterosaur! When it swoops in low, swipe down to duck', '0', '6px'],
 };
 function showHint(h: HintKind) {
   const [g, t, nx, ny] = HINTS[h];
@@ -626,6 +629,65 @@ function showResults() {
   requestAnimationFrame(tick);
 }
 
+// ---------------- Creature hazards (pooled: building a model mid-run would hitch) ----------------
+const protoPool = Array.from({ length: 4 }, () => new Protoceratops());
+const pteroPool = [new Pterosaur()];
+for (const c of [...protoPool, ...pteroPool]) { c.root.visible = false; stage.world.add(c.root); }
+const creatureViews = new Map<number, Protoceratops | Pterosaur>();
+const screeched = new Set<number>();
+/** The pterosaur's swoop as a function of how far the runner is from where it crosses the trail (dz, meters):
+ * [dz, x, y, meters beyond the crossing]. High and far, a long dive, head height across the lanes at dz = 0,
+ * then up and away over the camera. */
+const SWOOP: [number, number, number, number][] = [[115, 22, 19, 58], [72, 15, 14, 34], [42, 8, 8, 15], [18, 3, 2.7, 4], [0, 0, 1.45, 0], [-10, -2, 3.2, -12], [-30, -6, 9.5, -32]];
+function swoopAt(dz: number) {
+  const k = SWOOP.findIndex(([d]) => d <= dz);
+  if (k <= 0) return SWOOP[k < 0 ? SWOOP.length - 1 : 0].slice(1) as [number, number, number];
+  const [d0, ...a] = SWOOP[k - 1], [d1, ...b] = SWOOP[k];
+  const u = (dz - d0) / (d1 - d0), e = u * u * (3 - 2 * u);
+  return a.map((v, i) => v + (b[i] - v) * e) as [number, number, number];
+}
+function syncCreatures(dt: number) {
+  const r = session.runner;
+  for (const h of session.hazards) {
+    if (h.type !== 'nester' && h.type !== 'wanderer' && h.type !== 'pterosaur') continue;
+    let v = creatureViews.get(h.id);
+    if (!v) {
+      v = h.type === 'pterosaur' ? pteroPool.find((p) => !p.root.visible) : protoPool.find((p) => !p.root.visible);
+      if (!v) continue;
+      v.root.visible = true;
+      creatureViews.set(h.id, v);
+    }
+    const dz = h.d - r.distance;
+    if (v instanceof Pterosaur) {
+      const [x, y, ahead] = swoopAt(dz);
+      const [x2, y2, ahead2] = swoopAt(dz - 1);
+      v.root.position.set(x, y, -(h.d + ahead));
+      v.root.rotation.set(Math.atan2(y2 - y, Math.max(0.3, ahead - ahead2)) * 0.8, Math.PI, (x2 - x) * 0.6, 'YXZ');
+      v.root.visible = dz < 118 && dz > -32;
+      v.update(dt, dz > 70 ? 0.6 : dz > 4 ? 0.12 : 1);
+      if (dz < 46 && !screeched.has(h.id)) { screeched.add(h.id); audio.play('screech'); }
+    } else {
+      v.root.position.set(h.x, 0, -h.d);
+      if (h.type === 'nester') {
+        v.pose = 'rest';
+        v.root.rotation.set(0, Math.PI + ((h.id * 0.618) % 1 - 0.5) * 0.6, 0);
+        v.update(dt, 0, 0, 0);
+      } else {
+        const target = h.lane * CONFIG.lanes.spacing;
+        const moving = Math.abs(h.x - target) > 0.03;
+        v.pose = moving ? 'run' : 'alert';
+        v.root.rotation.set(0, (h.x0 ?? 0) < target ? -Math.PI / 2 : Math.PI / 2, 0);
+        v.update(dt, moving ? 2.6 : 0, 0, 0);
+      }
+    }
+  }
+  for (const [id, v] of creatureViews) {
+    if (session.hazards.some((h) => h.id === id)) continue;
+    v.root.visible = false;
+    creatureViews.delete(id);
+  }
+}
+
 // ---------------- Per-frame sync ----------------
 const tmpV = new THREE.Vector3();
 const menuCam = { pos: new THREE.Vector3(), look: new THREE.Vector3() };
@@ -646,6 +708,7 @@ function syncWorld(dt: number) {
     }
   }
   for (const [id, m] of hazardMeshes) if (!live.has(id)) { stage.world.remove(m); hazardMeshes.delete(id); }
+  syncCreatures(dt);
   // Amber and eggs.
   const seen = seenSet;
   seen.clear();
@@ -921,7 +984,9 @@ function warmShaders() {
   g.position.set(0, -50, 0);
   stage.world.add(g);
   if (herd) herd.group.visible = true; // compile the instanced herd too (it's hidden until its stretch)
+  for (const c of [...protoPool, ...pteroPool]) c.root.visible = true;
   stage.renderer.compile(stage.scene, stage.camera);
+  for (const c of [...protoPool, ...pteroPool]) c.root.visible = false;
   herd?.update(0, session.distance);
   draw();
   stage.world.remove(g);

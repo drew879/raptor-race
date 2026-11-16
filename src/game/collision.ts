@@ -11,10 +11,13 @@ export const HAZARD_BOXES: Record<HazardType, Box> = {
   arch: { hx: 0.7, y0: 0.66, y1: 2.6, hz: 0.3 }, // a tall overhang: no jump clears it, slide under
   ribArch: { hx: 2.4, y0: 0.72, y1: 2.5, hz: 0.2 }, // hanging ribs: no jump clears them, slide under
   spine: { hx: 0.6, y0: 0, y1: 3, hz: 0 }, // hz comes from the fin's length
+  nester: { hx: 0.6, y0: 0, y1: 0.55, hz: 0.7 }, // lying down: a low jump
+  wanderer: { hx: 0.85, y0: 0, y1: 0.95, hz: 0.45 }, // broadside across its lane: go around (or clear it at a jump's peak)
+  pterosaur: { hx: 2.6, y0: 0.75, y1: 2.6, hz: 0.6 }, // wings across all lanes at head height: slide
 };
 
 /** Hazards that span all three lanes. */
-export const isWide = (type: HazardType) => type === 'gully' || type === 'ribArch';
+export const isWide = (type: HazardType) => type === 'gully' || type === 'ribArch' || type === 'pterosaur';
 
 /** Collision box for a hazard; long hazards (the fork spine) are centered half their length past `d`. */
 export function hazardBox(type: HazardType, len = 0): Box {

@@ -65,7 +65,7 @@ class Leg {
   }
 }
 
-export type ProtoPose = 'run' | 'graze' | 'alert' | 'pinned';
+export type ProtoPose = 'run' | 'graze' | 'alert' | 'pinned' | 'rest';
 
 export class Protoceratops {
   readonly root = new THREE.Group();
@@ -215,6 +215,15 @@ export class Protoceratops {
         pitch = 0.25;
         yaw = 0.6;
         this.tail.rotation.y = -0.15;
+        break;
+      case 'rest':
+        // Lying on its nest: belly down, legs folded under, tail on the sand, looking around now and then.
+        this.body.position.y = -0.24;
+        this.body.rotation.set(0.02, 0, 0);
+        pitch = -0.12 + Math.sin(t * 0.8) * 0.04;
+        yaw = Math.sin(t * 0.45) * 0.5;
+        this.tail.rotation.set(0.25, Math.sin(t * 0.6) * 0.08, 0);
+        this.legs.forEach((leg, i) => { leg.upper.rotation.x = i < 2 ? -1.25 : 1.35; leg.lower.rotation.x = i < 2 ? 0.25 : -0.5; });
         break;
       case 'pinned':
         // Pressed down, head thrown up, braced and struggling.

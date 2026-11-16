@@ -6,7 +6,7 @@ import { Noise2D } from '../../core/noise';
 import { Rng, hash2 } from '../../core/rng';
 import { smoothstep } from '../../core/math';
 import { CONFIG } from '../../game/config';
-import { addBush, addHoodoo, addMesa, addRibcage, addRock, addScanBush, addScanCliff, addScanRock, addScanTree, addSkull, addVertebrae } from './props';
+import { addBush, addHoodoo, addMesa, addNest, addRibcage, addRock, addScanBush, addScanCliff, addScanRock, addScanTree, addSkull, addVertebrae } from './props';
 
 const noise = new Noise2D(1923);
 const TRACK = CONFIG.world.trackHalfWidth;
@@ -194,6 +194,12 @@ export function buildChunk(index: number, opts: { mesas?: boolean; layout?: Terr
       for (let i = 0; i < mid; i++) {
         const x = sgn * rng.range(12, 34), z = z0 - rng.range(0, L);
         addHoodoo(g, new THREE.Vector3(x, groundHeight(x, z) - 0.3, z), rng.range(6, 12), rng);
+      }
+    } else if (kind === 'nest') {
+      // A Protoceratops nesting ground: clutches of eggs in sand mounds along both sides of the trail.
+      for (let i = 0; i < rng.int(2, 4); i++) {
+        const x = sgn * rng.range(3.6, 9), z = z0 - rng.range(2, L - 2);
+        addNest(g, new THREE.Vector3(x, groundHeight(x, z), z), rng.range(0.55, 0.8), rng);
       }
     } else if (kind === 'bones') {
       // A bone field: the remains of a herd caught by a collapsing dune.

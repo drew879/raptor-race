@@ -5,7 +5,7 @@ import { speedAt, type HintKind, type LevelDef } from './level';
 import type { HazardType, Lane, PickupKind } from './types';
 
 /** `len` > 0 for long hazards (the fork spine), which run from `d` to `d + len`. */
-export interface LiveHazard { id: number; type: HazardType; lane: Lane; d: number; len: number; x: number; hit: boolean; passed: boolean }
+export interface LiveHazard { id: number; type: HazardType; lane: Lane; d: number; len: number; x: number; hit: boolean; passed: boolean; /** wanderer: where it starts */ x0?: number }
 export interface LivePickup { id: number; kind: PickupKind; lane: Lane; d: number; x: number; y: number; taken: boolean; eggIndex: number }
 
 export type GameEvent =
@@ -126,7 +126,7 @@ export class Session {
     }
     // Boulders block a lane; the prey also goes around arches when it can (it's too tall to duck).
     const ahead = this.hazards.filter((h) => h.d > this.preyD + 2 && h.d < this.preyD + 14);
-    const blocked = (lane: number) => ahead.some((h) => (h.type === 'boulder' || h.type === 'arch' || h.type === 'spine') && h.lane === lane);
+    const blocked = (lane: number) => ahead.some((h) => (h.type === 'boulder' || h.type === 'arch' || h.type === 'spine' || h.type === 'nester' || h.type === 'wanderer') && h.lane === lane);
     if (blocked(this.preyLaneTarget)) {
       const options = [-1, 0, 1].filter((l) => !blocked(l));
       if (options.length) this.preyLaneTarget = options.sort((a, b) => Math.abs(a - this.preyLaneTarget) - Math.abs(b - this.preyLaneTarget))[0];
@@ -151,7 +151,8 @@ export class Session {
     while (this.hzCursor < L.hazards.length && L.hazards[this.hzCursor].d < ahead) {
       const h = L.hazards[this.hzCursor++];
       const wide = isWide(h.type);
-      this.hazards.push({ id: this.nextId++, type: h.type, lane: h.lane, d: h.d, len: h.len ?? 0, x: wide ? 0 : laneX(h.lane), hit: false, passed: false });
+      const x0 = h.from !== undefined ? laneX(h.from) : undefined;
+      this.hazards.push({ id: this.nextId++, type: h.type, lane: h.lane, d: h.d, len: h.len ?? 0, x: wide ? 0 : x0 ?? laneX(h.lane), hit: false, passed: false, x0 });
     }
     while (this.pkCursor < L.pickups.length && L.pickups[this.pkCursor].d < ahead) {
       const idx = this.pkCursor++;
@@ -257,6 +258,14 @@ export class Session {
     this.steerPrey();
     this.preyX += (laneX(this.preyLaneTarget as Lane) - this.preyX) * Math.min(1, dt * 5);
 
+    // Wandering Protoceratops walk across as you approach (eased, so they're plainly heading somewhere).
+    const W = CONFIG.wander;
+    for (const h of this.hazards) {
+      if (h.x0 === undefined) continue;
+      const p = Math.min(1, Math.max(0, (W.start - (h.d - r.distance)) / (W.start - W.end)));
+      h.x = h.x0 + (laneX(h.lane) - h.x0) * p * p * (3 - 2 * p);
+    }
+
     // Hazards.
     for (const h of this.hazards) {
       if (h.hit || h.passed) continue;
@@ -265,7 +274,7 @@ export class Session {
       if (dz < -0.9 - box.hz) {
         h.passed = true;
         // Cleared an obstacle in our own lane by jumping or sliding: small style bonus.
-        if (h.type !== 'boulder' && h.type !== 'spine' && Math.abs(r.x - h.x) < box.hx + 0.26) {
+        if (h.type !== 'boulder' && h.type !== 'spine' && h.type !== 'wanderer' && Math.abs(r.x - h.x) < box.hx + 0.26) {
           this.score += 50;
           this.preyD -= CONFIG.hunt.closePerClear;
           this.events.push({ t: 'clear', bonus: 50 });

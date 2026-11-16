@@ -8,7 +8,7 @@ import { DEFAULT_STYLE } from './music-styles';
 /** Music bus level relative to SFX: keeps music peaks about 8 dB under SFX peaks (AUDIO_BIBLE mix targets). */
 export const MUSIC_LEVEL = 0.26;
 
-export type SfxName = 'amber' | 'lane' | 'jump' | 'land' | 'slide' | 'stumble' | 'egg' | 'powerup' | 'checkpoint' | 'finish';
+export type SfxName = 'amber' | 'lane' | 'jump' | 'land' | 'slide' | 'stumble' | 'egg' | 'powerup' | 'checkpoint' | 'finish' | 'screech';
 
 const PENTA = [0, 2, 4, 7, 9]; // major pentatonic, semitones
 const midiHz = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
@@ -143,6 +143,25 @@ export class Sfx {
       case 'checkpoint': {
         this.tone(t, 680, 'sine', 0.2, 0.001, 0.05, o);
         this.tone(t + 0.11, 1020, 'sine', 0.18, 0.001, 0.06, o);
+        break;
+      }
+      case 'screech': {
+        // A pterosaur's harsh cry, falling in pitch: a buzzy saw through a narrow band, plus breath noise.
+        const o = this.ctx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(1300 * v.pitch, t);
+        o.frequency.exponentialRampToValueAtTime(520 * v.pitch, t + 0.34);
+        const f = this.ctx.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.setValueAtTime(2200, t);
+        f.frequency.exponentialRampToValueAtTime(1100, t + 0.34);
+        f.Q.value = 2.2;
+        const g = this.ctx.createGain();
+        this.env(g, t, 0.16 * v.gain, 0.02, 0.33);
+        o.connect(f).connect(g).connect(this.panned(0.3));
+        o.start(t);
+        o.stop(t + 0.4);
+        this.noiseBurst(t, 0.3, 0.06 * v.gain, { type: 'bandpass', f0: 3000, f1: 1500, q: 1.2 }, o, 0.02);
         break;
       }
       case 'finish': {

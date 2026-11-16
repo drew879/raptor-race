@@ -261,6 +261,7 @@ export function hazardGeometry(type: HazardType, variant = 0, len = 0): THREE.Bu
   // Scanned rocks (Poly Haven, CC0) for boulders; slabs, arches and bones are hand-built.
   if (type === 'boulder') return scenery(BOULDERS[variant % BOULDERS.length]);
   if (type === 'gully') return EMPTY; // cut into the terrain itself (see terrain.ts)
+  if (type === 'nester' || type === 'wanderer' || type === 'pterosaur') return EMPTY; // animated creatures, drawn by the game page
   if (!GEOMS[type]) {
     GEOMS[type] = type === 'ledge' ? slab() : type === 'arch' ? arch() : ribArch();
   }

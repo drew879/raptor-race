@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LEVEL1 } from '../src/game/level1';
 import { Session } from '../src/game/session';
-import { HAZARD_BOXES, hazardBox } from '../src/game/collision';
+import { HAZARD_BOXES, hazardBox, testHit } from '../src/game/collision';
 import { CRASH_COPY } from '../src/game/copy';
 import { BEAT, distanceAtTime, speedAt, timeAt } from '../src/game/level';
 import { GLIDE_SECONDS } from '../src/game/session';
@@ -107,6 +107,44 @@ describe('setbacks and fork placement (owner playtest 4)', () => {
       for (const sp of spines) if (sp.d > p.d) expect(sp.d - landing, `fork at ${sp.d}`).toBeGreaterThan(3 * speedAt(LEVEL1, landing));
     }
     for (const cp of LEVEL1.checkpoints) for (const sp of spines) expect(cp < sp.d - 5 || cp > sp.d + sp.len! + 5).toBe(true);
+  });
+});
+
+describe('nesting ground and pterosaur', () => {
+  it('a wanderer starts in one lane, walks across, and has settled in its final lane before you reach it', () => {
+    const w = LEVEL1.hazards.find((h) => h.type === 'wanderer')!;
+    const s = new Session(LEVEL1);
+    s.start();
+    s.resumeAt(w.d - 70);
+    s.runner.snapToLane(w.lane === 0 ? 1 : 0); // stay out of its way
+    s.invuln = 1e9; // ghost through the slide and gully in front of it; this test only watches the crossing
+    const xs: number[] = [];
+    let settledAt = -1;
+    for (let t = 0; t < 4 && s.state === 'running'; t += 1 / 60) {
+      s.step(1 / 60);
+      s.drainEvents();
+      const h = s.hazards.find((q) => q.type === 'wanderer');
+      if (!h) break;
+      xs.push(h.x);
+      if (settledAt < 0 && Math.abs(h.x - w.lane * 1.5) < 1e-6) settledAt = h.d - s.distance;
+    }
+    expect(xs[0]).toBeCloseTo(w.from! * 1.5, 5);
+    expect(settledAt).toBeGreaterThan(14); // in place with the better part of a second to spare
+  });
+  it('running straight into a settled wanderer crashes; a nester can be jumped; the pterosaur needs a slide', () => {
+    const w = LEVEL1.hazards.find((h) => h.type === 'wanderer')!;
+    const s = new Session(LEVEL1);
+    s.start();
+    s.resumeAt(w.d - 12);
+    s.runner.snapToLane(w.lane);
+    let cause = '';
+    for (let t = 0; t < 2 && !cause; t += 1 / 60) { s.step(1 / 60); for (const e of s.drainEvents()) if (e.t === 'crash') cause = e.cause; }
+    expect(cause).toBe('wanderer');
+    const base = { x: 0, prevX: 0, y: 0, sliding: false, airborne: false };
+    expect(testHit({ ...base, y: 0.5, airborne: true }, 0, 0, HAZARD_BOXES.nester)).toBe('none');
+    expect(testHit(base, 0, 0, HAZARD_BOXES.pterosaur)).toBe('front');
+    expect(testHit({ ...base, y: 1.25, airborne: true }, 0, 0, HAZARD_BOXES.pterosaur)).toBe('front');
+    expect(testHit({ ...base, sliding: true }, 0, 0, HAZARD_BOXES.pterosaur)).toBe('none');
   });
 });
 

@@ -262,3 +262,28 @@ export function addVertebrae(g: GeomBuilder, pos: THREE.Vector3, len: number, ro
     addTube(g, [c.clone().add(new THREE.Vector3(0, s * 0.5, 0)), c.clone().add(new THREE.Vector3(0, s * 2.4, 0)).addScaledVector(dir, -s * 0.6)], [s * 0.3, s * 0.08], 4, () => shade(bone, 0.95));
   }
 }
+
+/** A Protoceratops nest: a low sand mound ringed with elongated eggs, laid in a circle and tipped outward. */
+export function addNest(g: GeomBuilder, pos: THREE.Vector3, size: number, rng: Rng) {
+  const sand = mix(GOBI.sandMid, GOBI.sandShadow, 0.35), rim = mix(GOBI.sandMid, GOBI.sandLight, 0.4);
+  const M = 10, R = size, r0 = size * 0.45;
+  const outer = Array.from({ length: M }, (_, k) => { const a = (k / M) * Math.PI * 2; return pos.clone().add(new THREE.Vector3(Math.cos(a) * R * 1.35, -0.05, Math.sin(a) * R * 1.35)); });
+  const top = Array.from({ length: M }, (_, k) => { const a = (k / M) * Math.PI * 2 + 0.2; return pos.clone().add(new THREE.Vector3(Math.cos(a) * R * 0.9, size * 0.22, Math.sin(a) * R * 0.9)); });
+  const inner = Array.from({ length: M }, (_, k) => { const a = (k / M) * Math.PI * 2; return pos.clone().add(new THREE.Vector3(Math.cos(a) * r0, size * 0.08, Math.sin(a) * r0)); });
+  const ctr = pos.clone().add(new THREE.Vector3(0, size * 0.04, 0));
+  for (let k = 0; k < M; k++) {
+    const k1 = (k + 1) % M;
+    g.quad(outer[k], outer[k1], top[k1], top[k], shade(rim, rng.range(0.94, 1.04)));
+    g.quad(top[k], top[k1], inner[k1], inner[k], shade(sand, rng.range(0.9, 1.0)));
+    g.tri(inner[k], inner[k1], ctr, shade(sand, 0.82));
+  }
+  // Eggs: pale, elongated, half-buried in a ring.
+  const egg = mix(0xf1e6cf, GOBI.sandLight, 0.25);
+  const n = rng.int(8, 12);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + rng.range(-0.1, 0.1);
+    const p = pos.clone().add(new THREE.Vector3(Math.cos(a) * R * 0.62, size * 0.16, Math.sin(a) * R * 0.62));
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.sin(a) * 0.9, -a, -Math.cos(a) * 0.9));
+    g.appendGeometry(ICO1, new THREE.Matrix4().compose(p, q, new THREE.Vector3(size * 0.09, size * 0.16, size * 0.09)), (_i, _c, nn) => shade(egg, 0.82 + Math.max(0, nn.y) * 0.22));
+  }
+}
