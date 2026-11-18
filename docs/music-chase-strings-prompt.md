@@ -53,7 +53,7 @@ Each part says when it plays. "Intensity" runs from 0 to 1 (see "In the game" be
 
 9. **High tremolo strings (intensity over 0.75).** One sustained note per bar, the fifth of the chord, high and shimmering, a little left: G#5 (80), E6 (88), C#6 (85), D#6 (87), G#5 (80), E6 (88), A5 (81), D#6 (87). Each held about 1.9 s with fast tremolo.
 10. **Wind bed (always).** Very quiet low-passed noise under everything, drifting slowly.
-11. **Amber chimes (game pickups).** Small bell tones snapped to the next sixteenth note. Each pickup plays a tone of the current chord, starting at E5 (76) or the first chord tone above it, and climbs one chord tone per pickup in a run (capped at E7, 100). A gap of more than 0.6 s starts the climb over.
+11. **Amber chimes (game pickups).** Small bell tones snapped to the next sixteenth note. Each pickup plays a tone of the current chord, starting at E5 (76) or the first chord tone above it, and climbs one chord tone per pickup in a run (capped at E7, 100). A gap of more than 0.6 s starts the climb over. The amber never plays the violin melody or any fixed part: the level lays lines of amber on eighth notes (4 pieces a second at any speed, about 3.3 m apart at this level's speed) and arcs over jumps on sixteenths, so every line comes out as a rising arpeggio over whatever chord is playing. The violin line is its own layer (29 notes every eight bars).
 
 ## How each sound was made
 All of it was built with Web Audio. If you're using real or sampled instruments, treat this as a description of the character to aim for.

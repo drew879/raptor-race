@@ -2,6 +2,8 @@
 
 Newest first. Every session updates this before pushing.
 
+**Retired (owner, 2026-11-18):** the owner rebuilt Level 1 from scratch in drew879/raptor-race-fable and is continuing there. No more work here; the GitHub Pages build stays up as it is.
+
 ## Current milestone: new Level 1, Jehol Forest (owner playtests 6-7)
 - [x] Music: Chase Strings is the default (owner's pick) with a string bed from bar 1 and a swell on the pounce window; a proper ending (held fifth through the leap, landing on C# major ringing over the plate) replaces the abrupt stop and the off-key jingle; pterosaur screech fixed
 - [x] Levels carry biome, hero, prey, hunt tuning, music, hill and copy; the page builds one level at load (`?level=`, else the last played); pick a level in the Field Journal, the results card offers the next
